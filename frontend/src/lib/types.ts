@@ -112,6 +112,12 @@ export interface Scenario {
   created_at: string;
 }
 
+export interface BrdWorkflow {
+  brd_id: string;
+  rule_set: { id: string; status: string; rules_count: number } | null;
+  simulation: { id: string; status: string; scenario_name: string } | null;
+}
+
 export interface PipelineRunResponse {
   status: string;
   simulation_id: string;
