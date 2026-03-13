@@ -5,7 +5,7 @@ An AI-powered platform that extracts business rules from BRD documents (PDF/DOCX
 ## What It Does
 
 1. **Upload** a Business Requirements Document (PDF or DOCX)
-2. **Extract** structured business rules using Claude AI via a LangGraph pipeline
+2. **Extract** structured business rules using OpenAI GPT-4o via a LangGraph pipeline
 3. **Review** extracted rules with conflict detection and human approval
 4. **Simulate** rule impact against customer datasets
 5. **Compare** scenarios side-by-side with visual dashboards
@@ -16,7 +16,7 @@ An AI-powered platform that extracts business rules from BRD documents (PDF/DOCX
 ```
 Frontend (Next.js 16)          Backend (FastAPI)
 React 19 + Tailwind CSS 4     LangGraph Pipeline + Simulation Engine
-Recharts + shadcn/ui           Claude AI Rule Extraction
+Recharts + shadcn/ui           OpenAI GPT-4o Rule Extraction
         │                              │
         └──── REST API (/api/v1) ──────┘
                     │
@@ -47,7 +47,7 @@ Recharts + shadcn/ui           Claude AI Rule Extraction
 ### Docker (recommended)
 
 ```bash
-# Set your Anthropic API key
+# Set your OpenAI API key
 echo "OPENAI_API_KEY=sk-..." > .env
 
 # Start all services
@@ -100,7 +100,7 @@ npm run dev
 │   │   ├── pipeline/         # LangGraph processing pipeline
 │   │   │   ├── graph.py          # Pipeline orchestration
 │   │   │   ├── document_parser.py
-│   │   │   ├── rule_extractor.py # Claude AI extraction
+│   │   │   ├── rule_extractor.py # OpenAI GPT-4o extraction
 │   │   │   ├── rule_compiler.py  # Rules → executable Python
 │   │   │   └── rule_validator.py # Conflict detection
 │   │   ├── simulation/       # Simulation engine
@@ -126,7 +126,7 @@ BRD Upload (PDF/DOCX)
   ↓
 Parse Document → Extract sections
   ↓
-Extract Rules (Claude AI) → Structured JSON with conditions & actions
+Extract Rules (OpenAI GPT-4o) → Structured JSON with conditions & actions
   ↓
 Validate Rules → Conflict detection, completeness checks
   ↓
