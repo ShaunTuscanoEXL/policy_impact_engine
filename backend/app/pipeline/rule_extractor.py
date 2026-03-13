@@ -1,6 +1,6 @@
-"""LLM-powered rule extractor using Claude.
+"""LLM-powered rule extractor using OpenAI.
 
-Takes parsed BRD document sections and uses Claude to extract structured
+Takes parsed BRD document sections and uses an OpenAI model to extract structured
 business rules suitable for the downstream Rule Compiler.
 """
 
@@ -10,7 +10,7 @@ import json
 import logging
 import re
 
-from anthropic import Anthropic
+from openai import OpenAI
 
 from app.config import settings
 from app.pipeline.schemas import DocumentSection, SectionType
@@ -231,29 +231,22 @@ def extract_rules(sections: list[DocumentSection]) -> list[RuleDefinition]:
         logger.warning("Combined section text is empty; returning empty rule list")
         return []
 
-    client = Anthropic(api_key=settings.anthropic_api_key)
+    client = OpenAI(api_key=settings.openai_api_key)
 
     try:
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
+        response = client.chat.completions.create(
+            model=settings.openai_model,
             max_tokens=4096,
             messages=[
-                {
-                    "role": "user",
-                    "content": (
-                        f"{EXTRACTION_PROMPT}\n\n---\n\nBRD Content:\n\n{combined_text}"
-                    ),
-                }
+                {"role": "system", "content": EXTRACTION_PROMPT},
+                {"role": "user", "content": f"BRD Content:\n\n{combined_text}"},
             ],
         )
     except Exception as exc:
-        logger.error("Anthropic API call failed: %s", exc)
+        logger.error("OpenAI API call failed: %s", exc)
         return []
 
-    # The API may return multiple content blocks; concatenate text blocks.
-    response_text = "".join(
-        block.text for block in response.content if hasattr(block, "text")
-    )
+    response_text = response.choices[0].message.content or ""
 
     if not response_text.strip():
         logger.warning("LLM returned empty response")

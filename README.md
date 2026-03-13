@@ -31,7 +31,7 @@ Recharts + shadcn/ui           Claude AI Rule Extraction
 | Layer | Technology |
 |-------|-----------|
 | API | FastAPI, Pydantic, SQLAlchemy (async) |
-| AI/LLM | Anthropic Claude, LangGraph, LangChain |
+| AI/LLM | OpenAI GPT-4o, LangGraph, LangChain |
 | Database | PostgreSQL + asyncpg |
 | Task Queue | Celery + Redis |
 | Document Parsing | Unstructured, pypdf |
@@ -48,7 +48,7 @@ Recharts + shadcn/ui           Claude AI Rule Extraction
 
 ```bash
 # Set your Anthropic API key
-echo "ANTHROPIC_API_KEY=sk-ant-..." > .env
+echo "OPENAI_API_KEY=sk-..." > .env
 
 # Start all services
 docker-compose up
@@ -71,7 +71,7 @@ pip install -e ".[dev]"
 
 # Set environment variables
 export DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/policy_engine"
-export ANTHROPIC_API_KEY="sk-ant-..."
+export OPENAI_API_KEY="sk-..."
 
 # Run migrations
 alembic upgrade head
@@ -174,7 +174,8 @@ Export → PDF report, CSV data
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `ANTHROPIC_API_KEY` | Yes | — | Claude API key for rule extraction |
+| `OPENAI_API_KEY` | Yes | — | OpenAI API key for rule extraction |
+| `OPENAI_MODEL` | No | `gpt-4o` | OpenAI model for rule extraction |
 | `DATABASE_URL` | Yes | — | PostgreSQL connection string |
 | `REDIS_URL` | No | `redis://localhost:6379/0` | Redis for Celery broker |
 | `MAX_UPLOAD_SIZE_MB` | No | `50` | Max file upload size |

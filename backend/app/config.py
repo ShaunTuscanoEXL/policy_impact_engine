@@ -8,7 +8,8 @@ class Settings(BaseSettings):
         "postgresql+asyncpg://postgres:postgres@localhost:5432/policy_impact_engine"
     )
     redis_url: str = "redis://localhost:6379/0"
-    anthropic_api_key: str = ""
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4o"
     upload_dir: str = "data/uploads"
     max_upload_size_mb: int = 50
 
