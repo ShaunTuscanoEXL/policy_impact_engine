@@ -1,13 +1,8 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  FileText,
-  PlayCircle,
-  GitCompare,
-  TrendingUp,
-  Loader2,
-} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { HoverCard, StaggerItem } from "@/components/page-transition";
+import { FileText, PlayCircle, GitCompare, BarChart3 } from "lucide-react";
 
 interface StatsCardsProps {
   brdCount: number | null;
@@ -17,86 +12,35 @@ interface StatsCardsProps {
   loading: boolean;
 }
 
-const stats = [
-  {
-    key: "brds" as const,
-    label: "Total BRDs",
-    icon: FileText,
-    color: "text-blue-600",
-    bgColor: "bg-blue-100 dark:bg-blue-900/30",
-  },
-  {
-    key: "simulations" as const,
-    label: "Total Simulations",
-    icon: PlayCircle,
-    color: "text-green-600",
-    bgColor: "bg-green-100 dark:bg-green-900/30",
-  },
-  {
-    key: "scenarios" as const,
-    label: "Active Scenarios",
-    icon: GitCompare,
-    color: "text-purple-600",
-    bgColor: "bg-purple-100 dark:bg-purple-900/30",
-  },
-  {
-    key: "impact" as const,
-    label: "Latest Impact Rate",
-    icon: TrendingUp,
-    color: "text-orange-600",
-    bgColor: "bg-orange-100 dark:bg-orange-900/30",
-  },
-];
-
-export function StatsCards({
-  brdCount,
-  simulationCount,
-  scenarioCount,
-  latestImpactRate,
-  loading,
-}: StatsCardsProps) {
-  function getValue(key: string): string {
-    if (loading) return "...";
-    switch (key) {
-      case "brds":
-        return brdCount !== null ? String(brdCount) : "0";
-      case "simulations":
-        return simulationCount !== null ? String(simulationCount) : "0";
-      case "scenarios":
-        return scenarioCount !== null ? String(scenarioCount) : "0";
-      case "impact":
-        return latestImpactRate !== null
-          ? `${latestImpactRate.toFixed(1)}%`
-          : "N/A";
-      default:
-        return "0";
-    }
-  }
+export function StatsCards({ brdCount, simulationCount, scenarioCount, latestImpactRate, loading }: StatsCardsProps) {
+  const cards = [
+    { label: "BRD Documents", value: brdCount, icon: FileText },
+    { label: "Simulations", value: simulationCount, icon: PlayCircle },
+    { label: "Scenarios", value: scenarioCount, icon: GitCompare },
+    { label: "Avg Impact Rate", value: latestImpactRate != null ? `${latestImpactRate.toFixed(1)}%` : "\u2014", icon: BarChart3 },
+  ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {stats.map((stat) => {
-        const Icon = stat.icon;
-        return (
-          <Card key={stat.key}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.label}
-              </CardTitle>
-              <div className={`rounded-md p-2 ${stat.bgColor}`}>
-                <Icon className={`h-4 w-4 ${stat.color}`} />
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              ) : (
-                <div className="text-2xl font-bold">{getValue(stat.key)}</div>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
+    <>
+      {cards.map((card) => (
+        <StaggerItem key={card.label}>
+          <HoverCard>
+            <Card className="relative overflow-hidden border-border/50 shadow-sm">
+              <CardContent className="p-6">
+                <card.icon className="absolute top-4 right-4 h-8 w-8 text-muted-foreground/10" />
+                <p className="text-sm font-medium text-muted-foreground">{card.label}</p>
+                {loading ? (
+                  <div className="mt-1 h-9 w-16 animate-pulse rounded bg-muted" />
+                ) : (
+                  <p className="mt-1 text-3xl font-semibold tracking-tight">
+                    {typeof card.value === "number" ? card.value : card.value}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </HoverCard>
+        </StaggerItem>
+      ))}
+    </>
   );
 }
