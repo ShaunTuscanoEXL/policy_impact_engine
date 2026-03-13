@@ -43,7 +43,7 @@ export function SegmentTable({ segmentBreakdown }: SegmentTableProps) {
 
   if (availableTabs.length === 0) {
     return (
-      <Card>
+      <Card className="border-border/50 shadow-sm">
         <CardHeader>
           <CardTitle>Segment Breakdown</CardTitle>
         </CardHeader>
@@ -57,7 +57,7 @@ export function SegmentTable({ segmentBreakdown }: SegmentTableProps) {
   }
 
   return (
-    <Card>
+    <Card className="border-border/50 shadow-sm">
       <CardHeader>
         <CardTitle>Segment Breakdown</CardTitle>
       </CardHeader>

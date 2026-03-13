@@ -34,6 +34,8 @@ import {
   BarChart3,
   Table2,
 } from "lucide-react";
+import { PageTransition } from "@/components/page-transition";
+import { motion } from "framer-motion";
 
 export default function DatasetDetailPage() {
   const params = useParams<{ id: string }>();
@@ -71,7 +73,9 @@ export default function DatasetDetailPage() {
   const schemaEntries = Object.entries(columnSchema);
 
   return (
+    <PageTransition>
     <div className="space-y-8">
+      <p className="text-xs text-muted-foreground mb-4">Dashboard / Datasets / Detail</p>
       {/* Header */}
       <div className="flex items-start gap-4">
         <Button
@@ -84,7 +88,7 @@ export default function DatasetDetailPage() {
         <div>
           <div className="flex items-center gap-3">
             <Database className="size-6 text-muted-foreground" />
-            <h1 className="text-2xl font-bold tracking-tight">
+            <h1 className="text-2xl font-semibold tracking-tight">
               {dataset.name}
             </h1>
             <Badge variant={fileType.includes("CSV") ? "secondary" : "outline"}>
@@ -114,6 +118,7 @@ export default function DatasetDetailPage() {
       </div>
 
       {/* Tabs */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
       <Tabs defaultValue="schema">
         <TabsList>
           <TabsTrigger value="schema">
@@ -132,7 +137,7 @@ export default function DatasetDetailPage() {
 
         {/* Schema Tab */}
         <TabsContent value="schema">
-          <Card>
+          <Card className="border-border/50 shadow-sm">
             {schemaEntries.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <FileSpreadsheet className="size-10 text-muted-foreground/40" />
@@ -187,6 +192,8 @@ export default function DatasetDetailPage() {
           <SampleTable sampleData={dataset.sample_data ?? []} />
         </TabsContent>
       </Tabs>
+      </motion.div>
     </div>
+    </PageTransition>
   );
 }

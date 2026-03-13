@@ -53,7 +53,7 @@ function NumericProfileCard({
   ].filter((s) => s.value !== undefined && s.value !== null);
 
   return (
-    <Card>
+    <Card className="border-border/50 shadow-sm">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium">{column}</CardTitle>
@@ -90,7 +90,7 @@ function CategoricalProfileCard({
   const chartData = entries.map(([name, count]) => ({ name, count }));
 
   return (
-    <Card>
+    <Card className="border-border/50 shadow-sm">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium">{column}</CardTitle>
@@ -116,13 +116,16 @@ function CategoricalProfileCard({
               />
               <Tooltip
                 contentStyle={{
-                  fontSize: 12,
-                  borderRadius: 8,
+                  backgroundColor: "#171717",
+                  border: "none",
+                  borderRadius: "8px",
+                  color: "#ededed",
+                  fontSize: "12px",
                 }}
               />
               <Bar
                 dataKey="count"
-                fill="hsl(var(--primary))"
+                fill="#0070f3"
                 radius={[0, 4, 4, 0]}
               />
             </BarChart>

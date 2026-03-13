@@ -13,7 +13,7 @@ import {
   CartesianGrid,
 } from "recharts";
 
-const COLORS = ["#6366f1", "#f59e0b", "#10b981", "#ef4444"];
+const COLORS = ["#0070f3", "#3b82f6", "#60a5fa", "#93c5fd"];
 
 interface ComparisonChartsProps {
   results: {
@@ -54,7 +54,7 @@ export function ComparisonCharts({ results }: ComparisonChartsProps) {
   ];
 
   return (
-    <Card>
+    <Card className="border-border/50 shadow-sm">
       <CardHeader>
         <CardTitle>Comparison Bar Chart</CardTitle>
       </CardHeader>
@@ -64,7 +64,7 @@ export function ComparisonCharts({ results }: ComparisonChartsProps) {
             data={chartData}
             margin={{ top: 10, right: 30, left: 10, bottom: 5 }}
           >
-            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.04)" />
             <XAxis
               dataKey="metric"
               tick={{ fontSize: 12 }}
@@ -76,9 +76,10 @@ export function ComparisonCharts({ results }: ComparisonChartsProps) {
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: "hsl(var(--background))",
-                border: "1px solid hsl(var(--border))",
+                backgroundColor: "#171717",
+                border: "none",
                 borderRadius: "8px",
+                color: "#ededed",
                 fontSize: "12px",
               }}
             />

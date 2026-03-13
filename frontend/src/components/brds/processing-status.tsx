@@ -24,10 +24,10 @@ interface ProcessingStatusProps {
 
 function StepIcon({ status }: { status: StepStatus }) {
   if (status === "completed") {
-    return <CheckCircle className="size-5 text-green-600 dark:text-green-400" />;
+    return <CheckCircle className="size-5 text-emerald-500" />;
   }
   if (status === "active") {
-    return <Loader2 className="size-5 text-primary animate-spin" />;
+    return <Loader2 className="size-5 text-[#0070f3] animate-spin" />;
   }
   return <Circle className="size-5 text-muted-foreground/40" />;
 }
@@ -45,8 +45,8 @@ export function ProcessingStatus({
               className={cn(
                 "text-xs whitespace-nowrap",
                 step.status === "completed" &&
-                  "font-medium text-green-700 dark:text-green-300",
-                step.status === "active" && "font-medium text-primary",
+                  "font-medium text-emerald-500",
+                step.status === "active" && "font-medium text-[#0070f3]",
                 step.status === "pending" && "text-muted-foreground"
               )}
             >
@@ -56,9 +56,9 @@ export function ProcessingStatus({
           {index < steps.length - 1 && (
             <div
               className={cn(
-                "mx-2 mt-[-1.25rem] h-px w-10 sm:w-16",
+                "mx-2 mt-[-1.25rem] h-px w-10 sm:w-16 transition-colors",
                 step.status === "completed"
-                  ? "bg-green-500 dark:bg-green-400"
+                  ? "bg-[#0070f3]"
                   : "bg-muted-foreground/20"
               )}
             />

@@ -53,7 +53,7 @@ export function FinancialPanel({ financialImpact }: FinancialPanelProps) {
         const Icon = card.icon;
         const isPositive = card.delta >= 0;
         return (
-          <Card key={card.title}>
+          <Card key={card.title} className="border-border/50 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {card.title}

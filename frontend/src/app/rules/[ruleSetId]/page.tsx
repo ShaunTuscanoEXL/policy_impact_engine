@@ -23,6 +23,8 @@ import {
   type RuleFormData,
 } from "@/components/rules/rule-editor-dialog";
 import { ConflictPanel } from "@/components/rules/conflict-panel";
+import { PageTransition } from "@/components/page-transition";
+import { motion } from "framer-motion";
 
 const STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
   DRAFT: "secondary",
@@ -158,7 +160,9 @@ export default function RuleReviewPage() {
   const conflictCount = ruleSet.rules.filter((r) => r.has_conflicts).length;
 
   return (
+    <PageTransition>
     <div className="space-y-6">
+      <p className="text-xs text-muted-foreground mb-4">Dashboard / Rules / Detail</p>
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-4">
@@ -172,7 +176,7 @@ export default function RuleReviewPage() {
           <div>
             <div className="flex items-center gap-3">
               <Shield className="size-6 text-muted-foreground" />
-              <h1 className="text-2xl font-bold tracking-tight">
+              <h1 className="text-2xl font-semibold tracking-tight">
                 {ruleSet.name}
               </h1>
               <Badge variant="outline">v{ruleSet.version}</Badge>
@@ -225,10 +229,13 @@ export default function RuleReviewPage() {
       </div>
 
       {/* Conflict Panel */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
       <ConflictPanel rules={ruleSet.rules} />
+      </motion.div>
 
       {/* Rule Table */}
-      <Card className="p-0 overflow-hidden">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+      <Card className="p-0 overflow-hidden border-border/50 shadow-sm">
         <div className="flex items-center justify-between border-b px-4 py-3">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Rules
@@ -244,6 +251,7 @@ export default function RuleReviewPage() {
           onDelete={handleDeleteRule}
         />
       </Card>
+      </motion.div>
 
       {/* Editor Dialog */}
       <RuleEditorDialog
@@ -254,5 +262,6 @@ export default function RuleReviewPage() {
         saving={saving}
       />
     </div>
+    </PageTransition>
   );
 }

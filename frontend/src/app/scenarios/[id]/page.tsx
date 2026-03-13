@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, GitCompare, Loader2 } from "lucide-react";
+import { PageTransition } from "@/components/page-transition";
+import { motion } from "framer-motion";
 
 interface SimWithResult {
   simulation: Simulation;
@@ -77,7 +79,9 @@ export default function ScenarioDetailPage() {
   }));
 
   return (
+    <PageTransition>
     <div className="space-y-8">
+      <p className="text-xs text-muted-foreground mb-4">Dashboard / Scenarios / Detail</p>
       {/* Header */}
       <div className="flex items-start gap-4">
         <Button
@@ -90,7 +94,7 @@ export default function ScenarioDetailPage() {
         <div>
           <div className="flex items-center gap-3">
             <GitCompare className="size-6 text-muted-foreground" />
-            <h1 className="text-2xl font-bold tracking-tight">
+            <h1 className="text-2xl font-semibold tracking-tight">
               {scenario.name}
             </h1>
           </div>
@@ -113,7 +117,7 @@ export default function ScenarioDetailPage() {
       </div>
 
       {simData.length < 2 ? (
-        <Card>
+        <Card className="border-border/50 shadow-sm">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <GitCompare className="size-10 text-muted-foreground/40" />
             <p className="mt-3 text-sm text-muted-foreground">
@@ -125,14 +129,19 @@ export default function ScenarioDetailPage() {
       ) : (
         <>
           {/* Comparison Bar Chart */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <ComparisonCharts results={chartResults} />
+          </motion.div>
 
           <Separator />
 
           {/* Delta Table */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <DeltaTable results={chartResults} />
+          </motion.div>
         </>
       )}
     </div>
+    </PageTransition>
   );
 }

@@ -264,7 +264,7 @@ export function RuleEditorDialog({
           <div className="space-y-1.5">
             <label className="text-xs font-medium">Description</label>
             <textarea
-              className="flex min-h-[60px] w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex min-h-[60px] w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-[#0070f3] focus-visible:ring-3 focus-visible:ring-[#0070f3]/20 disabled:cursor-not-allowed disabled:opacity-50"
               value={formData.description}
               onChange={(e) =>
                 setFormData((prev) => ({

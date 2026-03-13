@@ -34,7 +34,7 @@ export function DecisionFlowChart({ summary }: DecisionFlowChartProps) {
   ];
 
   return (
-    <Card>
+    <Card className="border-border/50 shadow-sm">
       <CardHeader>
         <CardTitle>Decision Flow</CardTitle>
       </CardHeader>
@@ -45,25 +45,27 @@ export function DecisionFlowChart({ summary }: DecisionFlowChartProps) {
               data={data}
               margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
             >
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.04)" />
               <XAxis dataKey="name" className="text-sm" />
               <YAxis className="text-sm" />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
+                  backgroundColor: "#171717",
+                  border: "none",
                   borderRadius: "8px",
+                  color: "#ededed",
+                  fontSize: "12px",
                 }}
               />
               <Legend />
               <Bar
                 dataKey="Baseline"
-                fill="hsl(215, 70%, 60%)"
+                fill="#0070f3"
                 radius={[4, 4, 0, 0]}
               />
               <Bar
                 dataKey="Simulated"
-                fill="hsl(150, 60%, 50%)"
+                fill="#60a5fa"
                 radius={[4, 4, 0, 0]}
               />
             </BarChart>

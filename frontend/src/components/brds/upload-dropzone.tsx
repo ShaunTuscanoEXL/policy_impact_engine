@@ -92,12 +92,12 @@ export function UploadDropzone({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
       className={cn(
-        "relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-10 text-center transition-colors cursor-pointer",
+        "relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-10 text-center transition-all duration-200 cursor-pointer",
         status === "idle" &&
           "border-muted-foreground/25 hover:border-muted-foreground/50 hover:bg-muted/50",
-        status === "dragover" && "border-primary bg-primary/5",
+        status === "dragover" && "border-[#0070f3] bg-[#0070f3]/5",
         status === "uploading" && "border-muted-foreground/25 bg-muted/30 cursor-wait",
-        status === "success" && "border-green-500/50 bg-green-50 dark:bg-green-950/20",
+        status === "success" && "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20",
         status === "error" && "border-destructive/50 bg-destructive/5"
       )}
     >

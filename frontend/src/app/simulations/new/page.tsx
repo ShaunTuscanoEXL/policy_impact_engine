@@ -4,10 +4,13 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { SimulationForm } from "@/components/simulations/simulation-form";
 import { ChevronLeft } from "lucide-react";
+import { PageTransition } from "@/components/page-transition";
 
 export default function NewSimulationPage() {
   return (
+    <PageTransition>
     <div className="space-y-8">
+      <p className="text-xs text-muted-foreground mb-4">Dashboard / Simulations / New</p>
       <div>
         <Button
           variant="ghost"
@@ -18,7 +21,7 @@ export default function NewSimulationPage() {
           <ChevronLeft className="size-4" />
           Back to Simulations
         </Button>
-        <h1 className="text-3xl font-bold tracking-tight">New Simulation</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">New Simulation</h1>
         <p className="mt-2 text-muted-foreground">
           Configure and run a new policy impact simulation.
         </p>
@@ -28,5 +31,6 @@ export default function NewSimulationPage() {
         <SimulationForm />
       </div>
     </div>
+    </PageTransition>
   );
 }

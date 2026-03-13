@@ -108,7 +108,7 @@ export function SimulationForm() {
   const isLoading = loadingBrds || loadingDatasets;
 
   return (
-    <Card className="p-6">
+    <Card className="p-6 border-border/50 shadow-sm">
       <div className="space-y-6">
         <div>
           <h2 className="text-lg font-semibold">Configure Simulation</h2>

@@ -129,14 +129,14 @@ export function RuleTable({ rules, onEdit, onDelete }: RuleTableProps) {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-8" />
-          <TableHead>Rule ID</TableHead>
-          <TableHead>Name</TableHead>
-          <TableHead>Type</TableHead>
-          <TableHead>Confidence</TableHead>
-          <TableHead className="text-center">Priority</TableHead>
-          <TableHead className="text-center">Conflicts</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
+          <TableHead className="w-8 text-xs uppercase tracking-wider" />
+          <TableHead className="text-xs uppercase tracking-wider">Rule ID</TableHead>
+          <TableHead className="text-xs uppercase tracking-wider">Name</TableHead>
+          <TableHead className="text-xs uppercase tracking-wider">Type</TableHead>
+          <TableHead className="text-xs uppercase tracking-wider">Confidence</TableHead>
+          <TableHead className="text-center text-xs uppercase tracking-wider">Priority</TableHead>
+          <TableHead className="text-center text-xs uppercase tracking-wider">Conflicts</TableHead>
+          <TableHead className="text-right text-xs uppercase tracking-wider">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -184,7 +184,7 @@ function ExpandableRuleRow({
 
   return (
     <>
-      <TableRow className="cursor-pointer" onClick={onToggle}>
+      <TableRow className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={onToggle}>
         <TableCell>
           {isExpanded ? (
             <ChevronDown className="size-4 text-muted-foreground" />

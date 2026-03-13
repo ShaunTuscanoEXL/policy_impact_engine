@@ -36,6 +36,8 @@ import {
   Loader2,
   Play,
 } from "lucide-react";
+import { PageTransition } from "@/components/page-transition";
+import { motion } from "framer-motion";
 
 export default function BrdDetailPage() {
   const params = useParams<{ id: string }>();
@@ -163,7 +165,9 @@ export default function BrdDetailPage() {
   const fileType = brd.file_type.toUpperCase();
 
   return (
+    <PageTransition>
     <div className="space-y-8">
+      <p className="text-xs text-muted-foreground mb-4">Dashboard / BRDs / Detail</p>
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-4">
@@ -177,7 +181,7 @@ export default function BrdDetailPage() {
           <div>
             <div className="flex items-center gap-3">
               <FileText className="size-6 text-muted-foreground" />
-              <h1 className="text-2xl font-bold tracking-tight">
+              <h1 className="text-2xl font-semibold tracking-tight">
                 {brd.filename}
               </h1>
               <Badge variant={fileType.includes("PDF") ? "secondary" : "outline"}>
@@ -274,16 +278,19 @@ export default function BrdDetailPage() {
       </div>
 
       {/* Pipeline Status */}
-      <Card className="p-6">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+      <Card className="p-6 border-border/50 shadow-sm">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Pipeline Status
         </h2>
         <ProcessingStatus steps={pipelineSteps} />
       </Card>
+      </motion.div>
 
       {/* Pipeline Result Summary */}
       {pipelineResult && (
-        <Card className="p-6">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <Card className="p-6 border-border/50 shadow-sm">
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Pipeline Result
           </h2>
@@ -311,7 +318,9 @@ export default function BrdDetailPage() {
             </div>
           )}
         </Card>
+        </motion.div>
       )}
     </div>
+    </PageTransition>
   );
 }

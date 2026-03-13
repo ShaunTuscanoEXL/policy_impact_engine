@@ -8,6 +8,7 @@ import {
   DollarSign,
 } from "lucide-react";
 import type { ImpactSummary } from "@/lib/types";
+import { StaggerContainer, StaggerItem, HoverCard } from "@/components/page-transition";
 
 interface SummaryCardsProps {
   summary: ImpactSummary;
@@ -52,11 +53,13 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <StaggerContainer className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {cards.map((card) => {
         const Icon = card.icon;
         return (
-          <Card key={card.label}>
+          <StaggerItem key={card.label}>
+          <HoverCard>
+          <Card className="border-border/50 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {card.label}
@@ -69,9 +72,11 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
               <div className="text-2xl font-bold">{card.value}</div>
             </CardContent>
           </Card>
+          </HoverCard>
+          </StaggerItem>
         );
       })}
-    </div>
+    </StaggerContainer>
   );
 }
 

@@ -13,6 +13,8 @@ import { SummaryCards } from "@/components/impact/summary-cards";
 import { DecisionFlowChart } from "@/components/impact/decision-sankey";
 import { SegmentTable } from "@/components/impact/segment-table";
 import { FinancialPanel } from "@/components/impact/financial-panel";
+import { PageTransition } from "@/components/page-transition";
+import { motion } from "framer-motion";
 
 const statusVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   COMPLETED: "default",
@@ -73,12 +75,14 @@ export default function SimulationDetailPage() {
   const summary = result?.summary_stats;
 
   return (
+    <PageTransition>
     <div className="space-y-6">
+      <p className="text-xs text-muted-foreground mb-4">Dashboard / Simulations / Detail</p>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">
+            <h1 className="text-2xl font-semibold tracking-tight">
               {simulation.scenario_name}
             </h1>
             <Badge variant={statusVariant[simulation.status] ?? "outline"}>
@@ -122,24 +126,33 @@ export default function SimulationDetailPage() {
       ) : (
         <>
           {/* Summary Cards */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <SummaryCards summary={summary} />
+          </motion.div>
 
           {/* Decision Flow Chart */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <DecisionFlowChart summary={summary} />
+          </motion.div>
 
           {/* Segment Breakdown */}
           {summary.segment_breakdown &&
             Object.keys(summary.segment_breakdown).length > 0 && (
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
               <SegmentTable segmentBreakdown={summary.segment_breakdown} />
+              </motion.div>
             )}
 
           {/* Financial Impact Panel */}
           {summary.financial_impact &&
             Object.keys(summary.financial_impact).length > 0 && (
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
               <FinancialPanel financialImpact={summary.financial_impact} />
+              </motion.div>
             )}
         </>
       )}
     </div>
+    </PageTransition>
   );
 }

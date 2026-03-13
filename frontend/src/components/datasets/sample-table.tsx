@@ -30,13 +30,13 @@ export function SampleTable({ sampleData }: SampleTableProps) {
   const rows = sampleData.slice(0, 10);
 
   return (
-    <div className="overflow-x-auto rounded-md border">
+    <div className="overflow-x-auto rounded-md border border-border/50 shadow-sm">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-12 text-center">#</TableHead>
+            <TableHead className="w-12 text-center text-xs uppercase tracking-wider text-muted-foreground">#</TableHead>
             {columns.map((col) => (
-              <TableHead key={col} className="whitespace-nowrap">
+              <TableHead key={col} className="whitespace-nowrap text-xs uppercase tracking-wider text-muted-foreground">
                 {col}
               </TableHead>
             ))}

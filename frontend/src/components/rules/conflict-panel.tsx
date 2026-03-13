@@ -31,7 +31,7 @@ export function ConflictPanel({ rules }: ConflictPanelProps) {
   if (conflictingRules.length === 0) return null;
 
   return (
-    <Card className="border-yellow-500/50 bg-yellow-50/50 p-4 dark:bg-yellow-950/20">
+    <Card className="border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex size-8 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900/50">
