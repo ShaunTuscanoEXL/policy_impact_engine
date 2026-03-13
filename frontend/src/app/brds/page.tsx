@@ -6,6 +6,8 @@ import api from "@/lib/api";
 import type { BrdDocument } from "@/lib/types";
 import { toast } from "sonner";
 import { UploadDropzone } from "@/components/brds/upload-dropzone";
+import { PageTransition } from "@/components/page-transition";
+import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -92,120 +94,129 @@ export default function BrdsPage() {
   };
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">BRD Documents</h1>
-        <p className="mt-2 text-muted-foreground">
-          Upload and manage Business Requirements Documents.
-        </p>
+    <PageTransition>
+      <div className="space-y-8">
+        <div>
+          <p className="text-xs text-muted-foreground mb-4">Dashboard / BRD Documents</p>
+          <h1 className="text-2xl font-semibold tracking-tight">BRD Documents</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Upload and manage Business Requirements Documents.
+          </p>
+        </div>
+
+        {/* Upload Section */}
+        <Card className="p-6 border-border/50 shadow-sm">
+          <UploadDropzone onUpload={handleUpload} />
+        </Card>
+
+        {/* BRD List Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+        >
+          <Card className="border-border/50 shadow-sm">
+            {loading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="size-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : brds.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <FileText className="size-10 text-muted-foreground/30" />
+                <p className="mt-3 text-sm text-muted-foreground">
+                  No BRD documents yet. Upload one above to get started.
+                </p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Filename</TableHead>
+                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Type</TableHead>
+                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Uploaded At</TableHead>
+                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {brds.map((brd) => (
+                    <TableRow key={brd.id} className="group hover:bg-accent/50">
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <FileText className="size-4 text-muted-foreground" />
+                          {brd.filename}
+                        </div>
+                      </TableCell>
+                      <TableCell>{fileTypeBadge(brd.file_type)}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(brd.created_at).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            render={<Link href={`/brds/${brd.id}`} />}
+                          >
+                            <Eye className="size-4" />
+                          </Button>
+
+                          <Dialog
+                            open={deleteId === brd.id}
+                            onOpenChange={(open) =>
+                              setDeleteId(open ? brd.id : null)
+                            }
+                          >
+                            <DialogTrigger
+                              render={
+                                <Button variant="ghost" size="icon-sm" />
+                              }
+                            >
+                              <Trash2 className="size-4 text-destructive" />
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Delete BRD</DialogTitle>
+                                <DialogDescription>
+                                  Are you sure you want to delete &ldquo;
+                                  {brd.filename}&rdquo;? This action cannot be
+                                  undone.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <DialogFooter>
+                                <DialogClose
+                                  render={<Button variant="outline" />}
+                                >
+                                  Cancel
+                                </DialogClose>
+                                <Button
+                                  variant="destructive"
+                                  disabled={deleting}
+                                  onClick={() => handleDelete(brd.id)}
+                                >
+                                  {deleting && (
+                                    <Loader2 className="mr-2 size-4 animate-spin" />
+                                  )}
+                                  Delete
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </Card>
+        </motion.div>
       </div>
-
-      {/* Upload Section */}
-      <Card className="p-6">
-        <UploadDropzone onUpload={handleUpload} />
-      </Card>
-
-      {/* BRD List Section */}
-      <Card>
-        {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="size-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : brds.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <FileText className="size-10 text-muted-foreground/40" />
-            <p className="mt-3 text-sm text-muted-foreground">
-              No BRD documents yet. Upload one above to get started.
-            </p>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Filename</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Uploaded At</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {brds.map((brd) => (
-                <TableRow key={brd.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      <FileText className="size-4 text-muted-foreground" />
-                      {brd.filename}
-                    </div>
-                  </TableCell>
-                  <TableCell>{fileTypeBadge(brd.file_type)}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {new Date(brd.created_at).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        render={<Link href={`/brds/${brd.id}`} />}
-                      >
-                        <Eye className="size-4" />
-                      </Button>
-
-                      <Dialog
-                        open={deleteId === brd.id}
-                        onOpenChange={(open) =>
-                          setDeleteId(open ? brd.id : null)
-                        }
-                      >
-                        <DialogTrigger
-                          render={
-                            <Button variant="ghost" size="icon-sm" />
-                          }
-                        >
-                          <Trash2 className="size-4 text-destructive" />
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Delete BRD</DialogTitle>
-                            <DialogDescription>
-                              Are you sure you want to delete &ldquo;
-                              {brd.filename}&rdquo;? This action cannot be
-                              undone.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <DialogFooter>
-                            <DialogClose
-                              render={<Button variant="outline" />}
-                            >
-                              Cancel
-                            </DialogClose>
-                            <Button
-                              variant="destructive"
-                              disabled={deleting}
-                              onClick={() => handleDelete(brd.id)}
-                            >
-                              {deleting && (
-                                <Loader2 className="mr-2 size-4 animate-spin" />
-                              )}
-                              Delete
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </Card>
-    </div>
+    </PageTransition>
   );
 }
