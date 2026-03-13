@@ -59,6 +59,12 @@ class PipelineApproveResponse(BaseModel):
     rules_compiled: int
 
 
+class RunSimulationRequest(BaseModel):
+    rule_set_id: str
+    dataset_id: str
+    scenario_name: str = "Default Scenario"
+
+
 class PipelineStatusResponse(BaseModel):
     simulation_id: str
     status: str
@@ -261,6 +267,75 @@ async def pipeline_run(body: PipelineRunRequest, db: AsyncSession = Depends(get_
         extracted_rules=[r.model_dump() for r in extracted_rules],
         validation_result=validation_result.model_dump() if validation_result else None,
         rules_extracted=len(extracted_rules),
+    )
+
+
+@router.post("/run-simulation", response_model=PipelineApproveResponse, status_code=200)
+async def run_simulation_for_ruleset(body: RunSimulationRequest, db: AsyncSession = Depends(get_db)):
+    """Run a simulation for an existing approved rule set."""
+    rule_set = await rule_service.get_rule_set(body.rule_set_id, db)
+    if not rule_set:
+        raise HTTPException(status_code=404, detail="Rule set not found")
+    if rule_set.status != RuleSetStatus.APPROVED:
+        raise HTTPException(status_code=400, detail="Rule set must be approved before running simulation")
+    if not rule_set.rules:
+        raise HTTPException(status_code=400, detail="No rules found in rule set")
+
+    dataset = await dataset_service.get_dataset(body.dataset_id, db)
+    if not dataset:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+    dataset_path = Path(dataset.file_path)
+    if not dataset_path.exists():
+        raise HTTPException(status_code=404, detail="Dataset file not found on disk")
+
+    sim = await simulation_service.create_simulation(
+        scenario_name=body.scenario_name,
+        dataset_id=body.dataset_id,
+        rule_set_id=body.rule_set_id,
+        parameters={},
+        db=db,
+    )
+
+    rule_definitions: list[RuleDefinition] = []
+    for rule in rule_set.rules:
+        rule_definitions.append(
+            RuleDefinition(
+                rule_id=rule.rule_id,
+                rule_name=rule.rule_name,
+                description=rule.description or "",
+                rule_type=rule.rule_type.value,
+                conditions=rule.conditions,
+                actions=rule.actions,
+                priority=rule.priority,
+                source_section=rule.source_section or "",
+                confidence=rule.confidence,
+            )
+        )
+    compiled = compile_rules(rule_definitions)
+
+    if dataset.file_type == DatasetFileType.CSV:
+        dataset_df = pd.read_csv(dataset_path)
+    else:
+        dataset_df = pd.read_json(dataset_path)
+
+    await simulation_service.update_simulation_status(str(sim.id), SimulationStatus.RUNNING, db)
+    try:
+        sim_output = await asyncio.to_thread(run_simulation, dataset_df, compiled)
+    except Exception as exc:
+        logger.exception("Simulation failed")
+        await simulation_service.update_simulation_status(str(sim.id), SimulationStatus.FAILED, db)
+        raise HTTPException(status_code=500, detail=f"Simulation failed: {exc}")
+
+    await _save_simulation_results(str(sim.id), sim_output, db)
+    await simulation_service.update_simulation_status(str(sim.id), SimulationStatus.COMPLETED, db)
+    await db.commit()
+
+    return PipelineApproveResponse(
+        status="COMPLETED",
+        simulation_id=str(sim.id),
+        rule_set_id=body.rule_set_id,
+        impact_summary=_simulation_output_to_summary(sim_output),
+        rules_compiled=len(compiled),
     )
 
 

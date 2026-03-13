@@ -22,7 +22,9 @@ interface Step {
 function deriveSteps(
   workflow: BrdWorkflow | null,
   onRunPipeline: () => void,
-  running: boolean
+  running: boolean,
+  onRunSimulation?: () => void,
+  simulationRunning?: boolean
 ): Step[] {
   const rs = workflow?.rule_set;
   const sim = workflow?.simulation;
@@ -99,17 +101,20 @@ function deriveSteps(
       description: "Simulation completed",
       state: "completed",
     });
-  } else if (simRunning) {
+  } else if (simRunning || simulationRunning) {
     steps.push({
       label: "Run Simulation",
       description: "Simulation running...",
       state: "active",
     });
-  } else if (rulesApproved && sim) {
+  } else if (rulesApproved) {
     steps.push({
       label: "Run Simulation",
-      description: "Simulation in progress",
+      description: "Rules approved — ready to simulate",
       state: "active",
+      onAction: onRunSimulation,
+      actionLabel: "Run Simulation",
+      actionLoading: simulationRunning,
     });
   } else {
     steps.push({
@@ -157,14 +162,18 @@ interface WorkflowStepperProps {
   workflow: BrdWorkflow | null;
   onRunPipeline: () => void;
   running: boolean;
+  onRunSimulation?: () => void;
+  simulationRunning?: boolean;
 }
 
 export function WorkflowStepper({
   workflow,
   onRunPipeline,
   running,
+  onRunSimulation,
+  simulationRunning,
 }: WorkflowStepperProps) {
-  const steps = deriveSteps(workflow, onRunPipeline, running);
+  const steps = deriveSteps(workflow, onRunPipeline, running, onRunSimulation, simulationRunning);
 
   return (
     <div className="space-y-0">

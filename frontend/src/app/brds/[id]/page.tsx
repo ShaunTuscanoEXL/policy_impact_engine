@@ -43,6 +43,11 @@ export default function BrdDetailPage() {
   const [autoApprove, setAutoApprove] = useState(false);
   const [running, setRunning] = useState(false);
 
+  // Simulation dialog state
+  const [simDialogOpen, setSimDialogOpen] = useState(false);
+  const [simDataset, setSimDataset] = useState<string>("");
+  const [simulationRunning, setSimulationRunning] = useState(false);
+
   // Workflow state
   const [workflow, setWorkflow] = useState<BrdWorkflow | null>(null);
 
@@ -86,6 +91,35 @@ export default function BrdDetailPage() {
     loadDatasets();
     setDialogOpen(true);
   }, [loadDatasets]);
+
+  const handleOpenSimDialog = useCallback(() => {
+    loadDatasets();
+    setSimDialogOpen(true);
+  }, [loadDatasets]);
+
+  const handleRunSimulation = useCallback(async () => {
+    if (!simDataset || !workflow?.rule_set) {
+      toast.error("Please select a dataset.");
+      return;
+    }
+
+    setSimulationRunning(true);
+    setSimDialogOpen(false);
+
+    try {
+      const { data } = await api.post("/pipeline/run-simulation", {
+        rule_set_id: workflow.rule_set.id,
+        dataset_id: simDataset,
+      });
+
+      toast.success("Simulation completed successfully.");
+      await fetchWorkflow();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || "Simulation failed.");
+    } finally {
+      setSimulationRunning(false);
+    }
+  }, [simDataset, workflow, fetchWorkflow]);
 
   const handleRunPipeline = useCallback(async () => {
     if (!selectedDataset) {
@@ -184,6 +218,8 @@ export default function BrdDetailPage() {
               workflow={workflow}
               onRunPipeline={handleOpenDialog}
               running={running}
+              onRunSimulation={handleOpenSimDialog}
+              simulationRunning={simulationRunning}
             />
           </Card>
         </motion.div>
@@ -246,6 +282,55 @@ export default function BrdDetailPage() {
               <Button onClick={handleRunPipeline} disabled={!selectedDataset}>
                 <Play className="mr-2 size-4" />
                 Run
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Run Simulation Dialog */}
+        <Dialog open={simDialogOpen} onOpenChange={setSimDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Run Simulation</DialogTitle>
+              <DialogDescription>
+                Select a dataset to simulate the approved rules against.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Dataset</label>
+                <Select
+                  value={simDataset}
+                  onValueChange={(val) => setSimDataset(val ?? "")}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a dataset..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {datasets.length === 0 ? (
+                      <SelectItem value="_none" disabled>
+                        No datasets available
+                      </SelectItem>
+                    ) : (
+                      datasets.map((ds) => (
+                        <SelectItem key={ds.id} value={ds.id}>
+                          {ds.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <DialogClose render={<Button variant="outline" />}>
+                Cancel
+              </DialogClose>
+              <Button onClick={handleRunSimulation} disabled={!simDataset}>
+                <Play className="mr-2 size-4" />
+                Run Simulation
               </Button>
             </DialogFooter>
           </DialogContent>
