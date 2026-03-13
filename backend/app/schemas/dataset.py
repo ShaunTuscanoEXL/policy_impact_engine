@@ -7,7 +7,7 @@ class DatasetUploadResponse(BaseModel):
     file_type: str
     row_count: int
     column_schema: dict | None
-    sample_data: dict | None
+    sample_data: list | dict | None
     created_at: str
 
 
@@ -28,4 +28,4 @@ class DatasetProfileResponse(BaseModel):
     row_count: int
     column_schema: dict | None
     data_profile: dict | None
-    sample_data: dict | None
+    sample_data: list | dict | None

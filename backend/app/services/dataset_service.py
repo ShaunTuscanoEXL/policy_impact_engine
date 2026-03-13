@@ -81,9 +81,9 @@ async def upload_dataset(
         file_path=str(file_path),
         file_type=file_type,
         row_count=len(df),
-        column_schema=column_schema,
+        column_schema=_convert_numpy_types(column_schema),
         sample_data=sample_data,
-        data_profile=data_profile,
+        data_profile=_convert_numpy_types(data_profile),
     )
     db.add(dataset)
     await db.commit()
@@ -100,7 +100,12 @@ def _convert_numpy_types(obj):
     elif isinstance(obj, (np.integer,)):
         return int(obj)
     elif isinstance(obj, (np.floating,)):
-        return float(obj)
+        val = float(obj)
+        if pd.isna(val):
+            return None
+        return val
+    elif isinstance(obj, float) and pd.isna(obj):
+        return None
     elif isinstance(obj, np.ndarray):
         return obj.tolist()
     elif isinstance(obj, np.bool_):
