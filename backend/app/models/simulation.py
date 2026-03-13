@@ -10,6 +10,7 @@ from app.database import Base
 class SimulationStatus(str, enum.Enum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
+    AWAITING_REVIEW = "AWAITING_REVIEW"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
 

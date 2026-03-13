@@ -23,6 +23,8 @@ class CompiledRule:
         for action in self.actions:
             if action.action_type == "REJECT":
                 result.loc[mask, "sim_decision"] = "REJECTED"
+                result.loc[mask, "sim_eligible_amount"] = 0.0
+                result.loc[mask, "sim_interest_rate"] = 0.0
             elif action.action_type == "SET":
                 target = action.target_field
                 # Map common field names to sim-prefixed columns

@@ -28,7 +28,7 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Plus, Eye, Trash2, Loader2, PlayCircle } from "lucide-react";
+import { Plus, Eye, Trash2, Loader2, PlayCircle, ClipboardCheck } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   COMPLETED: "bg-emerald-500",
@@ -163,6 +163,15 @@ export default function SimulationsPage() {
                               render={<Link href={`/simulations/${sim.id}`} />}
                             >
                               <Eye className="size-4" />
+                            </Button>
+                          )}
+                          {sim.status === "AWAITING_REVIEW" && (
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              render={<Link href={`/rules/${sim.rule_set_id}?simulationId=${sim.id}`} />}
+                            >
+                              <ClipboardCheck className="size-4" />
                             </Button>
                           )}
 

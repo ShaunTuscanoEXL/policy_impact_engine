@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
 import type { RuleSet, Rule } from "@/lib/types";
@@ -16,6 +16,7 @@ import {
   CheckCircle,
   Shield,
   GitBranch,
+  PlayCircle,
 } from "lucide-react";
 import { RuleTable } from "@/components/rules/rule-table";
 import {
@@ -35,7 +36,9 @@ const STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "des
 
 export default function RuleReviewPage() {
   const params = useParams<{ ruleSetId: string }>();
+  const searchParams = useSearchParams();
   const router = useRouter();
+  const simulationId = searchParams.get("simulationId");
 
   const [ruleSet, setRuleSet] = useState<RuleSet | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,10 +51,11 @@ export default function RuleReviewPage() {
   // Action loading states
   const [approving, setApproving] = useState(false);
   const [creatingVersion, setCreatingVersion] = useState(false);
+  const [runningSimulation, setRunningSimulation] = useState(false);
 
   const fetchRuleSet = useCallback(async () => {
     try {
-      const { data } = await api.get(`/rules/rule-sets/${params.ruleSetId}`);
+      const { data } = await api.get(`/rule-sets/${params.ruleSetId}`);
       setRuleSet(data);
     } catch {
       toast.error("Failed to load rule set.");
@@ -68,7 +72,7 @@ export default function RuleReviewPage() {
   const handleApproveAll = useCallback(async () => {
     setApproving(true);
     try {
-      await api.patch(`/rules/rule-sets/${params.ruleSetId}/approve`);
+      await api.patch(`/rule-sets/${params.ruleSetId}/approve`);
       toast.success("Rule set approved successfully.");
       fetchRuleSet();
     } catch (err: any) {
@@ -82,7 +86,7 @@ export default function RuleReviewPage() {
     setCreatingVersion(true);
     try {
       const { data } = await api.post(
-        `/rules/rule-sets/${params.ruleSetId}/version`
+        `/rule-sets/${params.ruleSetId}/version`
       );
       toast.success(`New version v${data.version} created.`);
       // Navigate to the new version
@@ -95,6 +99,20 @@ export default function RuleReviewPage() {
       setCreatingVersion(false);
     }
   }, [params.ruleSetId, router]);
+
+  const handleApproveAndRunSimulation = useCallback(async () => {
+    if (!simulationId) return;
+    setRunningSimulation(true);
+    try {
+      await api.post(`/pipeline/${simulationId}/approve`);
+      toast.success("Rules approved and simulation completed.");
+      router.push(`/simulations/${simulationId}`);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || "Failed to approve and run simulation.");
+    } finally {
+      setRunningSimulation(false);
+    }
+  }, [simulationId, router]);
 
   const handleEditRule = useCallback((rule: Rule) => {
     setEditingRule(rule);
@@ -130,7 +148,7 @@ export default function RuleReviewPage() {
         } else {
           // Add new rule
           await api.post(
-            `/rules/rule-sets/${params.ruleSetId}/rules`,
+            `/rule-sets/${params.ruleSetId}/rules`,
             formData
           );
           toast.success("Rule added.");
@@ -214,17 +232,31 @@ export default function RuleReviewPage() {
             )}
             Create New Version
           </Button>
-          <Button
-            onClick={handleApproveAll}
-            disabled={approving || ruleSet.status === "APPROVED"}
-          >
-            {approving ? (
-              <Loader2 className="mr-2 size-4 animate-spin" />
-            ) : (
-              <CheckCircle className="mr-2 size-4" />
-            )}
-            Approve All
-          </Button>
+          {simulationId && ruleSet.status !== "APPROVED" ? (
+            <Button
+              onClick={handleApproveAndRunSimulation}
+              disabled={runningSimulation}
+            >
+              {runningSimulation ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <PlayCircle className="mr-2 size-4" />
+              )}
+              Approve &amp; Run Simulation
+            </Button>
+          ) : (
+            <Button
+              onClick={handleApproveAll}
+              disabled={approving || ruleSet.status === "APPROVED"}
+            >
+              {approving ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <CheckCircle className="mr-2 size-4" />
+              )}
+              Approve All
+            </Button>
+          )}
         </div>
       </div>
 

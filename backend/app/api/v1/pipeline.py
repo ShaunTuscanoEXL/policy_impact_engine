@@ -251,6 +251,7 @@ async def pipeline_run(body: PipelineRunRequest, db: AsyncSession = Depends(get_
 
     # 10. Human review path: pause after validation
     await _save_extracted_rules(str(rule_set.id), extracted_rules, db)
+    await simulation_service.update_simulation_status(str(sim.id), SimulationStatus.AWAITING_REVIEW, db)
     await db.commit()
 
     return PipelineRunResponse(
@@ -274,7 +275,7 @@ async def pipeline_approve(simulation_id: str, db: AsyncSession = Depends(get_db
     if not sim:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
-    if sim.status not in (SimulationStatus.RUNNING, SimulationStatus.PENDING):
+    if sim.status not in (SimulationStatus.RUNNING, SimulationStatus.PENDING, SimulationStatus.AWAITING_REVIEW):
         if sim.status == SimulationStatus.COMPLETED:
             raise HTTPException(status_code=400, detail="Simulation already completed")
         if sim.status == SimulationStatus.FAILED:

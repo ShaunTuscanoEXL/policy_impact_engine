@@ -35,6 +35,7 @@ import {
   ArrowLeft,
   Loader2,
   Play,
+  CheckCircle,
 } from "lucide-react";
 import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
@@ -135,7 +136,10 @@ export default function BrdDetailPage() {
       updateSteps(3); // Validating
       await new Promise((r) => setTimeout(r, 500));
 
-      updateSteps(4); // Ready for Review
+      // Mark all steps completed
+      setPipelineSteps((prev) =>
+        prev.map((step) => ({ ...step, status: "completed" as const }))
+      );
       setPipelineResult(data);
       toast.success(
         `Pipeline completed. ${data.rules_extracted ?? 0} rules extracted.`
@@ -315,6 +319,31 @@ export default function BrdDetailPage() {
           {pipelineResult.error && (
             <div className="mt-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
               {pipelineResult.error}
+            </div>
+          )}
+          {pipelineResult.status === "AWAITING_REVIEW" && (
+            <div className="mt-4 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/30">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                {pipelineResult.rules_extracted} rule{pipelineResult.rules_extracted !== 1 ? "s" : ""} extracted and ready for review.
+              </p>
+              <Button
+                render={<Link href={`/rules/${pipelineResult.rule_set_id}?simulationId=${pipelineResult.simulation_id}`} />}
+              >
+                <CheckCircle className="mr-2 size-4" />
+                Review &amp; Approve Rules
+              </Button>
+            </div>
+          )}
+          {pipelineResult.status === "COMPLETED" && (
+            <div className="mt-4 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950/30">
+              <p className="text-sm text-emerald-800 dark:text-emerald-200">
+                Simulation completed successfully.
+              </p>
+              <Button
+                render={<Link href={`/simulations/${pipelineResult.simulation_id}`} />}
+              >
+                View Results
+              </Button>
             </div>
           )}
         </Card>

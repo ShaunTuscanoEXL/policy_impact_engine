@@ -94,7 +94,7 @@ export function SegmentTable({ segmentBreakdown }: SegmentTableProps) {
                           {data.affected}
                         </TableCell>
                         <TableCell className="text-right">
-                          {data.affected_percentage.toFixed(1)}%
+                          {(data.affected_pct ?? data.affected_percentage ?? 0).toFixed(1)}%
                         </TableCell>
                         <TableCell className="text-right">
                           <span

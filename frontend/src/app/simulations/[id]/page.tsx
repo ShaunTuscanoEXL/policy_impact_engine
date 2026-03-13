@@ -8,7 +8,7 @@ import type { Simulation, SimulationResult } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, AlertCircle, Loader2, CheckCircle } from "lucide-react";
 import { SummaryCards } from "@/components/impact/summary-cards";
 import { DecisionFlowChart } from "@/components/impact/decision-sankey";
 import { SegmentTable } from "@/components/impact/segment-table";
@@ -20,6 +20,7 @@ const statusVariant: Record<string, "default" | "secondary" | "destructive" | "o
   COMPLETED: "default",
   RUNNING: "secondary",
   PENDING: "outline",
+  AWAITING_REVIEW: "outline",
   FAILED: "destructive",
 };
 
@@ -120,8 +121,19 @@ export default function SimulationDetailPage() {
               ? "Simulation is still running. Results will appear here once complete."
               : simulation.status === "PENDING"
                 ? "Simulation is queued. Results will appear once processing begins."
-                : "No results available for this simulation."}
+                : simulation.status === "AWAITING_REVIEW"
+                  ? "Rules have been extracted and are ready for review."
+                  : "No results available for this simulation."}
           </p>
+          {simulation.status === "AWAITING_REVIEW" && (
+            <Link
+              href={`/rules/${simulation.rule_set_id}?simulationId=${simulation.id}`}
+              className={buttonVariants({ variant: "default" })}
+            >
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Review &amp; Approve Rules
+            </Link>
+          )}
         </div>
       ) : (
         <>

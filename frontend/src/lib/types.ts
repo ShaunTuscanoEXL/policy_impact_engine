@@ -64,7 +64,7 @@ export interface Simulation {
   dataset_id: string;
   rule_set_id: string;
   version: number;
-  status: "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
+  status: "PENDING" | "RUNNING" | "AWAITING_REVIEW" | "COMPLETED" | "FAILED";
   created_at: string;
   completed_at: string | null;
 }
