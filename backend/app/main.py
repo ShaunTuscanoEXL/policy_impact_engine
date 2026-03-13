@@ -1,5 +1,9 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from app.database import engine, Base
 from app.api.v1.brds import router as brds_router
 from app.api.v1.datasets import router as datasets_router
 from app.api.v1.simulations import router as simulations_router
@@ -9,7 +13,19 @@ from app.api.v1.pipeline import router as pipeline_router
 from app.api.v1.export import router as export_router
 from app.api.v1.dashboard import router as dashboard_router
 
-app = FastAPI(title="Policy Impact Engine", version="0.1.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Import all models so Base.metadata knows about them
+    import app.models.brd  # noqa: F401
+    import app.models.dataset  # noqa: F401
+    import app.models.rule  # noqa: F401
+    import app.models.simulation  # noqa: F401
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+
+
+app = FastAPI(title="Policy Impact Engine", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
