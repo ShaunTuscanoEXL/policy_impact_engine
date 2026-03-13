@@ -14,10 +14,6 @@ import { DecisionFlowChart } from "@/components/impact/decision-sankey";
 import { SegmentTable } from "@/components/impact/segment-table";
 import { FinancialPanel } from "@/components/impact/financial-panel";
 
-interface SimulationWithResults extends Simulation {
-  results: SimulationResult[];
-}
-
 const statusVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   COMPLETED: "default",
   RUNNING: "secondary",
@@ -29,7 +25,8 @@ export default function SimulationDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
 
-  const [simulation, setSimulation] = useState<SimulationWithResults | null>(null);
+  const [simulation, setSimulation] = useState<Simulation | null>(null);
+  const [result, setResult] = useState<SimulationResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,8 +34,12 @@ export default function SimulationDetailPage() {
     async function fetchSimulation() {
       try {
         setLoading(true);
-        const { data } = await api.get<SimulationWithResults>(`/simulations/${id}`);
-        setSimulation(data);
+        const [simRes, resultsRes] = await Promise.all([
+          api.get<Simulation>(`/simulations/${id}`),
+          api.get<SimulationResult[]>(`/simulations/${id}/results`).catch(() => null),
+        ]);
+        setSimulation(simRes.data);
+        setResult(resultsRes?.data?.[0] ?? null);
       } catch (err: any) {
         setError(err?.response?.data?.detail || "Failed to load simulation.");
       } finally {
@@ -69,7 +70,6 @@ export default function SimulationDetailPage() {
     );
   }
 
-  const result = simulation.results?.[0];
   const summary = result?.summary_stats;
 
   return (

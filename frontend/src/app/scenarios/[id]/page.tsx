@@ -41,7 +41,7 @@ export default function ScenarioDetailPage() {
             ]);
             return {
               simulation: simRes.data,
-              result: resultRes?.data ?? null,
+              result: resultRes?.data?.[0] ?? null,
             };
           })
         );

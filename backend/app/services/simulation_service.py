@@ -31,17 +31,25 @@ async def list_simulations(db: AsyncSession) -> list[Simulation]:
 
 
 async def get_simulation(sim_id: str, db: AsyncSession) -> Simulation | None:
+    try:
+        parsed_id = uuid.UUID(sim_id)
+    except ValueError:
+        return None
     result = await db.execute(
         select(Simulation)
-        .where(Simulation.id == uuid.UUID(sim_id))
+        .where(Simulation.id == parsed_id)
         .options(selectinload(Simulation.results))
     )
     return result.scalar_one_or_none()
 
 
 async def get_simulation_results(sim_id: str, db: AsyncSession) -> list[SimulationResult]:
+    try:
+        parsed_id = uuid.UUID(sim_id)
+    except ValueError:
+        return []
     result = await db.execute(
-        select(SimulationResult).where(SimulationResult.simulation_id == uuid.UUID(sim_id))
+        select(SimulationResult).where(SimulationResult.simulation_id == parsed_id)
     )
     return list(result.scalars().all())
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from pathlib import Path
@@ -187,9 +188,10 @@ async def pipeline_run(body: PipelineRunRequest, db: AsyncSession = Depends(get_
     # 6. Update simulation to RUNNING
     await simulation_service.update_simulation_status(str(sim.id), SimulationStatus.RUNNING, db)
 
-    # 7. Run the pipeline (synchronous / CPU-bound — Celery in Phase 6)
+    # 7. Run the pipeline in a thread pool to avoid blocking the event loop
     try:
-        result = run_pipeline(
+        result = await asyncio.to_thread(
+            run_pipeline,
             brd_content=brd_content,
             brd_filename=brd.filename,
             dataset_df=dataset_df,
@@ -324,10 +326,10 @@ async def pipeline_approve(simulation_id: str, db: AsyncSession = Depends(get_db
     else:
         dataset_df = pd.read_json(dataset_path)
 
-    # Run simulation
+    # Run simulation in a thread pool to avoid blocking the event loop
     await simulation_service.update_simulation_status(simulation_id, SimulationStatus.RUNNING, db)
     try:
-        sim_output = run_simulation(dataset_df, compiled)
+        sim_output = await asyncio.to_thread(run_simulation, dataset_df, compiled)
     except Exception as exc:
         logger.exception("Simulation failed during approval")
         await simulation_service.update_simulation_status(simulation_id, SimulationStatus.FAILED, db)

@@ -13,9 +13,13 @@ async def list_rule_sets(db: AsyncSession) -> list[RuleSet]:
 
 
 async def get_rule_set(rule_set_id: str, db: AsyncSession) -> RuleSet | None:
+    try:
+        parsed_id = uuid.UUID(rule_set_id)
+    except ValueError:
+        return None
     result = await db.execute(
         select(RuleSet)
-        .where(RuleSet.id == uuid.UUID(rule_set_id))
+        .where(RuleSet.id == parsed_id)
         .options(selectinload(RuleSet.rules))
     )
     return result.scalar_one_or_none()
@@ -67,7 +71,11 @@ async def create_rule_set_version(rule_set_id: str, db: AsyncSession) -> RuleSet
 
 
 async def update_rule(rule_id: str, updates: dict, db: AsyncSession) -> Rule | None:
-    result = await db.execute(select(Rule).where(Rule.id == uuid.UUID(rule_id)))
+    try:
+        parsed_id = uuid.UUID(rule_id)
+    except ValueError:
+        return None
+    result = await db.execute(select(Rule).where(Rule.id == parsed_id))
     rule = result.scalar_one_or_none()
     if not rule:
         return None
@@ -80,7 +88,11 @@ async def update_rule(rule_id: str, updates: dict, db: AsyncSession) -> Rule | N
 
 
 async def delete_rule(rule_id: str, db: AsyncSession) -> bool:
-    result = await db.execute(select(Rule).where(Rule.id == uuid.UUID(rule_id)))
+    try:
+        parsed_id = uuid.UUID(rule_id)
+    except ValueError:
+        return False
+    result = await db.execute(select(Rule).where(Rule.id == parsed_id))
     rule = result.scalar_one_or_none()
     if not rule:
         return False

@@ -36,8 +36,8 @@ def compare_results(baseline_df: pd.DataFrame, simulated_df: pd.DataFrame, confl
         "increased": int((amount_delta > 0).sum()),
         "decreased": int((amount_delta < 0).sum()),
         "unchanged": int((amount_delta == 0).sum()),
-        "avg_delta": round(float(amount_delta.mean()), 2),
-        "total_delta": round(float(amount_delta.sum()), 2),
+        "avg_delta": round(float(amount_delta.mean(skipna=True) or 0), 2),
+        "total_delta": round(float(amount_delta.sum(skipna=True) or 0), 2),
     }
 
     # Rate changes
@@ -83,7 +83,7 @@ def _build_segment_breakdown(baseline_df, simulated_df, affected):
     segments = {}
 
     # Bureau score bands
-    bins = [0, 650, 700, 720, 750, 800, 900]
+    bins = [0, 650, 700, 720, 750, 800, 1000]
     labels = ["<650", "650-699", "700-719", "720-749", "750-799", "800+"]
     baseline_df = baseline_df.copy()
     baseline_df["bureau_score_band"] = pd.cut(baseline_df["bureau_score"], bins=bins, labels=labels, right=False)

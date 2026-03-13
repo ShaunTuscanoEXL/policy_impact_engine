@@ -23,8 +23,17 @@ async def upload_dataset(
     upload_dir.mkdir(parents=True, exist_ok=True)
     file_path = upload_dir / f"{file_id}{file_ext}"
 
+    max_bytes = settings.max_upload_size_mb * 1024 * 1024
+    total_bytes = 0
     with open(file_path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
+        while chunk := file.file.read(8192):
+            total_bytes += len(chunk)
+            if total_bytes > max_bytes:
+                f.close()
+                file_path.unlink(missing_ok=True)
+                from fastapi import HTTPException
+                raise HTTPException(status_code=413, detail=f"File exceeds {settings.max_upload_size_mb}MB limit")
+            f.write(chunk)
 
     # Read with Pandas for profiling
     if file_type == DatasetFileType.CSV:
@@ -105,8 +114,12 @@ async def list_datasets(db: AsyncSession) -> list[Dataset]:
 
 
 async def get_dataset(dataset_id: str, db: AsyncSession) -> Dataset | None:
+    try:
+        parsed_id = uuid.UUID(dataset_id)
+    except ValueError:
+        return None
     result = await db.execute(
-        select(Dataset).where(Dataset.id == uuid.UUID(dataset_id))
+        select(Dataset).where(Dataset.id == parsed_id)
     )
     return result.scalar_one_or_none()
 

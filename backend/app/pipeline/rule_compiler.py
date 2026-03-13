@@ -32,14 +32,26 @@ class CompiledRule:
                     target = "sim_eligible_amount"
                 elif target == "interest_rate":
                     target = "sim_interest_rate"
-                result.loc[mask, target] = action.value
+                set_value = action.value
+                if target in ("sim_eligible_amount", "sim_interest_rate") and isinstance(set_value, str):
+                    try:
+                        set_value = float(set_value)
+                    except ValueError:
+                        pass
+                result.loc[mask, target] = set_value
             elif action.action_type == "ADJUST":
                 target = action.target_field
                 if target == "interest_rate":
                     target = "sim_interest_rate"
                 elif target == "eligible_amount":
                     target = "sim_eligible_amount"
-                result.loc[mask, target] = result.loc[mask, target] + action.value
+                adjust_value = action.value
+                if isinstance(adjust_value, str):
+                    try:
+                        adjust_value = float(adjust_value)
+                    except ValueError:
+                        continue
+                result.loc[mask, target] = result.loc[mask, target] + adjust_value
             elif action.action_type == "FLAG":
                 flag_col = f"flag_{action.target_field}"
                 if flag_col not in result.columns:

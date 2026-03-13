@@ -27,8 +27,12 @@ async def list_scenarios(db: AsyncSession) -> list[Scenario]:
 
 
 async def get_scenario(scenario_id: str, db: AsyncSession) -> Scenario | None:
+    try:
+        parsed_id = uuid.UUID(scenario_id)
+    except ValueError:
+        return None
     result = await db.execute(
-        select(Scenario).where(Scenario.id == uuid.UUID(scenario_id))
+        select(Scenario).where(Scenario.id == parsed_id)
     )
     return result.scalar_one_or_none()
 

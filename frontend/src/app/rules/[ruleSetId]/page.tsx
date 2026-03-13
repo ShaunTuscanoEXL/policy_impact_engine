@@ -66,7 +66,7 @@ export default function RuleReviewPage() {
   const handleApproveAll = useCallback(async () => {
     setApproving(true);
     try {
-      await api.post(`/rules/rule-sets/${params.ruleSetId}/approve`);
+      await api.patch(`/rules/rule-sets/${params.ruleSetId}/approve`);
       toast.success("Rule set approved successfully.");
       fetchRuleSet();
     } catch (err: any) {
@@ -123,7 +123,7 @@ export default function RuleReviewPage() {
       try {
         if (editingRule) {
           // Update existing rule
-          await api.put(`/rules/${editingRule.id}`, formData);
+          await api.patch(`/rules/${editingRule.id}`, formData);
           toast.success("Rule updated.");
         } else {
           // Add new rule

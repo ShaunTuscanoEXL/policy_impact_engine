@@ -17,8 +17,17 @@ async def upload_brd(file: UploadFile, db: AsyncSession) -> BrdDocument:
     upload_dir.mkdir(parents=True, exist_ok=True)
     file_path = upload_dir / f"{file_id}{file_ext}"
 
+    max_bytes = settings.max_upload_size_mb * 1024 * 1024
+    total_bytes = 0
     with open(file_path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
+        while chunk := file.file.read(8192):
+            total_bytes += len(chunk)
+            if total_bytes > max_bytes:
+                f.close()
+                file_path.unlink(missing_ok=True)
+                from fastapi import HTTPException
+                raise HTTPException(status_code=413, detail=f"File exceeds {settings.max_upload_size_mb}MB limit")
+            f.write(chunk)
 
     brd = BrdDocument(
         filename=file.filename,
@@ -37,7 +46,11 @@ async def list_brds(db: AsyncSession) -> list[BrdDocument]:
 
 
 async def get_brd(brd_id: str, db: AsyncSession) -> BrdDocument | None:
-    result = await db.execute(select(BrdDocument).where(BrdDocument.id == uuid.UUID(brd_id)))
+    try:
+        parsed_id = uuid.UUID(brd_id)
+    except ValueError:
+        return None
+    result = await db.execute(select(BrdDocument).where(BrdDocument.id == parsed_id))
     return result.scalar_one_or_none()
 
 
