@@ -48,7 +48,7 @@ export function ImpactChart({ simulations }: ImpactChartProps) {
                   <stop offset="100%" stopColor="#0070f3" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.04)" />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-foreground/[0.04]" />
               <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#a1a1a1" />
               <YAxis hide />
               <Tooltip
