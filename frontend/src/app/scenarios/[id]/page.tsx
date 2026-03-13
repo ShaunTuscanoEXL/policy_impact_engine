@@ -73,10 +73,17 @@ export default function ScenarioDetailPage() {
 
   if (!scenario) return null;
 
-  const chartResults = simData.map((s) => ({
-    name: s.simulation.scenario_name,
-    result: s.result,
-  }));
+  const chartResults = simData.map((s, i) => {
+    // Deduplicate names for chart keys by appending index if needed
+    const baseName = s.simulation.scenario_name;
+    const isDuplicate = simData.some(
+      (other, j) => j !== i && other.simulation.scenario_name === baseName
+    );
+    return {
+      name: isDuplicate ? `${baseName} (#${i + 1})` : baseName,
+      result: s.result,
+    };
+  });
 
   return (
     <PageTransition>
@@ -107,9 +114,9 @@ export default function ScenarioDetailPage() {
             <span className="text-sm text-muted-foreground">
               Comparing:
             </span>
-            {simData.map((s) => (
-              <Badge key={s.simulation.id} variant="secondary">
-                {s.simulation.scenario_name}
+            {chartResults.map((r, i) => (
+              <Badge key={simData[i].simulation.id} variant="secondary">
+                {r.name}
               </Badge>
             ))}
           </div>

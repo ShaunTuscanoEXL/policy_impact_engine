@@ -16,13 +16,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+interface SegmentData {
+  total: number;
+  affected: number;
+  affected_pct: number;
+}
+
 interface SegmentBreakdown {
-  [segment: string]: {
-    total: number;
-    affected: number;
-    affected_percentage: number;
-    impact: string;
-  };
+  [segment: string]: SegmentData;
 }
 
 interface SegmentTableProps {
@@ -94,19 +95,19 @@ export function SegmentTable({ segmentBreakdown }: SegmentTableProps) {
                           {data.affected}
                         </TableCell>
                         <TableCell className="text-right">
-                          {(data.affected_pct ?? data.affected_percentage ?? 0).toFixed(1)}%
+                          {(data.affected_pct ?? 0).toFixed(1)}%
                         </TableCell>
                         <TableCell className="text-right">
                           <span
                             className={
-                              data.impact === "positive"
-                                ? "text-green-600"
-                                : data.impact === "negative"
-                                  ? "text-red-600"
+                              data.affected_pct > 30
+                                ? "text-red-600"
+                                : data.affected_pct > 0
+                                  ? "text-amber-600"
                                   : "text-muted-foreground"
                             }
                           >
-                            {data.impact}
+                            {data.affected_pct > 30 ? "High" : data.affected_pct > 0 ? "Medium" : "None"}
                           </span>
                         </TableCell>
                       </TableRow>
