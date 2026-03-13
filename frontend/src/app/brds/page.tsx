@@ -29,7 +29,7 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import { FileText, Eye, Trash2, Loader2 } from "lucide-react";
+import { FileText, ArrowRight, Trash2, Loader2 } from "lucide-react";
 
 export default function BrdsPage() {
   const [brds, setBrds] = useState<BrdDocument[]>([]);
@@ -157,13 +157,14 @@ export default function BrdsPage() {
                         })}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end gap-2">
                           <Button
-                            variant="ghost"
-                            size="icon-sm"
+                            variant="outline"
+                            size="sm"
                             render={<Link href={`/brds/${brd.id}`} />}
                           >
-                            <Eye className="size-4" />
+                            Run Pipeline
+                            <ArrowRight className="size-3.5" />
                           </Button>
 
                           <Dialog
