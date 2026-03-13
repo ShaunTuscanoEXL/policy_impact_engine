@@ -88,18 +88,18 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" asChild>
-            <Link href="/brds">
+          <Link href="/brds">
+            <Button variant="outline">
               <Upload className="mr-2 h-4 w-4" />
               Upload BRD
-            </Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/datasets">
+            </Button>
+          </Link>
+          <Link href="/datasets">
+            <Button variant="outline">
               <Upload className="mr-2 h-4 w-4" />
               Upload Dataset
-            </Link>
-          </Button>
+            </Button>
+          </Link>
         </div>
       </div>
 

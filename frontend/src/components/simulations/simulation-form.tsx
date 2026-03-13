@@ -136,7 +136,7 @@ export function SimulationForm() {
           ) : (
             <Select
               value={selectedBrdId}
-              onValueChange={setSelectedBrdId}
+              onValueChange={(v) => setSelectedBrdId(v ?? "")}
             >
               <SelectTrigger className="w-full" id="brd-select">
                 <SelectValue placeholder="Select a BRD document" />
@@ -169,7 +169,7 @@ export function SimulationForm() {
           ) : (
             <Select
               value={selectedDatasetId}
-              onValueChange={setSelectedDatasetId}
+              onValueChange={(v) => setSelectedDatasetId(v ?? "")}
             >
               <SelectTrigger className="w-full" id="dataset-select">
                 <SelectValue placeholder="Select a dataset" />
