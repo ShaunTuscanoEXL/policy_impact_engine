@@ -1,0 +1,60 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: policy_impact_engine
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/policy_impact_engine
+      REDIS_URL: redis://redis:6379/0
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    volumes:
+      - upload_data:/app/data
+
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A app.celery_app worker --loglevel=info
+    depends_on:
+      - db
+      - redis
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/policy_impact_engine
+      REDIS_URL: redis://redis:6379/0
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:8000/api/v1
+
+volumes:
+  postgres_data:
+  upload_data:

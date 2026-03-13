@@ -7,6 +7,7 @@ from app.api.v1.scenarios import router as scenarios_router
 from app.api.v1.rules import router as rules_router
 from app.api.v1.pipeline import router as pipeline_router
 from app.api.v1.export import router as export_router
+from app.api.v1.dashboard import router as dashboard_router
 
 app = FastAPI(title="Policy Impact Engine", version="0.1.0")
 
@@ -25,6 +26,7 @@ app.include_router(scenarios_router, prefix="/api/v1")
 app.include_router(rules_router, prefix="/api/v1")
 app.include_router(pipeline_router, prefix="/api/v1")
 app.include_router(export_router, prefix="/api/v1")
+app.include_router(dashboard_router, prefix="/api/v1")
 
 
 @app.get("/health")
