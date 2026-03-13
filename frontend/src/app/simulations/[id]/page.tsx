@@ -8,7 +8,8 @@ import type { Simulation, SimulationResult } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, AlertCircle, Loader2, CheckCircle } from "lucide-react";
+import { ArrowLeft, AlertCircle, Loader2, CheckCircle, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SummaryCards } from "@/components/impact/summary-cards";
 import { DecisionFlowChart } from "@/components/impact/decision-sankey";
 import { SegmentTable } from "@/components/impact/segment-table";
@@ -83,8 +84,8 @@ export default function SimulationDetailPage() {
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {simulation.scenario_name}
+            <h1 className="text-2xl font-bold tracking-tight">
+              <span className="text-gradient">{simulation.scenario_name}</span>
             </h1>
             <Badge variant={statusVariant[simulation.status] ?? "outline"}>
               {simulation.status}
@@ -162,9 +163,86 @@ export default function SimulationDetailPage() {
               <FinancialPanel financialImpact={summary.financial_impact} />
               </motion.div>
             )}
+
+          {/* Amount Changes */}
+          {summary.amount_changes && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+              <AmountChangesPanel amountChanges={summary.amount_changes} />
+            </motion.div>
+          )}
         </>
       )}
     </div>
     </PageTransition>
   );
+}
+
+function AmountChangesPanel({ amountChanges }: { amountChanges: Record<string, any> }) {
+  const items = [
+    {
+      label: "Amount Increased",
+      count: amountChanges.increased ?? 0,
+      detail: amountChanges.total_increase != null
+        ? formatCompactCurrency(amountChanges.total_increase)
+        : null,
+      icon: TrendingUp,
+      color: "text-green-600",
+      bgColor: "bg-green-100 dark:bg-green-900/30",
+    },
+    {
+      label: "Amount Decreased",
+      count: amountChanges.decreased ?? 0,
+      detail: amountChanges.total_decrease != null
+        ? formatCompactCurrency(amountChanges.total_decrease)
+        : null,
+      icon: TrendingDown,
+      color: "text-red-600",
+      bgColor: "bg-red-100 dark:bg-red-900/30",
+    },
+    {
+      label: "Unchanged",
+      count: amountChanges.unchanged ?? 0,
+      detail: null,
+      icon: Minus,
+      color: "text-muted-foreground",
+      bgColor: "bg-muted",
+    },
+  ];
+
+  return (
+    <Card className="card-elevated border-border/40">
+      <CardHeader>
+        <CardTitle className="text-base">Amount Changes</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4 grid-cols-3">
+          {items.map((item) => {
+            const Icon = item.icon;
+            return (
+              <div key={item.label} className="flex items-center gap-3">
+                <div className={`rounded-md p-2 ${item.bgColor}`}>
+                  <Icon className={`h-4 w-4 ${item.color}`} />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">{item.label}</p>
+                  <p className="text-lg font-semibold">{item.count}</p>
+                  {item.detail && (
+                    <p className={`text-xs ${item.color}`}>{item.detail}</p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function formatCompactCurrency(value: number): string {
+  const abs = Math.abs(value);
+  const prefix = value >= 0 ? "+" : "-";
+  if (abs >= 1_000_000) return `${prefix}$${(abs / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `${prefix}$${(abs / 1_000).toFixed(1)}K`;
+  return `${prefix}$${abs.toFixed(0)}`;
 }

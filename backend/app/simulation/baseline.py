@@ -18,6 +18,20 @@ RATE_TIERS = [
 DEFAULT_RATE = 0.175  # Below 700
 
 
+def assign_eligible_amount(row: pd.Series) -> float:
+    """Calculate eligible amount for a single approved applicant."""
+    return float(min(row["desired_amount"], row["monthly_income"] * 12 * 0.35))
+
+
+def assign_interest_rate(row: pd.Series) -> float:
+    """Calculate interest rate for a single applicant based on bureau score."""
+    score = row["bureau_score"]
+    for min_score, max_score, rate in RATE_TIERS:
+        if min_score <= score <= max_score:
+            return rate
+    return DEFAULT_RATE
+
+
 def apply_baseline(df: pd.DataFrame) -> pd.DataFrame:
     """Apply current production rules to establish baseline state."""
     result = df.copy()

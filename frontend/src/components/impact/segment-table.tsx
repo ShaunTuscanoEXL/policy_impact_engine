@@ -15,11 +15,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { PieChart } from "lucide-react";
 
 interface SegmentData {
   total: number;
   affected: number;
   affected_pct: number;
+  exposure_delta?: number;
+  interest_income_delta?: number;
 }
 
 interface SegmentBreakdown {
@@ -44,9 +47,12 @@ export function SegmentTable({ segmentBreakdown }: SegmentTableProps) {
 
   if (availableTabs.length === 0) {
     return (
-      <Card className="border-border/50 shadow-sm">
+      <Card className="card-elevated border-border/40">
         <CardHeader>
-          <CardTitle>Segment Breakdown</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <PieChart className="size-5 text-violet-500" />
+            Segment Breakdown
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
@@ -58,7 +64,7 @@ export function SegmentTable({ segmentBreakdown }: SegmentTableProps) {
   }
 
   return (
-    <Card className="border-border/50 shadow-sm">
+    <Card className="card-elevated border-border/40">
       <CardHeader>
         <CardTitle>Segment Breakdown</CardTitle>
       </CardHeader>
@@ -76,17 +82,19 @@ export function SegmentTable({ segmentBreakdown }: SegmentTableProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Segment</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead className="text-right">Affected</TableHead>
-                    <TableHead className="text-right">Affected %</TableHead>
-                    <TableHead className="text-right">Impact</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-violet-500/20">Segment</TableHead>
+                    <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-violet-500/20">Total</TableHead>
+                    <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-violet-500/20">Affected</TableHead>
+                    <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-violet-500/20">Affected %</TableHead>
+                    <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-violet-500/20">Exposure Δ</TableHead>
+                    <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-violet-500/20">Interest Δ</TableHead>
+                    <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-violet-500/20">Impact</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {Object.entries(segmentBreakdown[tab.key]).map(
                     ([segment, data]) => (
-                      <TableRow key={segment}>
+                      <TableRow key={segment} className="cursor-pointer transition-colors duration-150 hover:bg-accent/50">
                         <TableCell className="font-medium">{segment}</TableCell>
                         <TableCell className="text-right">
                           {data.total}
@@ -96,6 +104,28 @@ export function SegmentTable({ segmentBreakdown }: SegmentTableProps) {
                         </TableCell>
                         <TableCell className="text-right">
                           {(data.affected_pct ?? 0).toFixed(1)}%
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className={
+                            (data.exposure_delta ?? 0) > 0
+                              ? "text-green-600"
+                              : (data.exposure_delta ?? 0) < 0
+                                ? "text-red-600"
+                                : "text-muted-foreground"
+                          }>
+                            {formatCompact(data.exposure_delta ?? 0)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className={
+                            (data.interest_income_delta ?? 0) > 0
+                              ? "text-green-600"
+                              : (data.interest_income_delta ?? 0) < 0
+                                ? "text-red-600"
+                                : "text-muted-foreground"
+                          }>
+                            {formatCompact(data.interest_income_delta ?? 0)}
+                          </span>
                         </TableCell>
                         <TableCell className="text-right">
                           <span
@@ -121,4 +151,13 @@ export function SegmentTable({ segmentBreakdown }: SegmentTableProps) {
       </CardContent>
     </Card>
   );
+}
+
+function formatCompact(value: number): string {
+  const abs = Math.abs(value);
+  const prefix = value >= 0 ? "+" : "-";
+  if (abs >= 1_000_000) return `${prefix}$${(abs / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `${prefix}$${(abs / 1_000).toFixed(1)}K`;
+  if (abs === 0) return "$0";
+  return `${prefix}$${abs.toFixed(0)}`;
 }

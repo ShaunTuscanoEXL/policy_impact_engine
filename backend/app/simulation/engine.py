@@ -58,5 +58,20 @@ def run_simulation(
                     "decision_flips": int(flipped.sum()),
                 })
 
+    # Phase 2b: Auto-calculate eligible_amount for REJECTED → APPROVED transitions
+    flipped_to_approved = (
+        (simulated_df["baseline_decision"] == "REJECTED")
+        & (simulated_df["sim_decision"] == "APPROVED")
+    )
+    if flipped_to_approved.any():
+        from app.simulation.baseline import assign_eligible_amount, assign_interest_rate
+
+        simulated_df.loc[flipped_to_approved, "sim_eligible_amount"] = (
+            simulated_df.loc[flipped_to_approved].apply(assign_eligible_amount, axis=1)
+        )
+        simulated_df.loc[flipped_to_approved, "sim_interest_rate"] = (
+            simulated_df.loc[flipped_to_approved].apply(assign_interest_rate, axis=1)
+        )
+
     # Phase 3: Compare
     return compare_results(baseline_df, simulated_df, conflict_log)

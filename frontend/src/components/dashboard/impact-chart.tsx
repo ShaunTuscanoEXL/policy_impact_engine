@@ -2,31 +2,29 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import type { Simulation } from "@/lib/types";
+import { TrendingUp } from "lucide-react";
 
-interface ImpactChartProps {
-  simulations: Simulation[];
+interface ChartPoint {
+  name: string;
+  date: string;
+  impact: number;
 }
 
-export function ImpactChart({ simulations }: ImpactChartProps) {
-  // Generate chart data from simulations (use index as x-axis if no results available)
-  const data = simulations
-    .filter((s) => s.status === "COMPLETED")
-    .slice(0, 10)
-    .reverse()
-    .map((s, i) => ({
-      name: `Sim ${i + 1}`,
-      date: new Date(s.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-    }));
+interface ImpactChartProps {
+  data: ChartPoint[];
+}
 
-  // If no data, show a placeholder
+export function ImpactChart({ data }: ImpactChartProps) {
   if (data.length === 0) {
     return (
-      <Card className="border-border/50 shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Impact Trend</CardTitle>
+      <Card className="card-elevated border-border/40">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <TrendingUp className="size-4 text-emerald-500" />
+            Impact Trend
+          </CardTitle>
         </CardHeader>
-        <CardContent className="flex h-[200px] items-center justify-center">
+        <CardContent className="flex h-[250px] items-center justify-center">
           <p className="text-sm text-muted-foreground">No completed simulations yet</p>
         </CardContent>
       </Card>
@@ -34,37 +32,46 @@ export function ImpactChart({ simulations }: ImpactChartProps) {
   }
 
   return (
-    <Card className="border-border/50 shadow-sm">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">Recent Simulations</CardTitle>
+    <Card className="card-elevated border-border/40">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <TrendingUp className="size-4 text-emerald-500" />
+          Impact Trend
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[200px]">
+        <div className="h-[250px]">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>
               <defs>
-                <linearGradient id="blueGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#0070f3" stopOpacity={0.2} />
-                  <stop offset="100%" stopColor="#0070f3" stopOpacity={0} />
+                <linearGradient id="impactGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.2} />
+                  <stop offset="100%" stopColor="var(--primary)" stopOpacity={0.01} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-foreground/[0.04]" />
-              <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#a1a1a1" />
-              <YAxis hide />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+              <XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} stroke="transparent" />
+              <YAxis
+                tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                stroke="transparent"
+                tickFormatter={(v) => `${v}%`}
+              />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#171717",
-                  border: "none",
-                  borderRadius: "8px",
-                  color: "#ededed",
+                  backgroundColor: "var(--card)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "10px",
+                  color: "var(--foreground)",
                   fontSize: "12px",
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
                 }}
+                formatter={(value) => [`${Number(value).toFixed(1)}%`, "Affected"]}
               />
               <Area
                 type="monotone"
-                dataKey="date"
-                stroke="#0070f3"
-                fill="url(#blueGradient)"
+                dataKey="impact"
+                stroke="var(--primary)"
+                fill="url(#impactGradient)"
                 strokeWidth={2}
               />
             </AreaChart>

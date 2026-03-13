@@ -38,15 +38,15 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
       bgColor: "bg-green-100 dark:bg-green-900/30",
     },
     {
-      label: "Financial Impact",
-      value: formatCurrency(summary.financial_impact.exposure_change ?? 0),
+      label: "Net Revenue Impact",
+      value: formatCurrency(summary.financial_impact.net_revenue_delta ?? summary.financial_impact.exposure_change ?? 0),
       icon: DollarSign,
       color:
-        (summary.financial_impact.exposure_change ?? 0) >= 0
+        (summary.financial_impact.net_revenue_delta ?? summary.financial_impact.exposure_change ?? 0) >= 0
           ? "text-green-600"
           : "text-red-600",
       bgColor:
-        (summary.financial_impact.exposure_change ?? 0) >= 0
+        (summary.financial_impact.net_revenue_delta ?? summary.financial_impact.exposure_change ?? 0) >= 0
           ? "bg-green-100 dark:bg-green-900/30"
           : "bg-red-100 dark:bg-red-900/30",
     },
@@ -59,7 +59,7 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
         return (
           <StaggerItem key={card.label}>
           <HoverCard>
-          <Card className="border-border/50 shadow-sm">
+          <Card className="card-elevated border-border/40">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {card.label}

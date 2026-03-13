@@ -68,7 +68,7 @@ export default function DatasetDetailPage() {
 
   if (!dataset) return null;
 
-  const fileType = dataset.file_type.toUpperCase();
+  const fileType = (dataset.file_type ?? "unknown").toUpperCase();
   const columnSchema = dataset.column_schema ?? {};
   const schemaEntries = Object.entries(columnSchema);
 
@@ -87,9 +87,11 @@ export default function DatasetDetailPage() {
         </Button>
         <div>
           <div className="flex items-center gap-3">
-            <Database className="size-6 text-muted-foreground" />
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {dataset.name}
+            <div className="icon-badge bg-emerald-100 dark:bg-emerald-900/30">
+              <Database className="size-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight">
+              <span className="text-gradient">{dataset.name}</span>
             </h1>
             <Badge variant={fileType.includes("CSV") ? "secondary" : "outline"}>
               {fileType.includes("CSV") ? "CSV" : "JSON"}
@@ -137,7 +139,7 @@ export default function DatasetDetailPage() {
 
         {/* Schema Tab */}
         <TabsContent value="schema">
-          <Card className="border-border/50 shadow-sm">
+          <Card className="border-border/40 shadow-sm">
             {schemaEntries.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <FileSpreadsheet className="size-10 text-muted-foreground/40" />

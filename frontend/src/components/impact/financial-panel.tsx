@@ -1,46 +1,75 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingDown, TrendingUp, DollarSign } from "lucide-react";
+import {
+  TrendingDown,
+  TrendingUp,
+  DollarSign,
+  ShieldAlert,
+  Receipt,
+  Landmark,
+} from "lucide-react";
 
 interface FinancialPanelProps {
   financialImpact: Record<string, any>;
 }
 
 export function FinancialPanel({ financialImpact }: FinancialPanelProps) {
-  const baselineExposure = financialImpact.total_baseline_exposure ?? 0;
-  const simulatedExposure = financialImpact.total_simulated_exposure ?? 0;
-  const exposureChange = financialImpact.exposure_change ?? simulatedExposure - baselineExposure;
+  const fi = financialImpact;
 
-  const revenueBaseline = financialImpact.estimated_revenue_baseline ?? 0;
-  const revenueSimulated = financialImpact.estimated_revenue_simulated ?? 0;
-  const revenueDelta = revenueSimulated - revenueBaseline;
-
-  const avgRateBaseline = financialImpact.avg_rate_baseline ?? 0;
-  const avgRateSimulated = financialImpact.avg_rate_simulated ?? 0;
-  const rateDelta = avgRateSimulated - avgRateBaseline;
+  const exposureChange = fi.exposure_change ?? 0;
+  const interestDelta = fi.interest_income_delta ?? 0;
+  const expectedLossDelta = fi.expected_loss_delta ?? 0;
+  const originationDelta = fi.origination_fee_delta ?? (fi.revenue_impact ?? 0);
+  const netRevenueDelta = fi.net_revenue_delta ?? 0;
+  const rateDelta = (fi.avg_rate_simulated ?? 0) - (fi.avg_rate_baseline ?? 0);
 
   const cards = [
     {
       title: "Total Exposure Change",
-      baseline: formatCurrency(baselineExposure),
-      simulated: formatCurrency(simulatedExposure),
+      baseline: formatCurrency(fi.total_baseline_exposure ?? 0),
+      simulated: formatCurrency(fi.total_simulated_exposure ?? 0),
       delta: exposureChange,
       deltaFormatted: formatCurrency(exposureChange),
       icon: DollarSign,
     },
     {
-      title: "Revenue Impact",
-      baseline: formatCurrency(revenueBaseline),
-      simulated: formatCurrency(revenueSimulated),
-      delta: revenueDelta,
-      deltaFormatted: formatCurrency(revenueDelta),
-      icon: DollarSign,
+      title: "Interest Income Delta",
+      baseline: formatCurrency(fi.interest_income_baseline ?? 0),
+      simulated: formatCurrency(fi.interest_income_simulated ?? 0),
+      delta: interestDelta,
+      deltaFormatted: formatCurrency(interestDelta),
+      icon: interestDelta >= 0 ? TrendingUp : TrendingDown,
+    },
+    {
+      title: "Expected Loss Delta",
+      baseline: formatCurrency(fi.expected_loss_baseline ?? 0),
+      simulated: formatCurrency(fi.expected_loss_simulated ?? 0),
+      delta: expectedLossDelta,
+      deltaFormatted: formatCurrency(expectedLossDelta),
+      icon: ShieldAlert,
+      invertColor: true, // higher loss = bad
+    },
+    {
+      title: "Origination Fee Delta",
+      baseline: formatCurrency(fi.origination_fee_baseline ?? fi.estimated_revenue_baseline ?? 0),
+      simulated: formatCurrency(fi.origination_fee_simulated ?? fi.estimated_revenue_simulated ?? 0),
+      delta: originationDelta,
+      deltaFormatted: formatCurrency(originationDelta),
+      icon: Receipt,
+    },
+    {
+      title: "Net Revenue Delta",
+      baseline: formatCurrency(fi.net_revenue_baseline ?? 0),
+      simulated: formatCurrency(fi.net_revenue_simulated ?? 0),
+      delta: netRevenueDelta,
+      deltaFormatted: formatCurrency(netRevenueDelta),
+      icon: Landmark,
     },
     {
       title: "Average Rate Change",
-      baseline: `${avgRateBaseline.toFixed(2)}%`,
-      simulated: `${avgRateSimulated.toFixed(2)}%`,
+      baseline: `${(fi.avg_rate_baseline ?? 0).toFixed(2)}%`,
+      simulated: `${(fi.avg_rate_simulated ?? 0).toFixed(2)}%`,
       delta: rateDelta,
       deltaFormatted: `${rateDelta >= 0 ? "+" : ""}${rateDelta.toFixed(2)}%`,
       icon: rateDelta >= 0 ? TrendingUp : TrendingDown,
@@ -48,12 +77,13 @@ export function FinancialPanel({ financialImpact }: FinancialPanelProps) {
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
+    <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
       {cards.map((card) => {
         const Icon = card.icon;
-        const isPositive = card.delta >= 0;
+        const invertColor = "invertColor" in card && card.invertColor;
+        const isPositive = invertColor ? card.delta <= 0 : card.delta >= 0;
         return (
-          <Card key={card.title} className="border-border/50 shadow-sm">
+          <Card key={card.title} className="card-elevated border-border/40">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {card.title}
