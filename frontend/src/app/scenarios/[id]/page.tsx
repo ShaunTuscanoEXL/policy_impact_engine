@@ -100,9 +100,9 @@ export default function ScenarioDetailPage() {
         </Button>
         <div>
           <div className="flex items-center gap-3">
-            <GitCompare className="size-6 text-muted-foreground" />
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {scenario.name}
+            <GitCompare className="size-6 text-amber-500" />
+            <h1 className="text-2xl font-bold tracking-tight">
+              <span className="text-gradient">{scenario.name}</span>
             </h1>
           </div>
           {scenario.description && (
@@ -124,7 +124,7 @@ export default function ScenarioDetailPage() {
       </div>
 
       {simData.length < 2 ? (
-        <Card className="border-border/50 shadow-sm">
+        <Card className="card-elevated border-border/40">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <GitCompare className="size-10 text-muted-foreground/40" />
             <p className="mt-3 text-sm text-muted-foreground">

@@ -28,7 +28,7 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Plus, Eye, Trash2, Loader2, PlayCircle, ClipboardCheck } from "lucide-react";
+import { Plus, Trash2, Loader2, PlayCircle } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   COMPLETED: "bg-emerald-500",
@@ -87,10 +87,17 @@ export default function SimulationsPage() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs text-muted-foreground mb-4">Dashboard / Simulations</p>
-            <h1 className="text-2xl font-semibold tracking-tight">Simulations</h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Run and review policy impact simulations.
-            </p>
+            <div className="flex items-center gap-3">
+              <div className="icon-badge bg-violet-100 dark:bg-violet-900/30">
+                <PlayCircle className="size-5 text-violet-600 dark:text-violet-400" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight"><span className="text-gradient">Simulations</span></h1>
+                <p className="text-sm text-muted-foreground">
+                  Run and review policy impact simulations.
+                </p>
+              </div>
+            </div>
           </div>
           <Button render={<Link href="/simulations/new" />}>
             <Plus className="size-4" />
@@ -103,14 +110,14 @@ export default function SimulationsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <Card className="border-border/50 shadow-sm">
+          <Card className="card-elevated border-border/40">
             {loading ? (
               <div className="flex items-center justify-center py-16">
                 <Loader2 className="size-6 animate-spin text-muted-foreground" />
               </div>
             ) : simulations.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <PlayCircle className="size-10 text-muted-foreground/30" />
+                <PlayCircle className="size-12 text-muted-foreground/20" />
                 <p className="mt-3 text-sm text-muted-foreground">
                   No simulations yet. Run one to get started.
                 </p>
@@ -119,17 +126,17 @@ export default function SimulationsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Scenario Name</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Status</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Rule Set</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Dataset</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Created At</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Actions</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-violet-500/20">Scenario Name</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-violet-500/20">Status</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-violet-500/20">Rule Set</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-violet-500/20">Dataset</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-violet-500/20">Created At</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-violet-500/20 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {simulations.map((sim) => (
-                    <TableRow key={sim.id} className="group hover:bg-accent/50">
+                    <TableRow key={sim.id} className="group cursor-pointer transition-colors duration-150 hover:bg-accent/50">
                       <TableCell className="font-medium">
                         {sim.scenario_name}
                       </TableCell>
@@ -155,23 +162,23 @@ export default function SimulationsPage() {
                         })}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end gap-2">
                           {sim.status === "COMPLETED" && (
                             <Button
-                              variant="ghost"
-                              size="icon-sm"
+                              variant="default"
+                              size="sm"
                               render={<Link href={`/simulations/${sim.id}`} />}
                             >
-                              <Eye className="size-4" />
+                              View
                             </Button>
                           )}
                           {sim.status === "AWAITING_REVIEW" && (
                             <Button
-                              variant="ghost"
-                              size="icon-sm"
+                              variant="default"
+                              size="sm"
                               render={<Link href={`/rules/${sim.rule_set_id}?simulationId=${sim.id}`} />}
                             >
-                              <ClipboardCheck className="size-4" />
+                              Review
                             </Button>
                           )}
 

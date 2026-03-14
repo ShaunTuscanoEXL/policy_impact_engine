@@ -32,10 +32,10 @@ export function DeltaTable({ results }: DeltaTableProps) {
   const metrics: MetricRow[] = buildMetrics(results);
 
   return (
-    <Card className="border-border/50 shadow-sm">
+    <Card className="card-elevated border-border/40">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Trophy className="size-5" />
+          <Trophy className="size-5 text-amber-500" />
           Delta Comparison
         </CardTitle>
       </CardHeader>

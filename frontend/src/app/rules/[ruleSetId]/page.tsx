@@ -193,9 +193,9 @@ export default function RuleReviewPage() {
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <Shield className="size-6 text-muted-foreground" />
-              <h1 className="text-2xl font-semibold tracking-tight">
-                {ruleSet.name}
+              <Shield className="size-6 text-indigo-500" />
+              <h1 className="text-2xl font-bold tracking-tight">
+                <span className="text-gradient">{ruleSet.name}</span>
               </h1>
               <Badge variant="outline">v{ruleSet.version}</Badge>
               <Badge variant={STATUS_VARIANTS[ruleSet.status] ?? "secondary"}>
@@ -267,8 +267,8 @@ export default function RuleReviewPage() {
 
       {/* Rule Table */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-      <Card className="p-0 overflow-hidden border-border/50 shadow-sm">
-        <div className="flex items-center justify-between border-b px-4 py-3">
+      <Card className="card-elevated p-0 overflow-hidden border-border/40">
+        <div className="flex items-center justify-between border-b border-border/40 px-4 py-3">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Rules
           </h2>

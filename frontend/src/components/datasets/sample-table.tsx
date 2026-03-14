@@ -30,7 +30,7 @@ export function SampleTable({ sampleData }: SampleTableProps) {
   const rows = sampleData.slice(0, 10);
 
   return (
-    <div className="overflow-x-auto rounded-md border border-border/50 shadow-sm">
+    <div className="overflow-x-auto rounded-md border border-border/40 shadow-sm">
       <Table>
         <TableHeader>
           <TableRow>

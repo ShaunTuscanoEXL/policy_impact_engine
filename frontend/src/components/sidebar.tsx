@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -18,46 +18,56 @@ import {
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/brds", label: "BRDs", icon: FileText },
-  { href: "/datasets", label: "Datasets", icon: Database },
-  { href: "/simulations", label: "Simulations", icon: PlayCircle },
-  { href: "/scenarios", label: "Scenarios", icon: GitCompare },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, color: "text-blue-500" },
+  { href: "/brds", label: "BRDs", icon: FileText, color: "text-blue-500" },
+  { href: "/datasets", label: "Datasets", icon: Database, color: "text-emerald-500" },
+  { href: "/simulations", label: "Simulations", icon: PlayCircle, color: "text-violet-500" },
+  { href: "/scenarios", label: "Scenarios", icon: GitCompare, color: "text-amber-500" },
 ];
 
 export function Sidebar() {
   const [expanded, setExpanded] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
 
+  useEffect(() => setMounted(true), []);
+
   return (
     <motion.aside
-      className="fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-border bg-background"
+      className="fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-border/60 bg-sidebar"
       animate={{ width: expanded ? 220 : 64 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
     >
       {/* Logo */}
-      <div className="flex h-14 items-center gap-3 px-5">
-        <Zap className="h-5 w-5 shrink-0 text-[#0070f3]" />
+      <div className="flex h-16 items-center gap-3 px-4">
+        <div className="relative flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/20">
+          <Zap className="h-4.5 w-4.5" />
+        </div>
         <AnimatePresence>
           {expanded && (
-            <motion.span
+            <motion.div
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -8 }}
               transition={{ duration: 0.15 }}
-              className="text-sm font-semibold tracking-tight whitespace-nowrap"
+              className="flex flex-col whitespace-nowrap"
             >
-              Policy Impact Engine
-            </motion.span>
+              <span className="text-sm font-bold tracking-tight text-gradient">
+                Policy Impact
+              </span>
+              <span className="text-[10px] font-medium text-muted-foreground/70">
+                Simulation Engine
+              </span>
+            </motion.div>
           )}
         </AnimatePresence>
       </div>
 
       {/* Divider */}
-      <div className="mx-3 h-px bg-border" />
+      <div className="mx-4 h-px bg-gradient-to-r from-border via-border/60 to-transparent" />
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-3 py-4">
@@ -71,13 +81,16 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "group relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer",
                 isActive
-                  ? "border-l-2 border-[#0070f3] bg-accent text-foreground"
+                  ? "bg-primary/10 text-primary shadow-sm"
                   : "text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
             >
-              <item.icon className="h-4 w-4 shrink-0" />
+              <item.icon className={cn(
+                "h-[18px] w-[18px] shrink-0 transition-colors duration-200",
+                isActive ? item.color : "group-hover:text-foreground"
+              )} />
               <AnimatePresence>
                 {expanded && (
                   <motion.span
@@ -92,9 +105,18 @@ export function Sidebar() {
                 )}
               </AnimatePresence>
 
+              {/* Active indicator dot */}
+              {isActive && (
+                <motion.div
+                  layoutId="sidebar-active"
+                  className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-primary"
+                  transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                />
+              )}
+
               {/* Tooltip when collapsed */}
               {!expanded && (
-                <div className="pointer-events-none absolute left-full ml-2 rounded-md bg-foreground px-2 py-1 text-xs text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100">
+                <div className="pointer-events-none absolute left-full ml-3 rounded-lg bg-foreground px-2.5 py-1.5 text-xs font-medium text-background opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
                   {item.label}
                 </div>
               )}
@@ -103,17 +125,20 @@ export function Sidebar() {
         })}
       </nav>
 
+      {/* Divider before bottom */}
+      <div className="mx-4 h-px bg-gradient-to-r from-border via-border/60 to-transparent" />
+
       {/* Bottom section */}
-      <div className="space-y-2 px-3 py-4">
+      <div className="space-y-1 px-3 py-4">
         {/* Theme toggle */}
         <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-foreground"
         >
-          {theme === "dark" ? (
-            <Sun className="h-4 w-4 shrink-0" />
+          {mounted && theme === "dark" ? (
+            <Sun className="h-[18px] w-[18px] shrink-0" />
           ) : (
-            <Moon className="h-4 w-4 shrink-0" />
+            <Moon className="h-[18px] w-[18px] shrink-0" />
           )}
           <AnimatePresence>
             {expanded && (
@@ -124,7 +149,7 @@ export function Sidebar() {
                 transition={{ duration: 0.15 }}
                 className="whitespace-nowrap"
               >
-                {theme === "dark" ? "Light mode" : "Dark mode"}
+                {mounted && theme === "dark" ? "Light mode" : "Dark mode"}
               </motion.span>
             )}
           </AnimatePresence>
@@ -137,7 +162,7 @@ export function Sidebar() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="px-3 text-xs text-muted-foreground"
+              className="px-3 text-[10px] text-muted-foreground/50"
             >
               v0.1.0
             </motion.p>

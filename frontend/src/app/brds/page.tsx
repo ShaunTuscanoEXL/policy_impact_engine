@@ -98,14 +98,21 @@ export default function BrdsPage() {
       <div className="space-y-8">
         <div>
           <p className="text-xs text-muted-foreground mb-4">Dashboard / BRD Documents</p>
-          <h1 className="text-2xl font-semibold tracking-tight">BRD Documents</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Upload and manage Business Requirements Documents.
-          </p>
+          <div className="flex items-center gap-3">
+            <div className="icon-badge bg-blue-100 dark:bg-blue-900/30">
+              <FileText className="size-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight"><span className="text-gradient">BRD Documents</span></h1>
+              <p className="text-sm text-muted-foreground">
+                Upload and manage Business Requirements Documents.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Upload Section */}
-        <Card className="p-6 border-border/50 shadow-sm">
+        <Card className="card-elevated card-glow p-6 border-border/40">
           <UploadDropzone onUpload={handleUpload} />
         </Card>
 
@@ -115,14 +122,14 @@ export default function BrdsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <Card className="border-border/50 shadow-sm">
+          <Card className="card-elevated border-border/40">
             {loading ? (
               <div className="flex items-center justify-center py-16">
                 <Loader2 className="size-6 animate-spin text-muted-foreground" />
               </div>
             ) : brds.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <FileText className="size-10 text-muted-foreground/30" />
+                <FileText className="size-12 text-muted-foreground/20" />
                 <p className="mt-3 text-sm text-muted-foreground">
                   No BRD documents yet. Upload one above to get started.
                 </p>
@@ -131,18 +138,18 @@ export default function BrdsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Filename</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Type</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Uploaded At</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Actions</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-blue-500/20">Filename</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-blue-500/20">Type</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-blue-500/20">Uploaded At</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-blue-500/20 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {brds.map((brd) => (
-                    <TableRow key={brd.id} className="group hover:bg-accent/50">
+                    <TableRow key={brd.id} className="group cursor-pointer transition-colors duration-150 hover:bg-accent/50">
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
-                          <FileText className="size-4 text-muted-foreground" />
+                          <FileText className="size-4 text-blue-500" />
                           {brd.filename}
                         </div>
                       </TableCell>
@@ -159,7 +166,7 @@ export default function BrdsPage() {
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button
-                            variant="outline"
+                            variant="default"
                             size="sm"
                             render={<Link href={`/brds/${brd.id}`} />}
                           >

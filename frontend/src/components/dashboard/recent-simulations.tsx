@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/table";
 import type { Simulation } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { Activity } from "lucide-react";
 
 interface RecentSimulationsProps {
   simulations: Simulation[];
@@ -23,15 +24,18 @@ const statusColors: Record<string, string> = {
 
 export function RecentSimulations({ simulations, loading }: RecentSimulationsProps) {
   return (
-    <Card className="border-border/50 shadow-sm">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">Recent Simulations</CardTitle>
+    <Card className="card-elevated border-border/40">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <Activity className="size-4 text-violet-500" />
+          Recent Simulations
+        </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         {loading ? (
           <div className="space-y-3 p-6">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-4 animate-pulse rounded bg-muted" />
+              <div key={i} className="h-4 animate-pulse rounded-lg bg-muted" />
             ))}
           </div>
         ) : simulations.length === 0 ? (
@@ -40,28 +44,28 @@ export function RecentSimulations({ simulations, loading }: RecentSimulationsPro
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Name</TableHead>
-                <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Status</TableHead>
-                <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Date</TableHead>
+                <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-violet-500/20">Name</TableHead>
+                <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-violet-500/20">Status</TableHead>
+                <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-violet-500/20">Date</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {simulations.slice(0, 5).map((sim) => (
-                <TableRow key={sim.id} className="group cursor-pointer hover:bg-accent/50">
+                <TableRow key={sim.id} className="group cursor-pointer transition-colors duration-150 hover:bg-accent/50">
                   <TableCell>
-                    <Link href={`/simulations/${sim.id}`} className="text-sm hover:underline">
+                    <Link href={`/simulations/${sim.id}`} className="text-sm font-medium hover:text-primary transition-colors">
                       {sim.scenario_name || "Unnamed"}
                     </Link>
                   </TableCell>
                   <TableCell>
                     <span className="flex items-center gap-2">
-                      <span className={cn("h-2 w-2 rounded-full", statusColors[sim.status] ?? "bg-neutral-400")} />
+                      <span className={cn("h-1.5 w-1.5 rounded-full", statusColors[sim.status] ?? "bg-neutral-400")} />
                       <span className="text-xs text-muted-foreground">
                         {sim.status.charAt(0) + sim.status.slice(1).toLowerCase().replace(/_/g, " ")}
                       </span>
                     </span>
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
+                  <TableCell className="text-xs text-muted-foreground tabular-nums">
                     {new Date(sim.created_at).toLocaleDateString()}
                   </TableCell>
                 </TableRow>

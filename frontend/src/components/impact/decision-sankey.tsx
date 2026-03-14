@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { GitBranch } from "lucide-react";
 import type { ImpactSummary } from "@/lib/types";
 
 interface DecisionFlowChartProps {
@@ -34,9 +35,12 @@ export function DecisionFlowChart({ summary }: DecisionFlowChartProps) {
   ];
 
   return (
-    <Card className="border-border/50 shadow-sm">
+    <Card className="card-elevated border-border/40">
       <CardHeader>
-        <CardTitle>Decision Flow</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <GitBranch className="size-5 text-blue-500" />
+          Decision Flow
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-[300px]">
@@ -50,17 +54,17 @@ export function DecisionFlowChart({ summary }: DecisionFlowChartProps) {
               <YAxis className="text-sm" />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#171717",
-                  border: "none",
+                  backgroundColor: "var(--card)",
+                  border: "1px solid var(--border)",
                   borderRadius: "8px",
-                  color: "#ededed",
+                  color: "var(--foreground)",
                   fontSize: "12px",
                 }}
               />
               <Legend />
               <Bar
                 dataKey="Baseline"
-                fill="#0070f3"
+                fill="var(--chart-1)"
                 radius={[4, 4, 0, 0]}
               />
               <Bar

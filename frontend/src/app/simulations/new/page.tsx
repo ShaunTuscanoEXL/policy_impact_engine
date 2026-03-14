@@ -21,7 +21,7 @@ export default function NewSimulationPage() {
           <ChevronLeft className="size-4" />
           Back to Simulations
         </Button>
-        <h1 className="text-2xl font-semibold tracking-tight">New Simulation</h1>
+        <h1 className="text-2xl font-bold tracking-tight"><span className="text-gradient">New Simulation</span></h1>
         <p className="mt-2 text-muted-foreground">
           Configure and run a new policy impact simulation.
         </p>

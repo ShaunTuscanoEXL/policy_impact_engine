@@ -180,9 +180,9 @@ export default function BrdDetailPage() {
             </Button>
             <div>
               <div className="flex items-center gap-3">
-                <FileText className="size-6 text-muted-foreground" />
-                <h1 className="text-2xl font-semibold tracking-tight">
-                  {brd.filename}
+                <FileText className="size-6 text-blue-500" />
+                <h1 className="text-2xl font-bold tracking-tight">
+                  <span className="text-gradient">{brd.filename}</span>
                 </h1>
                 <Badge
                   variant={fileType.includes("PDF") ? "secondary" : "outline"}
@@ -210,8 +210,8 @@ export default function BrdDetailPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <Card className="p-6 border-border/50 shadow-sm">
-            <h2 className="mb-6 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          <Card className="card-elevated p-6 border-border/40">
+            <h2 className="mb-6 text-sm font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/40 pb-3">
               Workflow
             </h2>
             <WorkflowStepper

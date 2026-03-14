@@ -29,7 +29,7 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Database, Eye, Trash2, Loader2 } from "lucide-react";
+import { Database, Trash2, Loader2 } from "lucide-react";
 
 export default function DatasetsPage() {
   const [datasets, setDatasets] = useState<Dataset[]>([]);
@@ -82,14 +82,21 @@ export default function DatasetsPage() {
       <div className="space-y-8">
         <div>
           <p className="text-xs text-muted-foreground mb-4">Dashboard / Datasets</p>
-          <h1 className="text-2xl font-semibold tracking-tight">Datasets</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Upload and manage customer datasets for simulation.
-          </p>
+          <div className="flex items-center gap-3">
+            <div className="icon-badge bg-emerald-100 dark:bg-emerald-900/30">
+              <Database className="size-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight"><span className="text-gradient">Datasets</span></h1>
+              <p className="text-sm text-muted-foreground">
+                Upload and manage customer datasets for simulation.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Upload Section */}
-        <Card className="p-6 border-border/50 shadow-sm">
+        <Card className="card-elevated p-6 border-border/40">
           <UploadForm onUploadComplete={fetchDatasets} />
         </Card>
 
@@ -99,14 +106,14 @@ export default function DatasetsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <Card className="border-border/50 shadow-sm">
+          <Card className="card-elevated border-border/40">
             {loading ? (
               <div className="flex items-center justify-center py-16">
                 <Loader2 className="size-6 animate-spin text-muted-foreground" />
               </div>
             ) : datasets.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <Database className="size-10 text-muted-foreground/30" />
+                <Database className="size-12 text-muted-foreground/20" />
                 <p className="mt-3 text-sm text-muted-foreground">
                   No datasets yet. Upload one above to get started.
                 </p>
@@ -115,19 +122,19 @@ export default function DatasetsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Name</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Type</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Rows</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Created At</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Actions</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-emerald-500/20">Name</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-emerald-500/20">Type</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-emerald-500/20 text-right">Rows</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-emerald-500/20">Created At</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-emerald-500/20 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {datasets.map((ds) => (
-                    <TableRow key={ds.id} className="group hover:bg-accent/50">
+                    <TableRow key={ds.id} className="group cursor-pointer transition-colors duration-150 hover:bg-accent/50">
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
-                          <Database className="size-4 text-muted-foreground" />
+                          <Database className="size-4 text-emerald-500" />
                           {ds.name}
                         </div>
                       </TableCell>
@@ -145,13 +152,13 @@ export default function DatasetsPage() {
                         })}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end gap-2">
                           <Button
-                            variant="ghost"
-                            size="icon-sm"
+                            variant="default"
+                            size="sm"
                             render={<Link href={`/datasets/${ds.id}`} />}
                           >
-                            <Eye className="size-4" />
+                            View
                           </Button>
 
                           <Dialog

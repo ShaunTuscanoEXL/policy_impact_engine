@@ -32,7 +32,7 @@ export default function RootLayout({
       >
         <ThemeProvider attribute="class" defaultTheme="light">
           <Sidebar />
-          <main className="ml-16 min-h-screen overflow-y-auto p-8">
+          <main className="ml-16 min-h-screen overflow-y-auto px-10 py-8">
             {children}
           </main>
           <Toaster />

@@ -12,8 +12,9 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { BarChart3 } from "lucide-react";
 
-const COLORS = ["#0070f3", "#3b82f6", "#60a5fa", "#93c5fd"];
+const COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)"];
 
 interface ComparisonChartsProps {
   results: {
@@ -54,9 +55,12 @@ export function ComparisonCharts({ results }: ComparisonChartsProps) {
   ];
 
   return (
-    <Card className="border-border/50 shadow-sm">
+    <Card className="card-elevated border-border/40">
       <CardHeader>
-        <CardTitle>Comparison Bar Chart</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <BarChart3 className="size-5 text-amber-500" />
+          Comparison Bar Chart
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={400}>
@@ -76,10 +80,10 @@ export function ComparisonCharts({ results }: ComparisonChartsProps) {
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: "#171717",
-                border: "none",
+                backgroundColor: "var(--card)",
+                border: "1px solid var(--border)",
                 borderRadius: "8px",
-                color: "#ededed",
+                color: "var(--foreground)",
                 fontSize: "12px",
               }}
             />

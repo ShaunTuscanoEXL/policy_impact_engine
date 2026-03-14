@@ -30,7 +30,7 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import { GitCompare, Plus, Trash2, Eye, Loader2 } from "lucide-react";
+import { GitCompare, Plus, Trash2, Loader2 } from "lucide-react";
 
 export default function ScenariosPage() {
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
@@ -125,17 +125,24 @@ export default function ScenariosPage() {
       <div className="space-y-8">
         <div>
           <p className="text-xs text-muted-foreground mb-4">Dashboard / Scenarios</p>
-          <h1 className="text-2xl font-semibold tracking-tight">Scenarios</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Compare multiple simulation scenarios side by side.
-          </p>
+          <div className="flex items-center gap-3">
+            <div className="icon-badge bg-amber-100 dark:bg-amber-900/30">
+              <GitCompare className="size-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight"><span className="text-gradient">Scenarios</span></h1>
+              <p className="text-sm text-muted-foreground">
+                Compare multiple simulation scenarios side by side.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Create Scenario Section */}
-        <Card className="border-border/50 shadow-sm">
+        <Card className="card-elevated border-border/40">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Plus className="size-5" />
+              <Plus className="size-5 text-primary" />
               Create Scenario
             </CardTitle>
           </CardHeader>
@@ -152,7 +159,7 @@ export default function ScenariosPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Description</label>
                 <textarea
-                  className="flex min-h-[60px] w-full rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+                  className="flex min-h-[60px] w-full rounded-lg border border-border bg-muted/40 shadow-sm px-2.5 py-1.5 text-sm outline-none placeholder:text-muted-foreground/60 focus-visible:bg-background focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/40 dark:border-border"
                   placeholder="Optional description..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -180,8 +187,8 @@ export default function ScenariosPage() {
                         key={sim.id}
                         className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${
                           checked
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:bg-muted/50"
+                            ? "border-primary bg-primary/10 dark:bg-primary/5"
+                            : "border-border/60 dark:border-border hover:bg-muted/50"
                         } ${
                           !checked && selectedSimIds.length >= 3
                             ? "cursor-not-allowed opacity-50"
@@ -193,7 +200,7 @@ export default function ScenariosPage() {
                           checked={checked}
                           onChange={() => toggleSimulation(sim.id)}
                           disabled={!checked && selectedSimIds.length >= 3}
-                          className="size-4 rounded border-input accent-primary"
+                          className="size-4 rounded border-input accent-primary dark:ring-1 dark:ring-muted-foreground/40"
                         />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium">
@@ -231,14 +238,14 @@ export default function ScenariosPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <Card className="border-border/50 shadow-sm">
+          <Card className="card-elevated border-border/40">
             {loading ? (
               <div className="flex items-center justify-center py-16">
                 <Loader2 className="size-6 animate-spin text-muted-foreground" />
               </div>
             ) : scenarios.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <GitCompare className="size-10 text-muted-foreground/30" />
+                <GitCompare className="size-12 text-muted-foreground/20" />
                 <p className="mt-3 text-sm text-muted-foreground">
                   No scenarios yet. Create one above to compare simulations.
                 </p>
@@ -247,18 +254,18 @@ export default function ScenariosPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Name</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-center"># Simulations</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Created At</TableHead>
-                    <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Actions</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-amber-500/20">Name</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-amber-500/20 text-center"># Simulations</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-amber-500/20">Created At</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-amber-500/20 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {scenarios.map((sc) => (
-                    <TableRow key={sc.id} className="group hover:bg-accent/50">
+                    <TableRow key={sc.id} className="group cursor-pointer transition-colors duration-150 hover:bg-accent/50">
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
-                          <GitCompare className="size-4 text-muted-foreground" />
+                          <GitCompare className="size-4 text-amber-500" />
                           {sc.name}
                         </div>
                       </TableCell>
@@ -277,13 +284,13 @@ export default function ScenariosPage() {
                         })}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end gap-2">
                           <Button
-                            variant="ghost"
-                            size="icon-sm"
+                            variant="default"
+                            size="sm"
                             render={<Link href={`/scenarios/${sc.id}`} />}
                           >
-                            <Eye className="size-4" />
+                            View
                           </Button>
 
                           <Dialog

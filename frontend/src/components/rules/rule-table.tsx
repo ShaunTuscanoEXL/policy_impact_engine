@@ -129,14 +129,14 @@ export function RuleTable({ rules, onEdit, onDelete }: RuleTableProps) {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-8 text-xs uppercase tracking-wider" />
-          <TableHead className="text-xs uppercase tracking-wider">Rule ID</TableHead>
-          <TableHead className="text-xs uppercase tracking-wider">Name</TableHead>
-          <TableHead className="text-xs uppercase tracking-wider">Type</TableHead>
-          <TableHead className="text-xs uppercase tracking-wider">Confidence</TableHead>
-          <TableHead className="text-center text-xs uppercase tracking-wider">Priority</TableHead>
-          <TableHead className="text-center text-xs uppercase tracking-wider">Conflicts</TableHead>
-          <TableHead className="text-right text-xs uppercase tracking-wider">Actions</TableHead>
+          <TableHead className="w-8 text-xs font-semibold uppercase tracking-wider border-b-2 border-indigo-500/20" />
+          <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-indigo-500/20">Rule ID</TableHead>
+          <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-indigo-500/20">Name</TableHead>
+          <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-indigo-500/20">Type</TableHead>
+          <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-indigo-500/20">Confidence</TableHead>
+          <TableHead className="text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-indigo-500/20">Priority</TableHead>
+          <TableHead className="text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-indigo-500/20">Conflicts</TableHead>
+          <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-indigo-500/20">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
