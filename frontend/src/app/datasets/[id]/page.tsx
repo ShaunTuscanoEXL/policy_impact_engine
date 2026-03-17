@@ -33,7 +33,9 @@ import {
   FileSpreadsheet,
   BarChart3,
   Table2,
+  Settings2,
 } from "lucide-react";
+import { MappingForm } from "@/components/datasets/mapping-form";
 import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
 
@@ -42,6 +44,9 @@ export default function DatasetDetailPage() {
   const router = useRouter();
   const [dataset, setDataset] = useState<Dataset | null>(null);
   const [loading, setLoading] = useState(true);
+  const [detectedMapping, setDetectedMapping] = useState<Record<string, any> | null>(null);
+  const [mappingLoading, setMappingLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     async function fetchDataset() {
@@ -57,6 +62,36 @@ export default function DatasetDetailPage() {
     }
     fetchDataset();
   }, [params.id, router]);
+
+  async function fetchDetectedMapping() {
+    setMappingLoading(true);
+    try {
+      const { data } = await api.get(`/datasets/${params.id}/detect-mapping`);
+      setDetectedMapping(data);
+    } catch {
+      toast.error("Failed to detect column mapping.");
+    } finally {
+      setMappingLoading(false);
+    }
+  }
+
+  async function handleSaveMapping(mapping: Record<string, any>, config: Record<string, any>) {
+    setSaving(true);
+    try {
+      await api.put(`/datasets/${params.id}/mapping`, {
+        column_mapping: mapping,
+        baseline_config: config,
+      });
+      toast.success("Column mapping saved successfully.");
+      // Refresh dataset to get updated mapping
+      const { data } = await api.get(`/datasets/${params.id}`);
+      setDataset(data);
+    } catch {
+      toast.error("Failed to save column mapping.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -96,6 +131,10 @@ export default function DatasetDetailPage() {
             <Badge variant={fileType.includes("CSV") ? "secondary" : "outline"}>
               {fileType.includes("CSV") ? "CSV" : "JSON"}
             </Badge>
+            <Badge variant={dataset.column_mapping ? "default" : "outline"}
+                   className={dataset.column_mapping ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"}>
+              {dataset.column_mapping ? "Mapped" : "Unmapped"}
+            </Badge>
           </div>
           {dataset.description && (
             <p className="mt-1 ml-10 text-sm text-muted-foreground">
@@ -121,7 +160,9 @@ export default function DatasetDetailPage() {
 
       {/* Tabs */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-      <Tabs defaultValue="schema">
+      <Tabs defaultValue="schema" onValueChange={(v) => {
+        if (v === "mapping" && !detectedMapping) fetchDetectedMapping();
+      }}>
         <TabsList>
           <TabsTrigger value="schema">
             <FileSpreadsheet className="size-4" />
@@ -134,6 +175,10 @@ export default function DatasetDetailPage() {
           <TabsTrigger value="sample">
             <Table2 className="size-4" />
             Sample Data
+          </TabsTrigger>
+          <TabsTrigger value="mapping">
+            <Settings2 className="size-4" />
+            Column Mapping
           </TabsTrigger>
         </TabsList>
 
@@ -192,6 +237,36 @@ export default function DatasetDetailPage() {
         {/* Sample Data Tab */}
         <TabsContent value="sample">
           <SampleTable sampleData={dataset.sample_data ?? []} />
+        </TabsContent>
+
+        {/* Column Mapping Tab */}
+        <TabsContent value="mapping">
+          {mappingLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="size-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : detectedMapping ? (
+            <MappingForm
+              columns={Object.keys(dataset.column_schema ?? {})}
+              detectedMapping={detectedMapping}
+              savedMapping={dataset.column_mapping}
+              savedConfig={dataset.baseline_config}
+              onSave={handleSaveMapping}
+              saving={saving}
+            />
+          ) : (
+            <Card className="border-border/40 shadow-sm">
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <Settings2 className="size-10 text-muted-foreground/40" />
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Click to auto-detect column mapping
+                </p>
+                <Button className="mt-4" onClick={fetchDetectedMapping}>
+                  Detect Columns
+                </Button>
+              </div>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
       </motion.div>

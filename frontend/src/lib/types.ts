@@ -14,6 +14,8 @@ export interface Dataset {
   column_schema: Record<string, any>;
   sample_data: Record<string, any>[];
   data_profile: Record<string, any>;
+  column_mapping: Record<string, any> | null;
+  baseline_config: Record<string, any> | null;
   created_at: string;
 }
 

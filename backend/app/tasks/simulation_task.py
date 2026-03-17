@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 def run_simulation_async(
     self,
     simulation_id: str,
+    dataset_id: str,
     brd_file_path: str,
     brd_filename: str,
     dataset_file_path: str,
@@ -32,9 +33,11 @@ def run_simulation_async(
     from sqlalchemy.orm import Session
 
     from app.config import settings
+    from app.models.dataset import Dataset
     from app.models.rule import Rule, RuleSet, RuleSetStatus
     from app.models.simulation import Simulation, SimulationResult, SimulationStatus
     from app.pipeline.graph import run_pipeline
+    from app.simulation.mapper import apply_column_mapping
 
     # Use sync database connection for Celery (not async)
     sync_url = settings.database_url.replace("+asyncpg", "")
@@ -49,6 +52,15 @@ def run_simulation_async(
         else:
             dataset_df = pd.read_json(dataset_file_path)
 
+        # Load dataset mapping from DB
+        baseline_config = None
+        with Session(engine) as session:
+            dataset = session.get(Dataset, uuid.UUID(dataset_id))
+            if dataset and dataset.column_mapping:
+                dataset_df = apply_column_mapping(dataset_df, dataset.column_mapping)
+            if dataset and dataset.baseline_config:
+                baseline_config = dataset.baseline_config
+
         # Update status to RUNNING
         with Session(engine) as session:
             sim = session.get(Simulation, uuid.UUID(simulation_id))
@@ -62,6 +74,7 @@ def run_simulation_async(
             brd_filename=brd_filename,
             dataset_df=dataset_df,
             auto_approve=True,
+            baseline_config=baseline_config,
         )
 
         if result.get("error"):

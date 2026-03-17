@@ -15,28 +15,37 @@ LOAN_TENURE_YEARS = 3
 ORIGINATION_FEE_RATE = 0.02
 
 
-def _get_pd(score: float) -> float:
+def _get_pd(score: float, pd_tiers=None) -> float:
     """Get probability of default for a given bureau score."""
-    for lo, hi, pd_val in PD_TIERS:
+    tiers = pd_tiers if pd_tiers is not None else PD_TIERS
+    for lo, hi, pd_val in tiers:
         if lo <= score <= hi:
             return pd_val
     return 0.15
 
 
-def _calculate_interest_income(amounts: pd.Series, rates: pd.Series) -> float:
+def _calculate_interest_income(amounts: pd.Series, rates: pd.Series, tenure=None) -> float:
     """Total interest income = sum(amount * rate * tenure)."""
-    return float((amounts * rates * LOAN_TENURE_YEARS).sum())
+    t = tenure if tenure is not None else LOAN_TENURE_YEARS
+    return float((amounts * rates * t).sum())
 
 
-def _calculate_expected_loss(amounts: pd.Series, scores: pd.Series) -> float:
+def _calculate_expected_loss(amounts: pd.Series, scores: pd.Series, pd_tiers=None, lgd=None) -> float:
     """Total expected loss = sum(amount * PD(score) * LGD)."""
-    pds = scores.apply(_get_pd)
-    return float((amounts * pds * LGD).sum())
+    effective_lgd = lgd if lgd is not None else LGD
+    pds = scores.apply(lambda s: _get_pd(s, pd_tiers=pd_tiers))
+    return float((amounts * pds * effective_lgd).sum())
 
 
-def compare_results(baseline_df: pd.DataFrame, simulated_df: pd.DataFrame, conflict_log: list[dict]):
+def compare_results(baseline_df: pd.DataFrame, simulated_df: pd.DataFrame, conflict_log: list[dict], config=None):
     """Compare baseline vs simulated to produce impact analysis."""
     from app.simulation.engine import SimulationOutput
+
+    # Extract config values with fallbacks to module-level defaults
+    cfg_pd_tiers = [tuple(t) for t in config.get("pd_tiers", [])] if config and config.get("pd_tiers") else PD_TIERS
+    cfg_lgd = config.get("lgd", LGD) if config else LGD
+    cfg_tenure = config.get("loan_tenure_years", LOAN_TENURE_YEARS) if config else LOAN_TENURE_YEARS
+    cfg_orig_rate = config.get("origination_fee_rate", ORIGINATION_FEE_RATE) if config else ORIGINATION_FEE_RATE
 
     total = len(baseline_df)
 
@@ -93,10 +102,13 @@ def compare_results(baseline_df: pd.DataFrame, simulated_df: pd.DataFrame, confl
     affected_count = int(affected.sum())
 
     # Segment breakdown
-    segment_breakdown = _build_segment_breakdown(baseline_df, simulated_df, affected)
+    segment_breakdown = _build_segment_breakdown(baseline_df, simulated_df, affected, tenure=cfg_tenure)
 
     # Financial impact
-    financial_impact = _calculate_financial_impact(baseline_df, simulated_df, decision_changes, amount_changes)
+    financial_impact = _calculate_financial_impact(
+        baseline_df, simulated_df, decision_changes, amount_changes,
+        pd_tiers=cfg_pd_tiers, lgd=cfg_lgd, tenure=cfg_tenure, orig_rate=cfg_orig_rate,
+    )
 
     return SimulationOutput(
         total_customers=total,
@@ -112,8 +124,9 @@ def compare_results(baseline_df: pd.DataFrame, simulated_df: pd.DataFrame, confl
     )
 
 
-def _build_segment_breakdown(baseline_df, simulated_df, affected):
+def _build_segment_breakdown(baseline_df, simulated_df, affected, tenure=None):
     """Break down impact by key segments with financial metrics."""
+    effective_tenure = tenure if tenure is not None else LOAN_TENURE_YEARS
     segments = {}
     baseline_df = baseline_df.copy()
 
@@ -127,8 +140,8 @@ def _build_segment_breakdown(baseline_df, simulated_df, affected):
         affected_in = int((mask & affected).sum())
         exp_baseline = float(b_amt[mask].sum())
         exp_simulated = float(s_amt[mask].sum())
-        ii_baseline = float((b_amt[mask] * b_rate[mask] * LOAN_TENURE_YEARS).sum())
-        ii_simulated = float((s_amt[mask] * s_rate[mask] * LOAN_TENURE_YEARS).sum())
+        ii_baseline = float((b_amt[mask] * b_rate[mask] * effective_tenure).sum())
+        ii_simulated = float((s_amt[mask] * s_rate[mask] * effective_tenure).sum())
         return {
             "total": total_in,
             "affected": affected_in,
@@ -176,8 +189,11 @@ def _build_segment_breakdown(baseline_df, simulated_df, affected):
     return segments
 
 
-def _calculate_financial_impact(baseline_df, simulated_df, decision_changes, amount_changes):
+def _calculate_financial_impact(baseline_df, simulated_df, decision_changes, amount_changes,
+                                pd_tiers=None, lgd=None, tenure=None, orig_rate=None):
     """Full financial impact: exposure, origination fees, interest income, expected loss, net revenue."""
+    effective_orig_rate = orig_rate if orig_rate is not None else ORIGINATION_FEE_RATE
+
     b_amt = baseline_df["baseline_eligible_amount"]
     s_amt = simulated_df["sim_eligible_amount"]
     b_rate = baseline_df["baseline_interest_rate"]
@@ -190,16 +206,16 @@ def _calculate_financial_impact(baseline_df, simulated_df, decision_changes, amo
     exposure_change = total_simulated_exposure - total_baseline_exposure
 
     # --- Origination fees ---
-    origination_baseline = float((b_amt * ORIGINATION_FEE_RATE).sum())
-    origination_simulated = float((s_amt * ORIGINATION_FEE_RATE).sum())
+    origination_baseline = float((b_amt * effective_orig_rate).sum())
+    origination_simulated = float((s_amt * effective_orig_rate).sum())
 
     # --- Interest income ---
-    interest_income_baseline = _calculate_interest_income(b_amt, b_rate)
-    interest_income_simulated = _calculate_interest_income(s_amt, s_rate)
+    interest_income_baseline = _calculate_interest_income(b_amt, b_rate, tenure=tenure)
+    interest_income_simulated = _calculate_interest_income(s_amt, s_rate, tenure=tenure)
 
     # --- Expected loss ---
-    expected_loss_baseline = _calculate_expected_loss(b_amt, scores)
-    expected_loss_simulated = _calculate_expected_loss(s_amt, scores)
+    expected_loss_baseline = _calculate_expected_loss(b_amt, scores, pd_tiers=pd_tiers, lgd=lgd)
+    expected_loss_simulated = _calculate_expected_loss(s_amt, scores, pd_tiers=pd_tiers, lgd=lgd)
 
     # --- Net revenue = origination + interest - expected_loss ---
     net_revenue_baseline = origination_baseline + interest_income_baseline - expected_loss_baseline

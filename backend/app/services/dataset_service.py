@@ -139,3 +139,24 @@ async def delete_dataset(dataset_id: str, db: AsyncSession) -> bool:
     await db.delete(ds)
     await db.commit()
     return True
+
+
+async def detect_column_mapping(dataset: Dataset) -> dict:
+    """Run auto-detection on a dataset."""
+    from app.services.column_detector import detect_mapping, get_default_baseline_config
+    if dataset.file_type == DatasetFileType.CSV:
+        df = pd.read_csv(dataset.file_path)
+    else:
+        df = pd.read_json(dataset.file_path)
+    detected = detect_mapping(df)
+    detected["default_baseline_config"] = get_default_baseline_config()
+    return detected
+
+
+async def save_mapping(dataset: Dataset, column_mapping: dict, baseline_config: dict | None, db: AsyncSession) -> Dataset:
+    """Save column mapping and baseline config."""
+    dataset.column_mapping = column_mapping
+    dataset.baseline_config = baseline_config
+    await db.commit()
+    await db.refresh(dataset)
+    return dataset

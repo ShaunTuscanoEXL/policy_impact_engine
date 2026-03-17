@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PlayCircle, Loader2, CheckCircle } from "lucide-react";
+import { PlayCircle, Loader2, CheckCircle, AlertTriangle } from "lucide-react";
 
 export function SimulationForm() {
   const router = useRouter();
@@ -105,6 +105,8 @@ export function SimulationForm() {
     }
   }, [selectedBrdId, selectedDatasetId, scenarioName, autoApprove, router]);
 
+  const selectedDataset = datasets.find((ds) => ds.id === selectedDatasetId);
+  const isUnmapped = selectedDataset ? !selectedDataset.column_mapping : false;
   const isLoading = loadingBrds || loadingDatasets;
 
   return (
@@ -178,10 +180,23 @@ export function SimulationForm() {
                 {datasets.map((ds) => (
                   <SelectItem key={ds.id} value={ds.id}>
                     {ds.name} ({ds.row_count.toLocaleString()} rows)
+                    {!ds.column_mapping && " — Unmapped"}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+          )}
+          {isUnmapped && (
+            <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
+              <p className="text-sm text-amber-700 dark:text-amber-400">
+                This dataset has no column mapping configured. Please{" "}
+                <a href={`/datasets/${selectedDatasetId}`} className="underline font-medium">
+                  configure the mapping
+                </a>{" "}
+                before running a simulation.
+              </p>
+            </div>
           )}
         </div>
 
@@ -217,7 +232,7 @@ export function SimulationForm() {
         {/* Run Button */}
         <Button
           size="lg"
-          disabled={running || isLoading}
+          disabled={running || isLoading || isUnmapped}
           onClick={handleRun}
           className="w-full"
         >

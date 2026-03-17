@@ -22,11 +22,12 @@ class SimulationOutput:
 def run_simulation(
     df: pd.DataFrame,
     new_rules: list[CompiledRule],
+    config: dict | None = None,
 ) -> SimulationOutput:
     """Run simulation: baseline -> apply new rules -> compare."""
 
     # Phase 1: Baseline
-    baseline_df = apply_baseline(df)
+    baseline_df = apply_baseline(df, config=config)
 
     # Phase 2: Initialize simulation columns from baseline
     simulated_df = baseline_df.copy()
@@ -69,9 +70,19 @@ def run_simulation(
         simulated_df.loc[flipped_to_approved, "sim_eligible_amount"] = (
             simulated_df.loc[flipped_to_approved].apply(assign_eligible_amount, axis=1)
         )
+        rate_tiers_cfg = None
+        default_rate_cfg = None
+        if config:
+            rt = config.get("rate_tiers")
+            if rt:
+                rate_tiers_cfg = [tuple(t) for t in rt]
+            default_rate_cfg = config.get("default_rate")
+
         simulated_df.loc[flipped_to_approved, "sim_interest_rate"] = (
-            simulated_df.loc[flipped_to_approved].apply(assign_interest_rate, axis=1)
+            simulated_df.loc[flipped_to_approved].apply(
+                lambda row: assign_interest_rate(row, rate_tiers=rate_tiers_cfg, default_rate=default_rate_cfg), axis=1
+            )
         )
 
     # Phase 3: Compare
-    return compare_results(baseline_df, simulated_df, conflict_log)
+    return compare_results(baseline_df, simulated_df, conflict_log, config=config)

@@ -24,6 +24,8 @@ class Dataset(Base):
     column_schema: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     sample_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     data_profile: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    column_mapping: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    baseline_config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     simulations = relationship("Simulation", back_populates="dataset")

@@ -36,6 +36,7 @@ class PipelineState(TypedDict, total=False):
     brd_filename: str
     dataset_df: pd.DataFrame
     auto_approve: bool
+    baseline_config: dict | None
 
     parsed_sections: list[DocumentSection]
     extracted_rules: list[RuleDefinition]
@@ -110,7 +111,7 @@ def simulation_node(state: PipelineState) -> dict[str, Any]:
     if state.get("error"):
         return {"simulation_result": None}
     try:
-        result = run_simulation(state["dataset_df"], state["compiled_rules"])
+        result = run_simulation(state["dataset_df"], state["compiled_rules"], config=state.get("baseline_config"))
         logger.info(
             "Simulation complete: %d/%d customers affected (%.1f%%)",
             result.affected_customers,
@@ -190,6 +191,7 @@ def run_pipeline(
     brd_filename: str,
     dataset_df: pd.DataFrame,
     auto_approve: bool = False,
+    baseline_config: dict | None = None,
 ) -> dict[str, Any]:
     """Create and run the full pipeline, returning the final state dict.
 
@@ -209,6 +211,7 @@ def run_pipeline(
         "brd_filename": brd_filename,
         "dataset_df": dataset_df,
         "auto_approve": auto_approve,
+        "baseline_config": baseline_config,
     }
 
     result = pipeline.invoke(initial_state)
