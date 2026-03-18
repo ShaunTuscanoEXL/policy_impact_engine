@@ -132,19 +132,21 @@ export default function RuleReviewPage() {
     }
   }, [params.ruleSetId, router]);
 
-  const handleApproveAndRunSimulation = useCallback(async () => {
-    if (!simulationId) return;
+  const handleApproveAndGenerateTests = useCallback(async () => {
     setRunningSimulation(true);
     try {
-      await api.post(`/pipeline/${simulationId}/approve`);
-      toast.success("Rules approved and simulation completed.");
-      router.push(`/simulations/${simulationId}`);
+      // First approve the rule set
+      await api.patch(`/rule-sets/${params.ruleSetId}/approve`);
+      toast.success("Rules approved. You can now generate test cases.");
+      await fetchRuleSet();
+      // Auto-trigger test case generation
+      await handleGenerateTestCases();
     } catch (err: any) {
-      toast.error(err?.response?.data?.detail || "Failed to approve and run simulation.");
+      toast.error(err?.response?.data?.detail || "Failed to approve rule set.");
     } finally {
       setRunningSimulation(false);
     }
-  }, [simulationId, router]);
+  }, [params.ruleSetId, fetchRuleSet, handleGenerateTestCases]);
 
   const handleEditRule = useCallback((rule: Rule) => {
     setEditingRule(rule);
@@ -264,17 +266,17 @@ export default function RuleReviewPage() {
             )}
             Create New Version
           </Button>
-          {simulationId && ruleSet.status !== "APPROVED" ? (
+          {ruleSet.status !== "APPROVED" ? (
             <Button
-              onClick={handleApproveAndRunSimulation}
+              onClick={handleApproveAndGenerateTests}
               disabled={runningSimulation}
             >
               {runningSimulation ? (
                 <Loader2 className="mr-2 size-4 animate-spin" />
               ) : (
-                <PlayCircle className="mr-2 size-4" />
+                <FlaskConical className="mr-2 size-4" />
               )}
-              Approve &amp; Run Simulation
+              Approve &amp; Generate Tests
             </Button>
           ) : (
             <Button

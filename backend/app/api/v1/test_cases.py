@@ -43,21 +43,21 @@ async def generate_test_cases(body: TestCaseGenerateRequest, db: AsyncSession = 
     return _suite_to_response(suite)
 
 
-@router.get("/{suite_id}", response_model=TestCaseSuiteResponse, status_code=200)
-async def get_test_case_suite(suite_id: str, db: AsyncSession = Depends(get_db)):
-    """Get a test case suite by ID with all test cases."""
-    suite = await test_case_service.get_suite(suite_id, db)
-    if not suite:
-        raise HTTPException(status_code=404, detail="Test case suite not found")
-    return _suite_to_response(suite)
-
-
 @router.get("/by-ruleset/{rule_set_id}", response_model=TestCaseSuiteResponse | None, status_code=200)
 async def get_by_rule_set(rule_set_id: str, db: AsyncSession = Depends(get_db)):
     """Get the most recent test case suite for a rule set."""
     suite = await test_case_service.get_by_rule_set(rule_set_id, db)
     if not suite:
         return None
+    return _suite_to_response(suite)
+
+
+@router.get("/{suite_id}", response_model=TestCaseSuiteResponse, status_code=200)
+async def get_test_case_suite(suite_id: str, db: AsyncSession = Depends(get_db)):
+    """Get a test case suite by ID with all test cases."""
+    suite = await test_case_service.get_suite(suite_id, db)
+    if not suite:
+        raise HTTPException(status_code=404, detail="Test case suite not found")
     return _suite_to_response(suite)
 
 
