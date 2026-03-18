@@ -13,6 +13,8 @@ class SimulationResponse(BaseModel):
     scenario_name: str
     dataset_id: str
     rule_set_id: str
+    dataset_name: str | None = None
+    rule_set_name: str | None = None
     version: int
     status: str
     created_at: str

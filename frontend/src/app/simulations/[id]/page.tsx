@@ -92,6 +92,12 @@ export default function SimulationDetailPage() {
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground">
+            {simulation.rule_set_name && (
+              <><span className="font-medium text-foreground">{simulation.rule_set_name}</span> &middot; </>
+            )}
+            {simulation.dataset_name && (
+              <><span className="font-medium text-foreground">{simulation.dataset_name}</span> &middot; </>
+            )}
             Created {new Date(simulation.created_at).toLocaleDateString("en-US", {
               year: "numeric",
               month: "long",
