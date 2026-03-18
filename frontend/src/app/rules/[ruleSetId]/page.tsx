@@ -178,9 +178,13 @@ export default function RuleReviewPage() {
     }
     setSimRunning(true);
     try {
+      const dsName = datasets.find((d) => d.id === selectedDatasetId)?.filename ?? "dataset";
+      const rsName = ruleSet?.name?.replace(/^Rules from /, "") ?? "rules";
+      const scenarioName = `${rsName} v${ruleSet?.version ?? 1} × ${dsName.replace(/\.[^.]+$/, "")}`;
       const { data } = await api.post("/pipeline/run-simulation", {
         rule_set_id: params.ruleSetId,
         dataset_id: selectedDatasetId,
+        scenario_name: scenarioName,
       });
       toast.success("Simulation completed!");
       router.push(`/simulations/${data.simulation_id}`);

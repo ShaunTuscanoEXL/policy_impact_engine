@@ -116,9 +116,13 @@ export default function BrdDetailPage() {
     setSimDialogOpen(false);
 
     try {
+      const dsName = datasets.find((d) => d.id === simDataset)?.filename ?? "dataset";
+      const brdName = brd?.filename?.replace(/\.[^.]+$/, "") ?? "BRD";
+      const scenarioName = `${brdName} × ${dsName.replace(/\.[^.]+$/, "")}`;
       const { data } = await api.post("/pipeline/run-simulation", {
         rule_set_id: workflow.rule_set.id,
         dataset_id: simDataset,
+        scenario_name: scenarioName,
       });
 
       toast.success("Simulation completed successfully.");
@@ -157,9 +161,13 @@ export default function BrdDetailPage() {
     setDialogOpen(false);
 
     try {
+      const dsName = datasets.find((d) => d.id === selectedDataset)?.filename ?? "dataset";
+      const brdName = brd?.filename?.replace(/\.[^.]+$/, "") ?? "BRD";
+      const scenarioName = `${brdName} × ${dsName.replace(/\.[^.]+$/, "")}`;
       const { data } = await api.post("/pipeline/run", {
         brd_id: params.id,
         dataset_id: selectedDataset,
+        scenario_name: scenarioName,
         auto_approve: autoApprove,
       });
 
