@@ -11,6 +11,7 @@ import {
   Database,
   PlayCircle,
   GitCompare,
+  FlaskConical,
   Zap,
   Sun,
   Moon,
@@ -22,6 +23,7 @@ const navItems = [
   { href: "/brds", label: "BRDs", icon: FileText, color: "text-blue-500" },
   { href: "/datasets", label: "Datasets", icon: Database, color: "text-emerald-500" },
   { href: "/simulations", label: "Simulations", icon: PlayCircle, color: "text-violet-500" },
+  { href: "/test-cases", label: "Test Cases", icon: FlaskConical, color: "text-pink-500" },
   { href: "/scenarios", label: "Scenarios", icon: GitCompare, color: "text-amber-500" },
 ];
 

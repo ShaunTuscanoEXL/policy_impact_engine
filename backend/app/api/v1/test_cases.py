@@ -16,15 +16,39 @@ from app.schemas.test_case import (
     TestCaseSuiteListResponse,
 )
 from app.services import test_case_service
-from app.services.rule_service import get_rule_set
+from app.services.rule_service import get_rule_set as get_rule_set_service
 
 router = APIRouter(prefix="/test-cases", tags=["Test Cases"])
+
+
+@router.get("", response_model=list[TestCaseSuiteListResponse])
+async def list_all_suites(db: AsyncSession = Depends(get_db)):
+    """List all test case suites with rule set names."""
+    suites = await test_case_service.list_suites(db)
+    result = []
+    for s in suites:
+        rs_name = None
+        try:
+            rs = await get_rule_set_service(str(s.rule_set_id), db)
+            if rs:
+                rs_name = rs.name
+        except Exception:
+            pass
+        result.append(TestCaseSuiteListResponse(
+            id=str(s.id),
+            rule_set_id=str(s.rule_set_id),
+            rule_set_name=rs_name,
+            total_cases=s.total_cases,
+            cases_by_category=s.cases_by_category or {},
+            created_at=s.created_at.isoformat() if s.created_at else "",
+        ))
+    return result
 
 
 @router.post("/generate", response_model=TestCaseSuiteResponse, status_code=200)
 async def generate_test_cases(body: TestCaseGenerateRequest, db: AsyncSession = Depends(get_db)):
     """Generate test cases for an approved rule set (standalone endpoint)."""
-    rule_set = await get_rule_set(body.rule_set_id, db)
+    rule_set = await get_rule_set_service(body.rule_set_id, db)
     if not rule_set:
         raise HTTPException(status_code=404, detail="Rule set not found")
     if not rule_set.rules:
@@ -40,7 +64,7 @@ async def generate_test_cases(body: TestCaseGenerateRequest, db: AsyncSession = 
 
     # Re-fetch with test cases loaded
     suite = await test_case_service.get_suite(str(suite.id), db)
-    return _suite_to_response(suite)
+    return _suite_to_response(suite, rule_set_name=rule_set.name)
 
 
 @router.get("/by-ruleset/{rule_set_id}", response_model=TestCaseSuiteResponse | None, status_code=200)
@@ -49,7 +73,8 @@ async def get_by_rule_set(rule_set_id: str, db: AsyncSession = Depends(get_db)):
     suite = await test_case_service.get_by_rule_set(rule_set_id, db)
     if not suite:
         return None
-    return _suite_to_response(suite)
+    rs_name = await _resolve_rule_set_name(rule_set_id, db)
+    return _suite_to_response(suite, rule_set_name=rs_name)
 
 
 @router.get("/{suite_id}", response_model=TestCaseSuiteResponse, status_code=200)
@@ -58,7 +83,8 @@ async def get_test_case_suite(suite_id: str, db: AsyncSession = Depends(get_db))
     suite = await test_case_service.get_suite(suite_id, db)
     if not suite:
         raise HTTPException(status_code=404, detail="Test case suite not found")
-    return _suite_to_response(suite)
+    rs_name = await _resolve_rule_set_name(str(suite.rule_set_id), db)
+    return _suite_to_response(suite, rule_set_name=rs_name)
 
 
 @router.get("/{suite_id}/export/csv")
@@ -145,11 +171,12 @@ async def export_json(suite_id: str, db: AsyncSession = Depends(get_db)):
     )
 
 
-def _suite_to_response(suite) -> TestCaseSuiteResponse:
+def _suite_to_response(suite, rule_set_name: str | None = None) -> TestCaseSuiteResponse:
     """Convert a TestCaseSuite ORM object to a response schema."""
     return TestCaseSuiteResponse(
         id=str(suite.id),
         rule_set_id=str(suite.rule_set_id),
+        rule_set_name=rule_set_name,
         total_cases=suite.total_cases,
         cases_by_category=suite.cases_by_category or {},
         test_cases=[
@@ -166,3 +193,12 @@ def _suite_to_response(suite) -> TestCaseSuiteResponse:
         ],
         created_at=suite.created_at.isoformat() if suite.created_at else "",
     )
+
+
+async def _resolve_rule_set_name(rule_set_id: str, db: AsyncSession) -> str | None:
+    """Resolve rule set ID to its name."""
+    try:
+        rs = await get_rule_set_service(rule_set_id, db)
+        return rs.name if rs else None
+    except Exception:
+        return None
