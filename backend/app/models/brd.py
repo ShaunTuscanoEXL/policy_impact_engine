@@ -23,4 +23,4 @@ class BrdDocument(Base):
     metadata_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
-    rule_sets = relationship("RuleSet", back_populates="brd_document")
+    rule_sets = relationship("RuleSet", back_populates="brd_document", cascade="all, delete-orphan")

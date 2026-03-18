@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { TestCase } from "@/lib/types";
 import {
   Table,
@@ -79,9 +79,8 @@ export function TestCaseTable({ testCases, casesByCategory }: TestCaseTableProps
           </TableHeader>
           <TableBody>
             {filtered.map((tc) => (
-              <>
+              <Fragment key={tc.test_case_id}>
                 <TableRow
-                  key={tc.test_case_id}
                   className="cursor-pointer hover:bg-muted/50"
                   onClick={() => setExpandedId(expandedId === tc.test_case_id ? null : tc.test_case_id)}
                 >
@@ -116,7 +115,7 @@ export function TestCaseTable({ testCases, casesByCategory }: TestCaseTableProps
                   </TableCell>
                 </TableRow>
                 {expandedId === tc.test_case_id && (
-                  <TableRow key={`${tc.test_case_id}-details`}>
+                  <TableRow>
                     <TableCell colSpan={6} className="bg-muted/30 p-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -147,7 +146,7 @@ export function TestCaseTable({ testCases, casesByCategory }: TestCaseTableProps
                     </TableCell>
                   </TableRow>
                 )}
-              </>
+              </Fragment>
             ))}
             {filtered.length === 0 && (
               <TableRow>

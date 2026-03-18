@@ -4,7 +4,11 @@ from pathlib import Path
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from app.models.brd import BrdDocument, FileType
+from app.models.rule import RuleSet
+from app.models.simulation import Simulation
+from app.models.test_case import TestCaseSuite
 from app.config import settings
 
 
@@ -55,7 +59,26 @@ async def get_brd(brd_id: str, db: AsyncSession) -> BrdDocument | None:
 
 
 async def delete_brd(brd_id: str, db: AsyncSession) -> bool:
-    brd = await get_brd(brd_id, db)
+    try:
+        parsed_id = uuid.UUID(brd_id)
+    except ValueError:
+        return False
+    # Eagerly load relationships so SQLAlchemy can cascade deletes
+    result = await db.execute(
+        select(BrdDocument)
+        .options(
+            selectinload(BrdDocument.rule_sets)
+            .selectinload(RuleSet.rules),
+            selectinload(BrdDocument.rule_sets)
+            .selectinload(RuleSet.simulations)
+            .selectinload(Simulation.results),
+            selectinload(BrdDocument.rule_sets)
+            .selectinload(RuleSet.test_case_suites)
+            .selectinload(TestCaseSuite.test_cases),
+        )
+        .where(BrdDocument.id == parsed_id)
+    )
+    brd = result.scalar_one_or_none()
     if not brd:
         return False
     # Delete file from disk
