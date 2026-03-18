@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CheckCircle, Circle, Loader2, Play, ArrowRight } from "lucide-react";
+import { CheckCircle, Circle, Loader2, Play, ArrowRight, FlaskConical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import type { BrdWorkflow } from "@/lib/types";
@@ -24,7 +24,11 @@ function deriveSteps(
   onRunPipeline: () => void,
   running: boolean,
   onRunSimulation?: () => void,
-  simulationRunning?: boolean
+  simulationRunning?: boolean,
+  onGenerateTestCases?: () => void,
+  testCaseLoading?: boolean,
+  testCaseSuiteId?: string | null,
+  testCaseCount?: number
 ): Step[] {
   const rs = workflow?.rule_set;
   const sim = workflow?.simulation;
@@ -94,7 +98,37 @@ function deriveSteps(
     });
   }
 
-  // Step 4: Run Simulation
+  // Step 4: Test Cases
+  if (testCaseSuiteId) {
+    steps.push({
+      label: "Test Cases",
+      description: `${testCaseCount ?? 0} test case${(testCaseCount ?? 0) !== 1 ? "s" : ""} generated`,
+      state: "completed",
+    });
+  } else if (testCaseLoading) {
+    steps.push({
+      label: "Test Cases",
+      description: "Generating test cases...",
+      state: "active",
+    });
+  } else if (rulesApproved) {
+    steps.push({
+      label: "Test Cases",
+      description: "Generate test cases from approved rules",
+      state: "active",
+      onAction: onGenerateTestCases,
+      actionLabel: "Generate Test Cases",
+      actionLoading: testCaseLoading,
+    });
+  } else {
+    steps.push({
+      label: "Test Cases",
+      description: "Test cases generated after rules are approved",
+      state: "pending",
+    });
+  }
+
+  // Step 5: Run Simulation
   if (simCompleted) {
     steps.push({
       label: "Run Simulation",
@@ -164,6 +198,10 @@ interface WorkflowStepperProps {
   running: boolean;
   onRunSimulation?: () => void;
   simulationRunning?: boolean;
+  onGenerateTestCases?: () => void;
+  testCaseLoading?: boolean;
+  testCaseSuiteId?: string | null;
+  testCaseCount?: number;
 }
 
 export function WorkflowStepper({
@@ -172,8 +210,12 @@ export function WorkflowStepper({
   running,
   onRunSimulation,
   simulationRunning,
+  onGenerateTestCases,
+  testCaseLoading,
+  testCaseSuiteId,
+  testCaseCount,
 }: WorkflowStepperProps) {
-  const steps = deriveSteps(workflow, onRunPipeline, running, onRunSimulation, simulationRunning);
+  const steps = deriveSteps(workflow, onRunPipeline, running, onRunSimulation, simulationRunning, onGenerateTestCases, testCaseLoading, testCaseSuiteId, testCaseCount);
 
   return (
     <div className="space-y-0">

@@ -114,10 +114,30 @@ export interface Scenario {
   created_at: string;
 }
 
+export interface TestCase {
+  id: string;
+  test_case_id: string;
+  description: string;
+  source_rule_ids: string[];
+  category: string;
+  inputs: Record<string, any>;
+  expected_outcome: Record<string, any>;
+}
+
+export interface TestCaseSuite {
+  id: string;
+  rule_set_id: string;
+  total_cases: number;
+  cases_by_category: Record<string, number>;
+  test_cases: TestCase[];
+  created_at: string;
+}
+
 export interface BrdWorkflow {
   brd_id: string;
   rule_set: { id: string; status: string; rules_count: number } | null;
   simulation: { id: string; status: string; scenario_name: string } | null;
+  test_case_suite?: { id: string; total_cases: number } | null;
 }
 
 export interface PipelineRunResponse {

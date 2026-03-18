@@ -51,12 +51,21 @@ export default function BrdDetailPage() {
   // Workflow state
   const [workflow, setWorkflow] = useState<BrdWorkflow | null>(null);
 
+  // Test case state
+  const [testCaseSuiteId, setTestCaseSuiteId] = useState<string | null>(null);
+  const [testCaseCount, setTestCaseCount] = useState<number>(0);
+  const [testCaseLoading, setTestCaseLoading] = useState(false);
+
   const fetchWorkflow = useCallback(async () => {
     try {
       const { data } = await api.get<BrdWorkflow>(
         `/brds/${params.id}/workflow`
       );
       setWorkflow(data);
+      if (data.test_case_suite) {
+        setTestCaseSuiteId(data.test_case_suite.id);
+        setTestCaseCount(data.test_case_suite.total_cases);
+      }
     } catch {
       // Workflow endpoint may not exist yet for fresh BRDs
     }
@@ -120,6 +129,23 @@ export default function BrdDetailPage() {
       setSimulationRunning(false);
     }
   }, [simDataset, workflow, fetchWorkflow]);
+
+  const handleGenerateTestCases = useCallback(async () => {
+    if (!workflow?.rule_set) return;
+    setTestCaseLoading(true);
+    try {
+      const { data } = await api.post("/test-cases/generate", {
+        rule_set_id: workflow.rule_set.id,
+      });
+      setTestCaseSuiteId(data.id);
+      setTestCaseCount(data.total_cases);
+      toast.success(`${data.total_cases} test cases generated.`);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || "Failed to generate test cases.");
+    } finally {
+      setTestCaseLoading(false);
+    }
+  }, [workflow]);
 
   const handleRunPipeline = useCallback(async () => {
     if (!selectedDataset) {
@@ -220,6 +246,10 @@ export default function BrdDetailPage() {
               running={running}
               onRunSimulation={handleOpenSimDialog}
               simulationRunning={simulationRunning}
+              onGenerateTestCases={handleGenerateTestCases}
+              testCaseLoading={testCaseLoading}
+              testCaseSuiteId={testCaseSuiteId}
+              testCaseCount={testCaseCount}
             />
           </Card>
         </motion.div>

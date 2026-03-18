@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
-import type { RuleSet, Rule } from "@/lib/types";
+import type { RuleSet, Rule, TestCaseSuite } from "@/lib/types";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
   Shield,
   GitBranch,
   PlayCircle,
+  FlaskConical,
 } from "lucide-react";
 import { RuleTable } from "@/components/rules/rule-table";
 import {
@@ -24,6 +25,8 @@ import {
   type RuleFormData,
 } from "@/components/rules/rule-editor-dialog";
 import { ConflictPanel } from "@/components/rules/conflict-panel";
+import { TestCaseTable } from "@/components/test-cases/test-case-table";
+import { TestCaseExportPanel } from "@/components/test-cases/test-case-export-panel";
 import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
 
@@ -53,6 +56,10 @@ export default function RuleReviewPage() {
   const [creatingVersion, setCreatingVersion] = useState(false);
   const [runningSimulation, setRunningSimulation] = useState(false);
 
+  // Test case state
+  const [testCaseSuite, setTestCaseSuite] = useState<TestCaseSuite | null>(null);
+  const [testCaseLoading, setTestCaseLoading] = useState(false);
+
   const fetchRuleSet = useCallback(async () => {
     try {
       const { data } = await api.get(`/rule-sets/${params.ruleSetId}`);
@@ -65,9 +72,34 @@ export default function RuleReviewPage() {
     }
   }, [params.ruleSetId, router]);
 
+  const fetchTestCases = useCallback(async () => {
+    try {
+      const { data } = await api.get<TestCaseSuite>(`/test-cases/by-ruleset/${params.ruleSetId}`);
+      setTestCaseSuite(data);
+    } catch {
+      // No test cases yet — that's fine
+    }
+  }, [params.ruleSetId]);
+
   useEffect(() => {
     fetchRuleSet();
-  }, [fetchRuleSet]);
+    fetchTestCases();
+  }, [fetchRuleSet, fetchTestCases]);
+
+  const handleGenerateTestCases = useCallback(async () => {
+    setTestCaseLoading(true);
+    try {
+      const { data } = await api.post<TestCaseSuite>("/test-cases/generate", {
+        rule_set_id: params.ruleSetId,
+      });
+      setTestCaseSuite(data);
+      toast.success(`${data.total_cases} test cases generated.`);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || "Failed to generate test cases.");
+    } finally {
+      setTestCaseLoading(false);
+    }
+  }, [params.ruleSetId]);
 
   const handleApproveAll = useCallback(async () => {
     setApproving(true);
@@ -284,6 +316,51 @@ export default function RuleReviewPage() {
         />
       </Card>
       </motion.div>
+
+      {/* Test Cases Section */}
+      {ruleSet.status === "APPROVED" && !testCaseSuite && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <Card className="card-elevated p-6 border-border/40">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <FlaskConical className="size-5 text-purple-500" />
+                <div>
+                  <h2 className="text-sm font-semibold">Generate Test Cases</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Automatically generate test cases from the approved rules
+                  </p>
+                </div>
+              </div>
+              <Button onClick={handleGenerateTestCases} disabled={testCaseLoading}>
+                {testCaseLoading ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <FlaskConical className="mr-2 size-4" />
+                )}
+                Generate Test Cases
+              </Button>
+            </div>
+          </Card>
+        </motion.div>
+      )}
+
+      {testCaseSuite && (
+        <>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+            <TestCaseTable
+              testCases={testCaseSuite.test_cases}
+              casesByCategory={testCaseSuite.cases_by_category}
+            />
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+            <TestCaseExportPanel
+              suiteId={testCaseSuite.id}
+              totalCases={testCaseSuite.total_cases}
+              casesByCategory={testCaseSuite.cases_by_category}
+            />
+          </motion.div>
+        </>
+      )}
 
       {/* Editor Dialog */}
       <RuleEditorDialog

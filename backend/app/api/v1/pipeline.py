@@ -21,6 +21,7 @@ from app.pipeline.graph import run_pipeline
 from app.pipeline.rule_compiler import compile_rules
 from app.schemas.rule import RuleDefinition
 from app.services import brd_service, dataset_service, rule_service, simulation_service
+from app.services import test_case_service
 from app.simulation.engine import SimulationOutput, run_simulation
 
 logger = logging.getLogger(__name__)
@@ -49,6 +50,7 @@ class PipelineRunResponse(BaseModel):
     validation_result: dict | None = None
     rules_extracted: int
     error: str | None = None
+    test_cases_generated: int | None = None
 
 
 class PipelineApproveResponse(BaseModel):
@@ -57,6 +59,7 @@ class PipelineApproveResponse(BaseModel):
     rule_set_id: str
     impact_summary: dict
     rules_compiled: int
+    test_cases_generated: int | None = None
 
 
 class RunSimulationRequest(BaseModel):
@@ -242,6 +245,18 @@ async def pipeline_run(body: PipelineRunRequest, db: AsyncSession = Depends(get_
         # Save simulation results
         await _save_simulation_results(str(sim.id), sim_output, db)
 
+        # Save test cases if generated
+        test_cases_count = None
+        tc_output = result.get("test_cases")
+        if tc_output and tc_output.test_cases:
+            tc_suite = await test_case_service.generate_and_save(
+                rule_set_id=str(rule_set.id),
+                rules=rule_set.rules,
+                baseline_config=None,
+                db=db,
+            )
+            test_cases_count = tc_suite.total_cases
+
         # Mark simulation completed
         await simulation_service.update_simulation_status(str(sim.id), SimulationStatus.COMPLETED, db)
 
@@ -253,6 +268,7 @@ async def pipeline_run(body: PipelineRunRequest, db: AsyncSession = Depends(get_
             rule_set_id=str(rule_set.id),
             impact_summary=_simulation_output_to_summary(sim_output),
             rules_extracted=len(extracted_rules),
+            test_cases_generated=test_cases_count,
         )
 
     # 10. Human review path: pause after validation
@@ -267,6 +283,7 @@ async def pipeline_run(body: PipelineRunRequest, db: AsyncSession = Depends(get_
         extracted_rules=[r.model_dump() for r in extracted_rules],
         validation_result=validation_result.model_dump() if validation_result else None,
         rules_extracted=len(extracted_rules),
+        test_cases_generated=None,
     )
 
 
@@ -336,6 +353,7 @@ async def run_simulation_for_ruleset(body: RunSimulationRequest, db: AsyncSessio
         rule_set_id=body.rule_set_id,
         impact_summary=_simulation_output_to_summary(sim_output),
         rules_compiled=len(compiled),
+        test_cases_generated=None,
     )
 
 
@@ -413,6 +431,20 @@ async def pipeline_approve(simulation_id: str, db: AsyncSession = Depends(get_db
 
     # Persist results
     await _save_simulation_results(simulation_id, sim_output, db)
+
+    # Generate and save test cases
+    test_cases_count = None
+    try:
+        tc_suite = await test_case_service.generate_and_save(
+            rule_set_id=str(rule_set.id),
+            rules=rule_set.rules,
+            baseline_config=None,
+            db=db,
+        )
+        test_cases_count = tc_suite.total_cases
+    except Exception:
+        logger.warning("Test case generation failed during approval (non-blocking)")
+
     await simulation_service.update_simulation_status(simulation_id, SimulationStatus.COMPLETED, db)
     await db.commit()
 
@@ -422,6 +454,7 @@ async def pipeline_approve(simulation_id: str, db: AsyncSession = Depends(get_db
         rule_set_id=str(rule_set.id),
         impact_summary=_simulation_output_to_summary(sim_output),
         rules_compiled=len(compiled),
+        test_cases_generated=test_cases_count,
     )
 
 

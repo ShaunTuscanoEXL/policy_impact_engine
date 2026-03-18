@@ -12,6 +12,7 @@ from app.api.v1.rules import router as rules_router
 from app.api.v1.pipeline import router as pipeline_router
 from app.api.v1.export import router as export_router
 from app.api.v1.dashboard import router as dashboard_router
+from app.api.v1.test_cases import router as test_cases_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -20,6 +21,7 @@ async def lifespan(app: FastAPI):
     import app.models.dataset  # noqa: F401
     import app.models.rule  # noqa: F401
     import app.models.simulation  # noqa: F401
+    import app.models.test_case  # noqa: F401
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
@@ -43,6 +45,7 @@ app.include_router(rules_router, prefix="/api/v1")
 app.include_router(pipeline_router, prefix="/api/v1")
 app.include_router(export_router, prefix="/api/v1")
 app.include_router(dashboard_router, prefix="/api/v1")
+app.include_router(test_cases_router, prefix="/api/v1")
 
 
 @app.get("/health")

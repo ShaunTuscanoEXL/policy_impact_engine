@@ -20,6 +20,7 @@ from app.pipeline.rule_validator import validate_rules
 from app.pipeline.schemas import DocumentSection, ValidationResult
 from app.schemas.rule import RuleDefinition
 from app.simulation.engine import SimulationOutput, run_simulation
+from app.pipeline.test_case_generator import generate_test_cases as generate_test_cases_func, TestCaseSuiteOutput
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,7 @@ class PipelineState(TypedDict, total=False):
     validation_result: ValidationResult | None
     compiled_rules: list[CompiledRule]
     simulation_result: SimulationOutput | None
+    test_cases: TestCaseSuiteOutput | None
     error: str | None
 
 
@@ -106,6 +108,23 @@ def compile_rules_node(state: PipelineState) -> dict[str, Any]:
         return {"compiled_rules": [], "error": f"Rule compilation failed: {exc}"}
 
 
+def generate_test_cases_node(state: PipelineState) -> dict[str, Any]:
+    """Generate test cases from compiled rules (non-blocking)."""
+    if state.get("error") or not state.get("compiled_rules"):
+        return {"test_cases": None}
+    try:
+        tc_output = generate_test_cases_func(
+            state["compiled_rules"],
+            state.get("extracted_rules", []),
+            state.get("baseline_config"),
+        )
+        logger.info("Generated %d test cases", tc_output.total_cases)
+        return {"test_cases": tc_output}
+    except Exception as exc:
+        logger.warning("Test case generation failed (non-blocking): %s", exc)
+        return {"test_cases": None}
+
+
 def simulation_node(state: PipelineState) -> dict[str, Any]:
     """Run simulation with compiled rules against the dataset."""
     if state.get("error"):
@@ -156,6 +175,7 @@ def build_pipeline() -> StateGraph:
     graph.add_node("extract_rules", extract_rules_node)
     graph.add_node("validate_rules", validate_rules_node)
     graph.add_node("compile_rules", compile_rules_node)
+    graph.add_node("generate_test_cases", generate_test_cases_node)
     graph.add_node("run_simulation", simulation_node)
 
     # Set entry point
@@ -175,7 +195,8 @@ def build_pipeline() -> StateGraph:
         },
     )
 
-    graph.add_edge("compile_rules", "run_simulation")
+    graph.add_edge("compile_rules", "generate_test_cases")
+    graph.add_edge("generate_test_cases", "run_simulation")
     graph.add_edge("run_simulation", END)
 
     return graph.compile()
