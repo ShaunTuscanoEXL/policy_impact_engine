@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import type { LoanRecordListItem, LoanRecordStats } from "@/lib/types";
@@ -25,6 +25,7 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  Upload,
 } from "lucide-react";
 
 const PAGE_SIZE = 20;
@@ -59,6 +60,8 @@ export default function LoanRecordsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchRecords = useCallback(async (currentPage: number, query: string) => {
     setLoading(true);
@@ -111,6 +114,28 @@ export default function LoanRecordsPage() {
     if (e.key === "Enter") handleSearch();
   };
 
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const { data } = await api.post("/loan-records/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success(`Imported ${data.imported} records (${data.skipped} skipped, ${data.errors} errors).`);
+      fetchStats();
+      fetchRecords(1, search);
+      setPage(1);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || "Upload failed.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   return (
@@ -119,7 +144,7 @@ export default function LoanRecordsPage() {
         {/* Header */}
         <div>
           <p className="text-xs text-muted-foreground mb-4">Dashboard / Loan Records</p>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-3">
             <div className="icon-badge bg-emerald-100 dark:bg-emerald-900/30">
               <Database className="size-5 text-emerald-600 dark:text-emerald-400" />
             </div>
@@ -131,6 +156,27 @@ export default function LoanRecordsPage() {
                 Browse and search loan application data.
               </p>
             </div>
+          </div>
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,.json"
+              className="hidden"
+              onChange={handleUpload}
+            />
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <Upload className="mr-2 size-4" />
+              )}
+              Upload CSV
+            </Button>
           </div>
         </div>
 

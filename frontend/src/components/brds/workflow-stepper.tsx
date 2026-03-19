@@ -78,10 +78,10 @@ function deriveSteps(
   } else {
     steps.push({
       label: "Extract Rules",
-      description: "Run the pipeline to extract rules from the BRD",
+      description: "Extract rules directly from the BRD document",
       state: "pending",
       onAction: onRunPipeline,
-      actionLabel: "Run Pipeline",
+      actionLabel: "Extract Rules",
     });
   }
 

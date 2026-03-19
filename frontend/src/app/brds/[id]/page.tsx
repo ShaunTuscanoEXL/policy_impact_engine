@@ -14,23 +14,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogClose,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { FileText, ArrowLeft, Loader2, Play } from "lucide-react";
+import { FileText, ArrowLeft, Loader2 } from "lucide-react";
 import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
 
@@ -40,11 +24,6 @@ export default function BrdDetailPage() {
   const [brd, setBrd] = useState<BrdDocument | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Pipeline dialog state
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [datasets, setDatasets] = useState<any[]>([]);
-  const [selectedDataset, setSelectedDataset] = useState<string>("");
-  const [autoApprove, setAutoApprove] = useState(false);
   const [running, setRunning] = useState(false);
 
   // Workflow state
@@ -89,19 +68,20 @@ export default function BrdDetailPage() {
     fetchWorkflow();
   }, [params.id, router, fetchWorkflow]);
 
-  const loadDatasets = useCallback(async () => {
+  const handleExtractRules = useCallback(async () => {
+    setRunning(true);
     try {
-      const { data } = await api.get("/datasets");
-      setDatasets(data);
-    } catch {
-      toast.error("Failed to load datasets.");
+      const { data } = await api.post(`/brds/${params.id}/extract-rules`);
+      toast.success(
+        `${data.rules_count ?? data.rules_extracted ?? 0} rules extracted.`
+      );
+      await fetchWorkflow();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || "Rule extraction failed.");
+    } finally {
+      setRunning(false);
     }
-  }, []);
-
-  const handleOpenDialog = useCallback(() => {
-    loadDatasets();
-    setDialogOpen(true);
-  }, [loadDatasets]);
+  }, [params.id, fetchWorkflow]);
 
   const handleCountChange = useCallback(
     (category: keyof TestCaseCounts, value: number) => {
@@ -116,7 +96,11 @@ export default function BrdDetailPage() {
     try {
       const { data } = await api.post("/test-cases/generate", {
         rule_set_id: workflow.rule_set.id,
-        counts: testCaseCounts,
+        positive_count: testCaseCounts.POSITIVE,
+        negative_count: testCaseCounts.NEGATIVE,
+        boundary_count: testCaseCounts.BOUNDARY,
+        edge_count: testCaseCounts.EDGE,
+        interaction_count: testCaseCounts.INTERACTION,
       });
       setTestCaseSuiteId(data.id);
       setTestCaseCount(data.total_cases);
@@ -128,38 +112,7 @@ export default function BrdDetailPage() {
     }
   }, [workflow, testCaseCounts]);
 
-  const handleRunPipeline = useCallback(async () => {
-    if (!selectedDataset) {
-      toast.error("Please select a dataset.");
-      return;
-    }
-
-    setRunning(true);
-    setDialogOpen(false);
-
-    try {
-      const dsName = datasets.find((d) => d.id === selectedDataset)?.filename ?? "dataset";
-      const brdName = brd?.filename?.replace(/\.[^.]+$/, "") ?? "BRD";
-      const scenarioName = `${brdName} × ${dsName.replace(/\.[^.]+$/, "")}`;
-      const { data } = await api.post("/pipeline/run", {
-        brd_id: params.id,
-        dataset_id: selectedDataset,
-        scenario_name: scenarioName,
-        auto_approve: autoApprove,
-      });
-
-      toast.success(
-        `Pipeline completed. ${data.rules_extracted ?? 0} rules extracted.`
-      );
-
-      // Refresh workflow state
-      await fetchWorkflow();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.detail || "Pipeline run failed.");
-    } finally {
-      setRunning(false);
-    }
-  }, [selectedDataset, autoApprove, params.id, brd, datasets, fetchWorkflow]);
+  // handleExtractRules is defined above
 
   if (loading) {
     return (
@@ -227,7 +180,7 @@ export default function BrdDetailPage() {
             </h2>
             <WorkflowStepper
               workflow={workflow}
-              onRunPipeline={handleOpenDialog}
+              onRunPipeline={handleExtractRules}
               running={running}
               onGenerateTestCases={handleGenerateTestCases}
               testCaseLoading={testCaseLoading}
@@ -258,69 +211,6 @@ export default function BrdDetailPage() {
             </Card>
           </motion.div>
         )}
-
-        {/* Run Pipeline Dialog */}
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Run Pipeline</DialogTitle>
-              <DialogDescription>
-                Select a dataset and configure options to run the extraction
-                pipeline on this BRD.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Dataset</label>
-                <Select
-                  value={selectedDataset}
-                  onValueChange={(val) => setSelectedDataset(val ?? "")}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a dataset..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {datasets.length === 0 ? (
-                      <SelectItem value="_none" disabled>
-                        No datasets available
-                      </SelectItem>
-                    ) : (
-                      datasets.map((ds) => (
-                        <SelectItem key={ds.id} value={ds.id}>
-                          {ds.name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="auto-approve"
-                  checked={autoApprove}
-                  onChange={(e) => setAutoApprove(e.target.checked)}
-                  className="size-4 rounded border-input"
-                />
-                <label htmlFor="auto-approve" className="text-sm">
-                  Auto-approve extracted rules
-                </label>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <DialogClose render={<Button variant="outline" />}>
-                Cancel
-              </DialogClose>
-              <Button onClick={handleRunPipeline} disabled={!selectedDataset}>
-                <Play className="mr-2 size-4" />
-                Run
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
 
       </div>
     </PageTransition>
