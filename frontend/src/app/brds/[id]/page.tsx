@@ -112,7 +112,7 @@ export default function BrdDetailPage() {
     } finally {
       setTestCaseLoading(false);
     }
-  }, [workflow, testCaseCounts]);
+  }, [workflow, testCaseCounts, maxMatches]);
 
   // handleExtractRules is defined above
 
