@@ -35,5 +35,5 @@ class RuleConflict:
 @dataclass
 class ValidationResult:
     is_valid: bool
-    conflicts: list[RuleConflict]
+    potential_conflicts: list[RuleConflict]
     warnings: list[str]
