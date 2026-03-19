@@ -65,6 +65,7 @@ export default function RuleReviewPage() {
   const [testCaseCounts, setTestCaseCounts] = useState<TestCaseCounts>({
     ...DEFAULT_TEST_CASE_COUNTS,
   });
+  const [maxMatches, setMaxMatches] = useState(10);
 
 
   const fetchRuleSet = useCallback(async () => {
@@ -107,6 +108,7 @@ export default function RuleReviewPage() {
         boundary_count: testCaseCounts.BOUNDARY,
         edge_count: testCaseCounts.EDGE,
         interaction_count: testCaseCounts.INTERACTION,
+        max_matches: maxMatches,
       });
       setTestCaseSuite(data);
       toast.success(`${data.total_cases} test cases generated.`);
@@ -367,6 +369,22 @@ export default function RuleReviewPage() {
                   />
                 </div>
               ))}
+            </div>
+            <div className="flex items-center gap-4 mb-4">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground uppercase">Max Matches per Test Case</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={maxMatches}
+                  onChange={(e) => setMaxMatches(parseInt(e.target.value) || 10)}
+                  className="h-9 w-32"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-4">
+                Maximum number of matching loan records to find per test case
+              </p>
             </div>
             <Button onClick={handleGenerateTestCases} disabled={testCaseLoading}>
               {testCaseLoading ? (

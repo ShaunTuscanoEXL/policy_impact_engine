@@ -17,6 +17,7 @@ class TestCaseGenerateRequest(BaseModel):
     boundary_count: int = 5
     edge_count: int = 3
     interaction_count: int = 2
+    max_matches: int = 10
 
 
 class MatchedCustomer(BaseModel):

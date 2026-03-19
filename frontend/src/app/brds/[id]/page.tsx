@@ -36,6 +36,7 @@ export default function BrdDetailPage() {
   const [testCaseCounts, setTestCaseCounts] = useState<TestCaseCounts>({
     ...DEFAULT_TEST_CASE_COUNTS,
   });
+  const [maxMatches, setMaxMatches] = useState(10);
 
   const fetchWorkflow = useCallback(async () => {
     try {
@@ -101,6 +102,7 @@ export default function BrdDetailPage() {
         boundary_count: testCaseCounts.BOUNDARY,
         edge_count: testCaseCounts.EDGE,
         interaction_count: testCaseCounts.INTERACTION,
+        max_matches: maxMatches,
       });
       setTestCaseSuiteId(data.id);
       setTestCaseCount(data.total_cases);
@@ -188,6 +190,8 @@ export default function BrdDetailPage() {
               testCaseCount={testCaseCount}
               testCaseCounts={testCaseCounts}
               onCountChange={handleCountChange}
+              maxMatches={maxMatches}
+              onMaxMatchesChange={setMaxMatches}
             />
           </Card>
         </motion.div>

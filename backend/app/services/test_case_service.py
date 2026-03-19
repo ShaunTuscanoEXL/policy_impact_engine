@@ -21,6 +21,7 @@ async def generate_and_save(
     rules: list,
     counts: dict,
     db: AsyncSession,
+    max_matches: int = 10,
 ) -> TestCaseSuite:
     """Generate test cases, match customers, and persist to DB."""
     # Convert DB rules to RuleDefinition objects
@@ -56,7 +57,7 @@ async def generate_and_save(
 
     # For each test case, match customers from loan DB
     for tc in output.test_cases:
-        matched = await match_customers(tc.filter_logic, db, limit=10)
+        matched = await match_customers(tc.filter_logic, db, limit=max_matches)
         matched_ids = [m["loan_application_id"] for m in matched]
 
         test_case = TestCase(

@@ -38,6 +38,7 @@ async def generate_test_cases(body: TestCaseGenerateRequest, db: AsyncSession = 
         rule_set_id=body.rule_set_id,
         rules=rule_set.rules,
         counts=counts,
+        max_matches=body.max_matches,
         db=db,
     )
 

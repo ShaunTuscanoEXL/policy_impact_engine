@@ -46,7 +46,9 @@ function deriveSteps(
   testCaseSuiteId?: string | null,
   testCaseCount?: number,
   testCaseCounts?: TestCaseCounts,
-  onCountChange?: (category: keyof TestCaseCounts, value: number) => void
+  onCountChange?: (category: keyof TestCaseCounts, value: number) => void,
+  maxMatches?: number,
+  onMaxMatchesChange?: (value: number) => void,
 ): Step[] {
   const rs = workflow?.rule_set;
 
@@ -127,7 +129,7 @@ function deriveSteps(
     });
   } else if (rulesApproved) {
     const countsForm = testCaseCounts && onCountChange ? (
-      <div className="mt-3 space-y-2">
+      <div className="mt-3 space-y-3">
         <p className="text-xs font-medium text-muted-foreground mb-1">Cases per category:</p>
         <div className="grid grid-cols-5 gap-2">
           {(Object.keys(DEFAULT_TEST_CASE_COUNTS) as Array<keyof TestCaseCounts>).map((cat) => (
@@ -144,6 +146,22 @@ function deriveSteps(
             </div>
           ))}
         </div>
+        {onMaxMatchesChange && (
+          <div className="flex items-center gap-3">
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-muted-foreground uppercase">Max Matches</label>
+              <Input
+                type="number"
+                min={1}
+                max={50}
+                value={maxMatches ?? 10}
+                onChange={(e) => onMaxMatchesChange(parseInt(e.target.value) || 10)}
+                className="h-8 text-sm w-24"
+              />
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-4">customers per test case</p>
+          </div>
+        )}
       </div>
     ) : null;
 
@@ -208,6 +226,8 @@ interface WorkflowStepperProps {
   testCaseCount?: number;
   testCaseCounts?: TestCaseCounts;
   onCountChange?: (category: keyof TestCaseCounts, value: number) => void;
+  maxMatches?: number;
+  onMaxMatchesChange?: (value: number) => void;
 }
 
 export function WorkflowStepper({
@@ -220,6 +240,8 @@ export function WorkflowStepper({
   testCaseCount,
   testCaseCounts,
   onCountChange,
+  maxMatches,
+  onMaxMatchesChange,
 }: WorkflowStepperProps) {
   const steps = deriveSteps(
     workflow,
@@ -230,7 +252,9 @@ export function WorkflowStepper({
     testCaseSuiteId,
     testCaseCount,
     testCaseCounts,
-    onCountChange
+    onCountChange,
+    maxMatches,
+    onMaxMatchesChange
   );
 
   return (
