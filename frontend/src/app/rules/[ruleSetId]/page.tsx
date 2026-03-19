@@ -117,7 +117,7 @@ export default function RuleReviewPage() {
     } finally {
       setTestCaseLoading(false);
     }
-  }, [params.ruleSetId, testCaseCounts]);
+  }, [params.ruleSetId, testCaseCounts, maxMatches]);
 
   const handleApproveAll = useCallback(async () => {
     setApproving(true);
