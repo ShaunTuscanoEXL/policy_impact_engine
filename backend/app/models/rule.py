@@ -35,7 +35,6 @@ class RuleSet(Base):
 
     brd_document = relationship("BrdDocument", back_populates="rule_sets")
     rules = relationship("Rule", back_populates="rule_set", cascade="all, delete-orphan")
-    simulations = relationship("Simulation", back_populates="rule_set", cascade="all, delete-orphan")
     test_case_suites = relationship("TestCaseSuite", back_populates="rule_set", cascade="all, delete-orphan")
 
 

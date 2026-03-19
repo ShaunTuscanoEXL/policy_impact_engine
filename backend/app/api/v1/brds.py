@@ -5,7 +5,7 @@ from app.database import get_db
 from app.services import brd_service
 from app.schemas.brd import BrdUploadResponse, BrdListResponse
 from app.models.rule import RuleSet, Rule
-from app.models.simulation import Simulation
+from app.models.test_case import TestCaseSuite
 
 router = APIRouter(prefix="/brds", tags=["BRDs"])
 
@@ -49,7 +49,7 @@ async def get_brd(brd_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.get("/{brd_id}/workflow")
 async def get_brd_workflow(brd_id: str, db: AsyncSession = Depends(get_db)):
-    """Get workflow status for a BRD: latest rule set and simulation."""
+    """Get workflow status for a BRD: latest rule set and test case suite."""
     brd = await brd_service.get_brd(brd_id, db)
     if not brd:
         raise HTTPException(404, "BRD not found")
@@ -64,7 +64,7 @@ async def get_brd_workflow(brd_id: str, db: AsyncSession = Depends(get_db)):
     rule_set = rs_result.scalar_one_or_none()
 
     rule_set_data = None
-    simulation_data = None
+    test_case_suite_data = None
 
     if rule_set:
         rules_count = await db.execute(
@@ -76,25 +76,25 @@ async def get_brd_workflow(brd_id: str, db: AsyncSession = Depends(get_db)):
             "rules_count": rules_count.scalar() or 0,
         }
 
-        # Get latest simulation for this rule set
-        sim_result = await db.execute(
-            select(Simulation)
-            .where(Simulation.rule_set_id == rule_set.id)
-            .order_by(Simulation.created_at.desc())
+        # Get latest test case suite for this rule set
+        tc_result = await db.execute(
+            select(TestCaseSuite)
+            .where(TestCaseSuite.rule_set_id == rule_set.id)
+            .order_by(TestCaseSuite.created_at.desc())
             .limit(1)
         )
-        simulation = sim_result.scalar_one_or_none()
-        if simulation:
-            simulation_data = {
-                "id": str(simulation.id),
-                "status": simulation.status.value,
-                "scenario_name": simulation.scenario_name,
+        tc_suite = tc_result.scalar_one_or_none()
+        if tc_suite:
+            test_case_suite_data = {
+                "id": str(tc_suite.id),
+                "total_cases": tc_suite.total_cases,
+                "cases_by_category": tc_suite.cases_by_category,
             }
 
     return {
         "brd_id": brd_id,
         "rule_set": rule_set_data,
-        "simulation": simulation_data,
+        "test_case_suite": test_case_suite_data,
     }
 
 

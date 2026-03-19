@@ -7,7 +7,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from app.models.brd import BrdDocument, FileType
 from app.models.rule import RuleSet
-from app.models.simulation import Simulation
 from app.models.test_case import TestCaseSuite
 from app.config import settings
 
@@ -69,9 +68,6 @@ async def delete_brd(brd_id: str, db: AsyncSession) -> bool:
         .options(
             selectinload(BrdDocument.rule_sets)
             .selectinload(RuleSet.rules),
-            selectinload(BrdDocument.rule_sets)
-            .selectinload(RuleSet.simulations)
-            .selectinload(Simulation.results),
             selectinload(BrdDocument.rule_sets)
             .selectinload(RuleSet.test_case_suites)
             .selectinload(TestCaseSuite.test_cases),
