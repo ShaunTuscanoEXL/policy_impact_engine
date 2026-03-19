@@ -33,8 +33,8 @@ export function TestCaseTable({ testCases, casesByCategory }: TestCaseTableProps
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const filtered = filter
-    ? testCases.filter((tc) => tc.category === filter)
-    : testCases;
+    ? (testCases ?? []).filter((tc) => tc.category === filter)
+    : (testCases ?? []);
 
   return (
     <Card>
@@ -42,7 +42,7 @@ export function TestCaseTable({ testCases, casesByCategory }: TestCaseTableProps
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <FlaskConical className="h-5 w-5" />
-            Test Cases ({testCases.length})
+            Test Cases ({testCases?.length ?? 0})
           </CardTitle>
         </div>
         {/* Category filter badges */}

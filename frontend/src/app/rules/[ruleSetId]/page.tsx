@@ -81,8 +81,12 @@ export default function RuleReviewPage() {
 
   const fetchTestCases = useCallback(async () => {
     try {
-      const { data } = await api.get<TestCaseSuite>(`/test-cases/by-ruleset/${params.ruleSetId}`);
-      setTestCaseSuite(data);
+      const { data: suites } = await api.get(`/test-cases/by-ruleset/${params.ruleSetId}`);
+      if (Array.isArray(suites) && suites.length > 0) {
+        // Fetch full suite with test cases
+        const { data: fullSuite } = await api.get<TestCaseSuite>(`/test-cases/${suites[0].id}`);
+        setTestCaseSuite(fullSuite);
+      }
     } catch {
       // No test cases yet -- that's fine
     }
@@ -98,7 +102,11 @@ export default function RuleReviewPage() {
     try {
       const { data } = await api.post<TestCaseSuite>("/test-cases/generate", {
         rule_set_id: params.ruleSetId,
-        counts: testCaseCounts,
+        positive_count: testCaseCounts.POSITIVE,
+        negative_count: testCaseCounts.NEGATIVE,
+        boundary_count: testCaseCounts.BOUNDARY,
+        edge_count: testCaseCounts.EDGE,
+        interaction_count: testCaseCounts.INTERACTION,
       });
       setTestCaseSuite(data);
       toast.success(`${data.total_cases} test cases generated.`);
