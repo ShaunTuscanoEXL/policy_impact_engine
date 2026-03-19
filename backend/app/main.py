@@ -14,6 +14,7 @@ async def lifespan(app: FastAPI):
     import app.models.brd
     import app.models.rule
     import app.models.test_case
+    import app.models.loan_record
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
