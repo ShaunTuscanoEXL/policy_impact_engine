@@ -151,18 +151,16 @@ export default function RuleReviewPage() {
   const handleApproveAndGenerateTests = useCallback(async () => {
     setRunningSimulation(true);
     try {
-      // First approve the rule set
+      // Approve the rule set, then show count configuration
       await api.patch(`/rule-sets/${params.ruleSetId}/approve`);
-      toast.success("Rules approved. You can now generate test cases.");
+      toast.success("Rules approved. Configure test case counts below and click Generate.");
       await fetchRuleSet();
-      // Auto-trigger test case generation
-      await handleGenerateTestCases();
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || "Failed to approve rule set.");
     } finally {
       setRunningSimulation(false);
     }
-  }, [params.ruleSetId, fetchRuleSet, handleGenerateTestCases]);
+  }, [params.ruleSetId, fetchRuleSet]);
 
   const handleEditRule = useCallback((rule: Rule) => {
     setEditingRule(rule);
@@ -299,7 +297,7 @@ export default function RuleReviewPage() {
               ) : (
                 <FlaskConical className="mr-2 size-4" />
               )}
-              Approve &amp; Generate Tests
+              Approve Rules
             </Button>
           ) : (
             <Button
