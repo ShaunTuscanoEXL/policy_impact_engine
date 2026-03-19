@@ -119,12 +119,12 @@ export function TestCaseTable({ testCases, casesByCategory }: TestCaseTableProps
                     <TableCell colSpan={6} className="bg-muted/30 p-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <h4 className="font-semibold text-sm mb-2">Inputs</h4>
+                          <h4 className="font-semibold text-sm mb-2">Filter Conditions</h4>
                           <div className="space-y-1">
-                            {Object.entries(tc.inputs).map(([key, val]) => (
-                              <div key={key} className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">{key}:</span>
-                                <span className="font-mono">{String(val)}</span>
+                            {(Array.isArray(tc.filter_logic) ? tc.filter_logic : []).map((f: any, idx: number) => (
+                              <div key={idx} className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">{f.field_name}:</span>
+                                <span className="font-mono">{f.operator} {String(f.value)}</span>
                               </div>
                             ))}
                           </div>

@@ -10,14 +10,35 @@ class TestCaseCategoryEnum(str, Enum):
     INTERACTION = "INTERACTION"
 
 
+class TestCaseGenerateRequest(BaseModel):
+    rule_set_id: str
+    positive_count: int = 3
+    negative_count: int = 3
+    boundary_count: int = 5
+    edge_count: int = 3
+    interaction_count: int = 2
+
+
+class MatchedCustomer(BaseModel):
+    id: str
+    loan_application_id: str
+    request_payload: dict
+    response_payload: dict
+    match_reason: str
+
+
 class TestCaseResponse(BaseModel):
     id: str
     test_case_id: str
-    description: str
+    description: str | None
     source_rule_ids: list[str]
     category: str
-    inputs: dict
+    filter_logic: list[dict]
+    filter_description: str | None = None
     expected_outcome: dict
+    matched_loan_ids: list[str] = []
+    match_count: int = 0
+    matched_customers: list[MatchedCustomer] = []
 
     model_config = {"from_attributes": True}
 
@@ -32,11 +53,6 @@ class TestCaseSuiteResponse(BaseModel):
     created_at: str
 
     model_config = {"from_attributes": True}
-
-
-class TestCaseGenerateRequest(BaseModel):
-    rule_set_id: str
-    baseline_config: dict | None = None
 
 
 class TestCaseSuiteListResponse(BaseModel):

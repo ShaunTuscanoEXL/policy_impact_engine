@@ -37,7 +37,9 @@ class TestCase(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_rule_ids: Mapped[dict] = mapped_column(JSON)
     category: Mapped[TestCaseCategory] = mapped_column(SAEnum(TestCaseCategory))
-    inputs: Mapped[dict] = mapped_column(JSON)
+    filter_logic: Mapped[dict] = mapped_column(JSON)
+    matched_loan_ids: Mapped[list] = mapped_column(JSON, default=list)
+    match_count: Mapped[int] = mapped_column(Integer, default=0)
     expected_outcome: Mapped[dict] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
