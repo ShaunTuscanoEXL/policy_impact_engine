@@ -527,10 +527,14 @@ def generate_single_record(index: int, rng: np.random.Generator) -> dict:
     }
 
 
-def generate_records(count: int = 2000) -> list[dict]:
+def generate_records(count: int = 10000) -> list[dict]:
+    # Use multiple seeds for diversity across segments
     rng = np.random.default_rng(seed=42)
     records = []
     for i in range(1, count + 1):
+        # Reseed every 2000 records to create distinct population segments
+        if i % 2000 == 1 and i > 1:
+            rng = np.random.default_rng(seed=42 + i)
         records.append(generate_single_record(i, rng))
     return records
 
@@ -552,8 +556,8 @@ async def main():
             await db.commit()
             print(f"Cleared {existing_count} existing loan records.")
 
-        print("Generating 2000 synthetic loan records...")
-        records = generate_records(2000)
+        print("Generating 10000 synthetic loan records...")
+        records = generate_records(10000)
 
         for rec in records:
             db.add(LoanRecord(**rec))
