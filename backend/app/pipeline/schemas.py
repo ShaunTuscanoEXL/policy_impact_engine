@@ -19,6 +19,7 @@ class DocumentSection:
     title: str
     content: str
     section_type: SectionType
+    section_id: str = ""
     page_number: int | None = None
 
 
