@@ -5,10 +5,15 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
 import type { RuleSet, Rule, TestCaseSuite } from "@/lib/types";
+import {
+  type TestCaseCounts,
+  DEFAULT_TEST_CASE_COUNTS,
+} from "@/components/brds/workflow-stepper";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   ArrowLeft,
   Loader2,
@@ -17,6 +22,7 @@ import {
   Shield,
   GitBranch,
   FlaskConical,
+  ExternalLink,
 } from "lucide-react";
 import { RuleTable } from "@/components/rules/rule-table";
 import {
@@ -56,6 +62,9 @@ export default function RuleReviewPage() {
   // Test case state
   const [testCaseSuite, setTestCaseSuite] = useState<TestCaseSuite | null>(null);
   const [testCaseLoading, setTestCaseLoading] = useState(false);
+  const [testCaseCounts, setTestCaseCounts] = useState<TestCaseCounts>({
+    ...DEFAULT_TEST_CASE_COUNTS,
+  });
 
 
   const fetchRuleSet = useCallback(async () => {
@@ -75,7 +84,7 @@ export default function RuleReviewPage() {
       const { data } = await api.get<TestCaseSuite>(`/test-cases/by-ruleset/${params.ruleSetId}`);
       setTestCaseSuite(data);
     } catch {
-      // No test cases yet — that's fine
+      // No test cases yet -- that's fine
     }
   }, [params.ruleSetId]);
 
@@ -89,6 +98,7 @@ export default function RuleReviewPage() {
     try {
       const { data } = await api.post<TestCaseSuite>("/test-cases/generate", {
         rule_set_id: params.ruleSetId,
+        counts: testCaseCounts,
       });
       setTestCaseSuite(data);
       toast.success(`${data.total_cases} test cases generated.`);
@@ -97,7 +107,7 @@ export default function RuleReviewPage() {
     } finally {
       setTestCaseLoading(false);
     }
-  }, [params.ruleSetId]);
+  }, [params.ruleSetId, testCaseCounts]);
 
   const handleApproveAll = useCallback(async () => {
     setApproving(true);
@@ -195,6 +205,13 @@ export default function RuleReviewPage() {
       }
     },
     [editingRule, params.ruleSetId, fetchRuleSet]
+  );
+
+  const handleCountChange = useCallback(
+    (category: keyof TestCaseCounts, value: number) => {
+      setTestCaseCounts((prev) => ({ ...prev, [category]: value }));
+    },
+    []
   );
 
   if (loading) {
@@ -317,49 +334,74 @@ export default function RuleReviewPage() {
       </Card>
       </motion.div>
 
-      {/* Test Cases Section */}
+      {/* Test Cases Section - Count Configuration */}
       {ruleSet.status === "APPROVED" && !testCaseSuite && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <Card className="card-elevated p-6 border-border/40">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <FlaskConical className="size-5 text-purple-500" />
-                <div>
-                  <h2 className="text-sm font-semibold">Generate Test Cases</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Automatically generate test cases from the approved rules
-                  </p>
-                </div>
+            <div className="flex items-center gap-3 mb-4">
+              <FlaskConical className="size-5 text-purple-500" />
+              <div>
+                <h2 className="text-sm font-semibold">Generate Test Cases</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Configure counts per category and generate test cases from the approved rules
+                </p>
               </div>
-              <Button onClick={handleGenerateTestCases} disabled={testCaseLoading}>
-                {testCaseLoading ? (
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                ) : (
-                  <FlaskConical className="mr-2 size-4" />
-                )}
-                Generate Test Cases
-              </Button>
             </div>
+            <div className="grid grid-cols-5 gap-3 mb-4">
+              {(Object.keys(DEFAULT_TEST_CASE_COUNTS) as Array<keyof TestCaseCounts>).map((cat) => (
+                <div key={cat} className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground uppercase">{cat}</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={20}
+                    value={testCaseCounts[cat]}
+                    onChange={(e) => handleCountChange(cat, parseInt(e.target.value) || 0)}
+                    className="h-9"
+                  />
+                </div>
+              ))}
+            </div>
+            <Button onClick={handleGenerateTestCases} disabled={testCaseLoading}>
+              {testCaseLoading ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <FlaskConical className="mr-2 size-4" />
+              )}
+              Generate Test Cases
+            </Button>
           </Card>
         </motion.div>
       )}
 
       {testCaseSuite && (
         <>
+          {/* View Full Suite Link */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">{testCaseSuite.total_cases}</span> test cases generated
+              </p>
+              <Button variant="outline" size="sm" render={<Link href={`/test-suites/${testCaseSuite.id}`} />}>
+                <ExternalLink className="mr-1.5 size-3.5" />
+                View Full Suite
+              </Button>
+            </div>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
             <TestCaseTable
               testCases={testCaseSuite.test_cases}
               casesByCategory={testCaseSuite.cases_by_category}
             />
           </motion.div>
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
             <TestCaseExportPanel
               suiteId={testCaseSuite.id}
               totalCases={testCaseSuite.total_cases}
               casesByCategory={testCaseSuite.cases_by_category}
             />
           </motion.div>
-
         </>
       )}
 

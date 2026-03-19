@@ -10,9 +10,10 @@ interface TestCaseExportPanelProps {
   suiteId: string;
   totalCases: number;
   casesByCategory: Record<string, number>;
+  brdId?: string;
 }
 
-export function TestCaseExportPanel({ suiteId, totalCases, casesByCategory }: TestCaseExportPanelProps) {
+export function TestCaseExportPanel({ suiteId, totalCases, casesByCategory, brdId }: TestCaseExportPanelProps) {
   const handleExport = async (format: "csv" | "json") => {
     try {
       const response = await api.get(`/test-cases/${suiteId}/export/${format}`, {
@@ -30,6 +31,27 @@ export function TestCaseExportPanel({ suiteId, totalCases, casesByCategory }: Te
       toast.success(`Test cases exported as ${format.toUpperCase()}`);
     } catch {
       toast.error(`Failed to export test cases as ${format.toUpperCase()}`);
+    }
+  };
+
+  const handleBrdExport = async () => {
+    if (!brdId) return;
+    try {
+      const response = await api.get(`/brds/${brdId}/export`, {
+        responseType: "blob",
+      });
+      const blob = new Blob([response.data]);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `brd_export_${brdId}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("BRD export downloaded");
+    } catch {
+      toast.error("Failed to export BRD");
     }
   };
 
@@ -56,6 +78,12 @@ export function TestCaseExportPanel({ suiteId, totalCases, casesByCategory }: Te
               <FileJson className="h-4 w-4 mr-2" />
               Export JSON
             </Button>
+            {brdId && (
+              <Button variant="outline" onClick={handleBrdExport} className="flex-1">
+                <Download className="h-4 w-4 mr-2" />
+                Export Full BRD
+              </Button>
+            )}
           </div>
         </div>
       </CardContent>

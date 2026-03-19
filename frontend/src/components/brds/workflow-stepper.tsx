@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { CheckCircle, Circle, Loader2, Play, ArrowRight } from "lucide-react";
+import { CheckCircle, Circle, Loader2, Play, ArrowRight, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { BrdWorkflow } from "@/lib/types";
 
 type StepState = "completed" | "active" | "pending";
@@ -17,7 +18,24 @@ interface Step {
   onAction?: () => void;
   actionDisabled?: boolean;
   actionLoading?: boolean;
+  customContent?: React.ReactNode;
 }
+
+export interface TestCaseCounts {
+  POSITIVE: number;
+  NEGATIVE: number;
+  BOUNDARY: number;
+  EDGE: number;
+  INTERACTION: number;
+}
+
+export const DEFAULT_TEST_CASE_COUNTS: TestCaseCounts = {
+  POSITIVE: 3,
+  NEGATIVE: 3,
+  BOUNDARY: 5,
+  EDGE: 3,
+  INTERACTION: 2,
+};
 
 function deriveSteps(
   workflow: BrdWorkflow | null,
@@ -26,14 +44,16 @@ function deriveSteps(
   onGenerateTestCases?: () => void,
   testCaseLoading?: boolean,
   testCaseSuiteId?: string | null,
-  testCaseCount?: number
+  testCaseCount?: number,
+  testCaseCounts?: TestCaseCounts,
+  onCountChange?: (category: keyof TestCaseCounts, value: number) => void
 ): Step[] {
   const rs = workflow?.rule_set;
 
   const hasRuleSet = !!rs;
   const rulesApproved = rs?.status === "APPROVED";
 
-  // Step 1: Upload BRD — always completed
+  // Step 1: Upload BRD -- always completed
   const steps: Step[] = [
     {
       label: "Upload BRD",
@@ -65,10 +85,10 @@ function deriveSteps(
     });
   }
 
-  // Step 3: Review Rules
+  // Step 3: Review & Approve Rules
   if (rulesApproved) {
     steps.push({
-      label: "Review Rules",
+      label: "Review & Approve Rules",
       description: "Rules approved",
       state: "completed",
       href: `/rules/${rs!.id}`,
@@ -76,7 +96,7 @@ function deriveSteps(
     });
   } else if (hasRuleSet && rs.status === "DRAFT") {
     steps.push({
-      label: "Review Rules",
+      label: "Review & Approve Rules",
       description: `${rs.rules_count} rule${rs.rules_count !== 1 ? "s" : ""} ready for review`,
       state: "active",
       href: `/rules/${rs.id}`,
@@ -84,38 +104,79 @@ function deriveSteps(
     });
   } else {
     steps.push({
-      label: "Review Rules",
+      label: "Review & Approve Rules",
       description: "Review and approve extracted rules",
       state: "pending",
     });
   }
 
-  // Step 4: Test Cases
+  // Step 4: Generate Test Cases (with configurable counts)
   if (testCaseSuiteId) {
     steps.push({
-      label: "Test Cases",
+      label: "Generate Test Cases",
       description: `${testCaseCount ?? 0} test case${(testCaseCount ?? 0) !== 1 ? "s" : ""} generated`,
       state: "completed",
+      href: `/test-suites/${testCaseSuiteId}`,
+      actionLabel: "View Test Suite",
     });
   } else if (testCaseLoading) {
     steps.push({
-      label: "Test Cases",
+      label: "Generate Test Cases",
       description: "Generating test cases...",
       state: "active",
     });
   } else if (rulesApproved) {
+    const countsForm = testCaseCounts && onCountChange ? (
+      <div className="mt-3 space-y-2">
+        <p className="text-xs font-medium text-muted-foreground mb-1">Cases per category:</p>
+        <div className="grid grid-cols-5 gap-2">
+          {(Object.keys(DEFAULT_TEST_CASE_COUNTS) as Array<keyof TestCaseCounts>).map((cat) => (
+            <div key={cat} className="space-y-1">
+              <label className="text-[10px] font-medium text-muted-foreground uppercase">{cat}</label>
+              <Input
+                type="number"
+                min={0}
+                max={20}
+                value={testCaseCounts[cat]}
+                onChange={(e) => onCountChange(cat, parseInt(e.target.value) || 0)}
+                className="h-8 text-sm"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    ) : null;
+
     steps.push({
-      label: "Test Cases",
-      description: "Generate test cases from approved rules",
+      label: "Generate Test Cases",
+      description: "Configure counts and generate test cases from approved rules",
       state: "active",
       onAction: onGenerateTestCases,
-      actionLabel: "Generate Test Cases",
+      actionLabel: "Generate",
       actionLoading: testCaseLoading,
+      customContent: countsForm,
     });
   } else {
     steps.push({
-      label: "Test Cases",
+      label: "Generate Test Cases",
       description: "Test cases generated after rules are approved",
+      state: "pending",
+    });
+  }
+
+  // Step 5: Export / Download
+  if (testCaseSuiteId) {
+    steps.push({
+      label: "Export / Download",
+      description: "Test suite ready for export",
+      state: "active",
+      href: `/test-suites/${testCaseSuiteId}`,
+      actionLabel: "Export Suite",
+    });
+  } else {
+    steps.push({
+      label: "Export / Download",
+      description: "Export test suite after generation",
       state: "pending",
     });
   }
@@ -145,6 +206,8 @@ interface WorkflowStepperProps {
   testCaseLoading?: boolean;
   testCaseSuiteId?: string | null;
   testCaseCount?: number;
+  testCaseCounts?: TestCaseCounts;
+  onCountChange?: (category: keyof TestCaseCounts, value: number) => void;
 }
 
 export function WorkflowStepper({
@@ -155,8 +218,20 @@ export function WorkflowStepper({
   testCaseLoading,
   testCaseSuiteId,
   testCaseCount,
+  testCaseCounts,
+  onCountChange,
 }: WorkflowStepperProps) {
-  const steps = deriveSteps(workflow, onRunPipeline, running, onGenerateTestCases, testCaseLoading, testCaseSuiteId, testCaseCount);
+  const steps = deriveSteps(
+    workflow,
+    onRunPipeline,
+    running,
+    onGenerateTestCases,
+    testCaseLoading,
+    testCaseSuiteId,
+    testCaseCount,
+    testCaseCounts,
+    onCountChange
+  );
 
   return (
     <div className="space-y-0">
@@ -193,6 +268,9 @@ export function WorkflowStepper({
               {step.description}
             </p>
 
+            {/* Custom content (e.g. count configuration form) */}
+            {step.customContent}
+
             {/* Action button */}
             {step.onAction && (
               <Button
@@ -203,6 +281,8 @@ export function WorkflowStepper({
               >
                 {step.actionLoading ? (
                   <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                ) : step.label.includes("Export") ? (
+                  <Download className="mr-1.5 size-3.5" />
                 ) : (
                   <Play className="mr-1.5 size-3.5" />
                 )}

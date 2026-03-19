@@ -6,28 +6,33 @@ import Link from "next/link";
 import api from "@/lib/api";
 import type { TestCaseSuite } from "@/lib/types";
 import { buttonVariants } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { TestCaseTable } from "@/components/test-cases/test-case-table";
 import { TestCaseExportPanel } from "@/components/test-cases/test-case-export-panel";
 import { PageTransition } from "@/components/page-transition";
 
-interface SuiteResponse extends TestCaseSuite {
-  rule_set_name: string | null;
-}
+const CATEGORY_COLORS: Record<string, string> = {
+  POSITIVE: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+  NEGATIVE: "bg-red-500/10 text-red-500 border-red-500/20",
+  BOUNDARY: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+  EDGE: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+  INTERACTION: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+};
 
-export default function TestCaseSuiteDetailPage() {
+export default function TestSuiteDetailPage() {
   const params = useParams<{ suiteId: string }>();
   const suiteId = params.suiteId;
 
-  const [suite, setSuite] = useState<SuiteResponse | null>(null);
+  const [suite, setSuite] = useState<TestCaseSuite | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchSuite() {
       try {
-        const res = await api.get<SuiteResponse>(`/test-cases/${suiteId}`);
+        const res = await api.get<TestCaseSuite>(`/test-cases/${suiteId}`);
         setSuite(res.data);
       } catch (err: any) {
         setError(err?.response?.data?.detail || "Failed to load test case suite.");
@@ -51,9 +56,9 @@ export default function TestCaseSuiteDetailPage() {
       <div className="flex flex-col items-center justify-center py-20 gap-4">
         <AlertCircle className="h-10 w-10 text-destructive" />
         <p className="text-lg text-muted-foreground">{error || "Suite not found."}</p>
-        <Link href="/test-cases" className={buttonVariants({ variant: "outline" })}>
+        <Link href="/test-suites" className={buttonVariants({ variant: "outline" })}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Test Cases
+          Back to Test Suites
         </Link>
       </div>
     );
@@ -63,7 +68,7 @@ export default function TestCaseSuiteDetailPage() {
     <PageTransition>
       <div className="space-y-6">
         <p className="text-xs text-muted-foreground mb-4">
-          Dashboard / <Link href="/test-cases" className="hover:underline">Test Cases</Link> / Detail
+          Dashboard / <Link href="/test-suites" className="hover:underline">Test Suites</Link> / Detail
         </p>
 
         {/* Header */}
@@ -82,10 +87,21 @@ export default function TestCaseSuiteDetailPage() {
                 day: "numeric",
               })}
             </p>
+            <div className="flex flex-wrap gap-1 mt-2">
+              {Object.entries(suite.cases_by_category).map(([cat, count]) => (
+                <Badge
+                  key={cat}
+                  variant="outline"
+                  className={`text-xs ${CATEGORY_COLORS[cat] || ""}`}
+                >
+                  {cat} ({count})
+                </Badge>
+              ))}
+            </div>
           </div>
-          <Link href="/test-cases" className={buttonVariants({ variant: "outline" })}>
+          <Link href="/test-suites" className={buttonVariants({ variant: "outline" })}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Test Cases
+            Back to Test Suites
           </Link>
         </div>
 

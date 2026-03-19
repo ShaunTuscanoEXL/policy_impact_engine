@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import Link from "next/link";
 import { TestCase } from "@/lib/types";
 import {
   Table,
@@ -73,7 +74,8 @@ export function TestCaseTable({ testCases, casesByCategory }: TestCaseTableProps
               <TableHead>Test Case ID</TableHead>
               <TableHead>Description</TableHead>
               <TableHead>Category</TableHead>
-              <TableHead>Source Rules</TableHead>
+              <TableHead>Filter</TableHead>
+              <TableHead>Match Count</TableHead>
               <TableHead>Expected Decision</TableHead>
             </TableRow>
           </TableHeader>
@@ -92,14 +94,17 @@ export function TestCaseTable({ testCases, casesByCategory }: TestCaseTableProps
                     )}
                   </TableCell>
                   <TableCell className="font-mono text-sm">{tc.test_case_id}</TableCell>
-                  <TableCell className="max-w-[300px] truncate">{tc.description}</TableCell>
+                  <TableCell className="max-w-[250px] truncate">{tc.description}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className={CATEGORY_COLORS[tc.category] || ""}>
                       {tc.category}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {tc.source_rule_ids.join(", ")}
+                  <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
+                    {tc.filter_description || (tc.filter_logic?.length ? `${tc.filter_logic.length} condition(s)` : "N/A")}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{tc.match_count ?? 0}</Badge>
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -116,19 +121,25 @@ export function TestCaseTable({ testCases, casesByCategory }: TestCaseTableProps
                 </TableRow>
                 {expandedId === tc.test_case_id && (
                   <TableRow>
-                    <TableCell colSpan={6} className="bg-muted/30 p-4">
+                    <TableCell colSpan={7} className="bg-muted/30 p-4">
                       <div className="grid grid-cols-2 gap-4">
+                        {/* Left: Filter Conditions */}
                         <div>
                           <h4 className="font-semibold text-sm mb-2">Filter Conditions</h4>
                           <div className="space-y-1">
-                            {(Array.isArray(tc.filter_logic) ? tc.filter_logic : []).map((f: any, idx: number) => (
+                            {(Array.isArray(tc.filter_logic) ? tc.filter_logic : []).map((f, idx) => (
                               <div key={idx} className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">{f.field_name}:</span>
                                 <span className="font-mono">{f.operator} {String(f.value)}</span>
                               </div>
                             ))}
+                            {(!tc.filter_logic || tc.filter_logic.length === 0) && (
+                              <p className="text-xs text-muted-foreground">No filter conditions</p>
+                            )}
                           </div>
                         </div>
+
+                        {/* Right: Expected Outcome */}
                         <div>
                           <h4 className="font-semibold text-sm mb-2">Expected Outcome</h4>
                           <div className="space-y-1">
@@ -143,6 +154,64 @@ export function TestCaseTable({ testCases, casesByCategory }: TestCaseTableProps
                           </div>
                         </div>
                       </div>
+
+                      {/* Below: Matched Customers */}
+                      {tc.matched_customers && tc.matched_customers.length > 0 && (
+                        <div className="mt-4">
+                          <h4 className="font-semibold text-sm mb-2">
+                            Matched Customers ({tc.matched_customers.length})
+                          </h4>
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Loan Application ID</TableHead>
+                                <TableHead>Decision</TableHead>
+                                <TableHead>Bureau Score</TableHead>
+                                <TableHead>Monthly Income</TableHead>
+                                <TableHead>Match Reason</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {tc.matched_customers.map((mc) => (
+                                <TableRow key={mc.id}>
+                                  <TableCell>
+                                    <Link
+                                      href={`/loan-records/${mc.id}`}
+                                      className="font-mono text-sm text-primary hover:underline"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      {mc.loan_application_id}
+                                    </Link>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      variant="outline"
+                                      className={
+                                        mc.response_payload?.decision_status === "APPROVED"
+                                          ? "bg-emerald-500/10 text-emerald-500"
+                                          : "bg-red-500/10 text-red-500"
+                                      }
+                                    >
+                                      {mc.response_payload?.decision_status || "N/A"}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="font-mono text-sm">
+                                    {mc.request_payload?.bureau_score ?? "N/A"}
+                                  </TableCell>
+                                  <TableCell className="font-mono text-sm">
+                                    {mc.request_payload?.monthly_income != null
+                                      ? `$${Number(mc.request_payload.monthly_income).toLocaleString()}`
+                                      : "N/A"}
+                                  </TableCell>
+                                  <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
+                                    {mc.match_reason}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 )}
@@ -150,7 +219,7 @@ export function TestCaseTable({ testCases, casesByCategory }: TestCaseTableProps
             ))}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   No test cases found
                 </TableCell>
               </TableRow>

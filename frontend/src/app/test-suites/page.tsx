@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
+import type { TestCaseSuiteListItem } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -13,17 +15,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FlaskConical, Loader2, AlertCircle } from "lucide-react";
+import { FlaskConical, Loader2, AlertCircle, FileSpreadsheet, FileJson } from "lucide-react";
 import { PageTransition } from "@/components/page-transition";
-
-interface TestCaseSuiteListItem {
-  id: string;
-  rule_set_id: string;
-  rule_set_name: string | null;
-  total_cases: number;
-  cases_by_category: Record<string, number>;
-  created_at: string;
-}
+import { toast } from "sonner";
 
 const CATEGORY_COLORS: Record<string, string> = {
   POSITIVE: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
@@ -33,7 +27,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   INTERACTION: "bg-blue-500/10 text-blue-500 border-blue-500/20",
 };
 
-export default function TestCasesListPage() {
+export default function TestSuitesListPage() {
   const [suites, setSuites] = useState<TestCaseSuiteListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +45,26 @@ export default function TestCasesListPage() {
     }
     fetchSuites();
   }, []);
+
+  const handleExport = async (suiteId: string, format: "csv" | "json") => {
+    try {
+      const response = await api.get(`/test-cases/${suiteId}/export/${format}`, {
+        responseType: "blob",
+      });
+      const blob = new Blob([response.data]);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `test_cases_${suiteId}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success(`Test cases exported as ${format.toUpperCase()}`);
+    } catch {
+      toast.error(`Failed to export test cases as ${format.toUpperCase()}`);
+    }
+  };
 
   if (loading) {
     return (
@@ -72,12 +86,12 @@ export default function TestCasesListPage() {
   return (
     <PageTransition>
       <div className="space-y-6">
-        <p className="text-xs text-muted-foreground mb-4">Dashboard / Test Cases</p>
+        <p className="text-xs text-muted-foreground mb-4">Dashboard / Test Suites</p>
 
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl font-bold tracking-tight">
-              <span className="text-gradient">Test Case Suites</span>
+              <span className="text-gradient">Test Suites</span>
             </h1>
             <p className="text-sm text-muted-foreground">
               All generated test case suites across BRDs and rule sets
@@ -89,7 +103,7 @@ export default function TestCasesListPage() {
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16 gap-3">
               <FlaskConical className="h-10 w-10 text-muted-foreground" />
-              <p className="text-lg text-muted-foreground">No test case suites yet</p>
+              <p className="text-lg text-muted-foreground">No test suites yet</p>
               <p className="text-sm text-muted-foreground">
                 Generate test cases from a BRD&apos;s rule set to see them here
               </p>
@@ -107,10 +121,11 @@ export default function TestCasesListPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Rule Set</TableHead>
+                    <TableHead>Rule Set Name</TableHead>
                     <TableHead>Total Cases</TableHead>
                     <TableHead>Categories</TableHead>
                     <TableHead>Created</TableHead>
+                    <TableHead className="text-right">Export</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -118,7 +133,7 @@ export default function TestCasesListPage() {
                     <TableRow key={suite.id} className="cursor-pointer hover:bg-muted/50">
                       <TableCell>
                         <Link
-                          href={`/test-cases/${suite.id}`}
+                          href={`/test-suites/${suite.id}`}
                           className="font-medium text-primary hover:underline"
                         >
                           {suite.rule_set_name || suite.rule_set_id.slice(0, 8)}
@@ -146,6 +161,32 @@ export default function TestCasesListPage() {
                           day: "numeric",
                           year: "numeric",
                         })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleExport(suite.id, "csv");
+                            }}
+                            title="Export CSV"
+                          >
+                            <FileSpreadsheet className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleExport(suite.id, "json");
+                            }}
+                            title="Export JSON"
+                          >
+                            <FileJson className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

@@ -1,33 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import api from "@/lib/api";
-import type { BrdDocument } from "@/lib/types";
 import { PageTransition, StaggerContainer, StaggerItem } from "@/components/page-transition";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { LayoutDashboard } from "lucide-react";
 
 export default function DashboardPage() {
-  const [loading, setLoading] = useState(true);
-  const [brdCount, setBrdCount] = useState<number | null>(null);
-
-  useEffect(() => {
-    async function fetchDashboardData() {
-      setLoading(true);
-      try {
-        const res = await api.get<BrdDocument[]>("/brds");
-        setBrdCount(res.data.length);
-      } catch {
-        // Error handled silently
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchDashboardData();
-  }, []);
-
   return (
     <PageTransition>
       <div className="space-y-8">
@@ -41,21 +19,18 @@ export default function DashboardPage() {
               <span className="text-gradient">Dashboard</span>
             </h1>
             <p className="text-sm text-muted-foreground">
-              Overview of BRDs, rules, and test cases
+              Overview of BRDs, loan records, and test suites
             </p>
           </div>
         </div>
 
         {/* Bento Grid */}
-        <StaggerContainer className="grid grid-cols-4 gap-5">
+        <StaggerContainer className="grid grid-cols-3 gap-5">
           {/* Row 1: stat cards */}
-          <StatsCards
-            brdCount={brdCount}
-            loading={loading}
-          />
+          <StatsCards />
 
-          {/* Row 2: Quick Actions (span 4) */}
-          <StaggerItem className="col-span-4">
+          {/* Row 2: Quick Actions (span 3) */}
+          <StaggerItem className="col-span-3">
             <QuickActions />
           </StaggerItem>
         </StaggerContainer>

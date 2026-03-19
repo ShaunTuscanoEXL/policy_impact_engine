@@ -1,19 +1,56 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import api from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { HoverCard, StaggerItem } from "@/components/page-transition";
 import { FileText, Database, FlaskConical } from "lucide-react";
 
-interface StatsCardsProps {
-  brdCount: number | null;
-  loading: boolean;
+interface DashboardStats {
+  brd_count: number;
+  test_suite_count: number;
 }
 
-export function StatsCards({ brdCount, loading }: StatsCardsProps) {
+interface LoanRecordStats {
+  total_records: number;
+}
+
+export function StatsCards() {
+  const [loading, setLoading] = useState(true);
+  const [brdCount, setBrdCount] = useState<number | null>(null);
+  const [loanCount, setLoanCount] = useState<number | null>(null);
+  const [testSuiteCount, setTestSuiteCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    async function fetchStats() {
+      setLoading(true);
+      try {
+        const [dashRes, loanRes] = await Promise.allSettled([
+          api.get<DashboardStats>("/dashboard/stats"),
+          api.get<LoanRecordStats>("/loan-records/stats"),
+        ]);
+
+        if (dashRes.status === "fulfilled") {
+          setBrdCount(dashRes.value.data.brd_count);
+          setTestSuiteCount(dashRes.value.data.test_suite_count);
+        }
+        if (loanRes.status === "fulfilled") {
+          setLoanCount(loanRes.value.data.total_records);
+        }
+      } catch {
+        // Errors handled per-request via allSettled
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchStats();
+  }, []);
+
   const cards = [
     { label: "BRD Documents", value: brdCount, icon: FileText, accent: "from-blue-500 to-blue-600", iconBg: "bg-blue-50 dark:bg-blue-500/10", iconColor: "text-blue-600 dark:text-blue-400", dotColor: "bg-blue-500" },
-    { label: "Loan Records", value: "\u2014", icon: Database, accent: "from-emerald-500 to-emerald-600", iconBg: "bg-emerald-50 dark:bg-emerald-500/10", iconColor: "text-emerald-600 dark:text-emerald-400", dotColor: "bg-emerald-500" },
-    { label: "Test Suites", value: "\u2014", icon: FlaskConical, accent: "from-pink-500 to-pink-600", iconBg: "bg-pink-50 dark:bg-pink-500/10", iconColor: "text-pink-600 dark:text-pink-400", dotColor: "bg-pink-500" },
+    { label: "Loan Records", value: loanCount, icon: Database, accent: "from-emerald-500 to-emerald-600", iconBg: "bg-emerald-50 dark:bg-emerald-500/10", iconColor: "text-emerald-600 dark:text-emerald-400", dotColor: "bg-emerald-500" },
+    { label: "Test Suites", value: testSuiteCount, icon: FlaskConical, accent: "from-pink-500 to-pink-600", iconBg: "bg-pink-50 dark:bg-pink-500/10", iconColor: "text-pink-600 dark:text-pink-400", dotColor: "bg-pink-500" },
   ];
 
   return (
@@ -34,7 +71,7 @@ export function StatsCards({ brdCount, loading }: StatsCardsProps) {
                       <div className="h-9 w-16 animate-pulse rounded-lg bg-muted" />
                     ) : (
                       <p className="text-3xl font-bold tracking-tight tabular-nums text-foreground">
-                        {typeof card.value === "number" ? card.value : card.value}
+                        {card.value !== null ? card.value : "\u2014"}
                       </p>
                     )}
                   </div>

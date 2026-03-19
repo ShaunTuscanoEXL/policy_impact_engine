@@ -6,7 +6,11 @@ import Link from "next/link";
 import api from "@/lib/api";
 import type { BrdDocument, BrdWorkflow } from "@/lib/types";
 import { toast } from "sonner";
-import { WorkflowStepper } from "@/components/brds/workflow-stepper";
+import {
+  WorkflowStepper,
+  type TestCaseCounts,
+  DEFAULT_TEST_CASE_COUNTS,
+} from "@/components/brds/workflow-stepper";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +54,9 @@ export default function BrdDetailPage() {
   const [testCaseSuiteId, setTestCaseSuiteId] = useState<string | null>(null);
   const [testCaseCount, setTestCaseCount] = useState<number>(0);
   const [testCaseLoading, setTestCaseLoading] = useState(false);
+  const [testCaseCounts, setTestCaseCounts] = useState<TestCaseCounts>({
+    ...DEFAULT_TEST_CASE_COUNTS,
+  });
 
   const fetchWorkflow = useCallback(async () => {
     try {
@@ -96,12 +103,20 @@ export default function BrdDetailPage() {
     setDialogOpen(true);
   }, [loadDatasets]);
 
+  const handleCountChange = useCallback(
+    (category: keyof TestCaseCounts, value: number) => {
+      setTestCaseCounts((prev) => ({ ...prev, [category]: value }));
+    },
+    []
+  );
+
   const handleGenerateTestCases = useCallback(async () => {
     if (!workflow?.rule_set) return;
     setTestCaseLoading(true);
     try {
       const { data } = await api.post("/test-cases/generate", {
         rule_set_id: workflow.rule_set.id,
+        counts: testCaseCounts,
       });
       setTestCaseSuiteId(data.id);
       setTestCaseCount(data.total_cases);
@@ -111,7 +126,7 @@ export default function BrdDetailPage() {
     } finally {
       setTestCaseLoading(false);
     }
-  }, [workflow]);
+  }, [workflow, testCaseCounts]);
 
   const handleRunPipeline = useCallback(async () => {
     if (!selectedDataset) {
@@ -144,7 +159,7 @@ export default function BrdDetailPage() {
     } finally {
       setRunning(false);
     }
-  }, [selectedDataset, autoApprove, params.id, fetchWorkflow]);
+  }, [selectedDataset, autoApprove, params.id, brd, datasets, fetchWorkflow]);
 
   if (loading) {
     return (
@@ -218,9 +233,31 @@ export default function BrdDetailPage() {
               testCaseLoading={testCaseLoading}
               testCaseSuiteId={testCaseSuiteId}
               testCaseCount={testCaseCount}
+              testCaseCounts={testCaseCounts}
+              onCountChange={handleCountChange}
             />
           </Card>
         </motion.div>
+
+        {/* Test Suite Link */}
+        {testCaseSuiteId && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+          >
+            <Card className="card-elevated p-4 border-border/40">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">{testCaseCount}</span> test cases generated successfully.
+                </p>
+                <Button variant="outline" size="sm" render={<Link href={`/test-suites/${testCaseSuiteId}`} />}>
+                  View Test Suite
+                </Button>
+              </div>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Run Pipeline Dialog */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
