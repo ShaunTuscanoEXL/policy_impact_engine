@@ -7,8 +7,9 @@ import { HoverCard, StaggerItem } from "@/components/page-transition";
 import { FileText, Database, FlaskConical } from "lucide-react";
 
 interface DashboardStats {
-  brd_count: number;
-  test_suite_count: number;
+  total_brds: number;
+  total_test_suites: number;
+  total_loan_records?: number;
 }
 
 interface LoanRecordStats {
@@ -31,8 +32,8 @@ export function StatsCards() {
         ]);
 
         if (dashRes.status === "fulfilled") {
-          setBrdCount(dashRes.value.data.brd_count);
-          setTestSuiteCount(dashRes.value.data.test_suite_count);
+          setBrdCount(dashRes.value.data.total_brds);
+          setTestSuiteCount(dashRes.value.data.total_test_suites);
         }
         if (loanRes.status === "fulfilled") {
           setLoanCount(loanRes.value.data.total_records);
