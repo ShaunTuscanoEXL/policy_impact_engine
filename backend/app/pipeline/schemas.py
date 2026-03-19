@@ -20,3 +20,19 @@ class DocumentSection:
     content: str
     section_type: SectionType
     page_number: int | None = None
+
+
+@dataclass
+class RuleConflict:
+    rule_id_1: str
+    rule_id_2: str
+    conflict_type: str
+    description: str
+    affected_fields: list[str]
+
+
+@dataclass
+class ValidationResult:
+    is_valid: bool
+    conflicts: list[RuleConflict]
+    warnings: list[str]

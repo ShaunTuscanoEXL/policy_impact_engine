@@ -170,7 +170,7 @@ export default function BrdsPage() {
                             size="sm"
                             render={<Link href={`/brds/${brd.id}`} />}
                           >
-                            Run Pipeline
+                            View Details
                             <ArrowRight className="size-3.5" />
                           </Button>
 

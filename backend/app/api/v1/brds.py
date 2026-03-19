@@ -1,11 +1,20 @@
+import logging
+from pathlib import Path
+
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.services import brd_service
 from app.schemas.brd import BrdUploadResponse, BrdListResponse
-from app.models.rule import RuleSet, Rule
+from app.models.brd import BrdDocument
+from app.models.rule import RuleSet, Rule, RuleSetStatus, RuleType
 from app.models.test_case import TestCaseSuite
+from app.pipeline.document_parser import parse_document
+from app.pipeline.rule_extractor import extract_rules
+from app.pipeline.rule_validator import validate_rules
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/brds", tags=["BRDs"])
 
@@ -95,6 +104,69 @@ async def get_brd_workflow(brd_id: str, db: AsyncSession = Depends(get_db)):
         "brd_id": brd_id,
         "rule_set": rule_set_data,
         "test_case_suite": test_case_suite_data,
+    }
+
+
+@router.post("/{brd_id}/extract-rules")
+async def extract_rules_from_brd(brd_id: str, db: AsyncSession = Depends(get_db)):
+    """Extract rules from a BRD document using AI."""
+    brd = await brd_service.get_brd(brd_id, db)
+    if not brd:
+        raise HTTPException(404, "BRD not found")
+
+    # Parse document
+    file_path = Path(brd.file_path)
+    if not file_path.exists():
+        raise HTTPException(404, "BRD file not found on disk")
+
+    content = file_path.read_bytes()
+    sections = parse_document(content, brd.filename)
+
+    if not sections:
+        raise HTTPException(422, "Could not parse document into sections")
+
+    # Extract rules using AI
+    rule_definitions = extract_rules(sections)
+
+    if not rule_definitions:
+        raise HTTPException(422, "No rules could be extracted from the document")
+
+    # Validate rules
+    validated = validate_rules(rule_definitions)
+
+    # Create rule set
+    brd_name = brd.filename.replace(".docx", "").replace(".pdf", "")
+    rule_set = RuleSet(
+        brd_document_id=brd.id,
+        name=f"Rules from {brd.filename}",
+        description=f"Auto-extracted rules from {brd.filename}",
+        status=RuleSetStatus.DRAFT,
+    )
+    db.add(rule_set)
+    await db.flush()
+
+    # Save individual rules
+    for rd in rule_definitions:
+        rule = Rule(
+            rule_set_id=rule_set.id,
+            rule_id=rd.rule_id,
+            rule_name=rd.rule_name,
+            description=rd.description,
+            rule_type=RuleType(rd.rule_type.value if hasattr(rd.rule_type, 'value') else rd.rule_type),
+            conditions=[c.model_dump() for c in rd.conditions],
+            actions=[a.model_dump() for a in rd.actions],
+            priority=rd.priority,
+            confidence=rd.confidence,
+            source_section=rd.source_section,
+        )
+        db.add(rule)
+
+    await db.commit()
+
+    return {
+        "rule_set_id": str(rule_set.id),
+        "rules_count": len(rule_definitions),
+        "status": "DRAFT",
     }
 
 
