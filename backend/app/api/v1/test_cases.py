@@ -41,6 +41,8 @@ async def generate_test_cases(body: TestCaseGenerateRequest, db: AsyncSession = 
         db=db,
     )
 
+    # Re-fetch with eagerly loaded test cases
+    suite = await test_case_service.get_suite(str(suite.id), db)
     return await _build_suite_response(suite, rule_set.name, db)
 
 
