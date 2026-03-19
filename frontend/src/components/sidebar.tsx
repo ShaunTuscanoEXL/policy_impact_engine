@@ -9,8 +9,6 @@ import {
   LayoutDashboard,
   FileText,
   Database,
-  PlayCircle,
-  GitCompare,
   FlaskConical,
   Zap,
   Sun,
@@ -21,10 +19,8 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, color: "text-blue-500" },
   { href: "/brds", label: "BRDs", icon: FileText, color: "text-blue-500" },
-  { href: "/datasets", label: "Datasets", icon: Database, color: "text-emerald-500" },
-  { href: "/simulations", label: "Simulations", icon: PlayCircle, color: "text-violet-500" },
-  { href: "/test-cases", label: "Test Cases", icon: FlaskConical, color: "text-pink-500" },
-  { href: "/scenarios", label: "Scenarios", icon: GitCompare, color: "text-amber-500" },
+  { href: "/loan-records", label: "Loan Records", icon: Database, color: "text-emerald-500" },
+  { href: "/test-suites", label: "Test Suites", icon: FlaskConical, color: "text-pink-500" },
 ];
 
 export function Sidebar() {
@@ -61,7 +57,7 @@ export function Sidebar() {
                 Policy Impact
               </span>
               <span className="text-[10px] font-medium text-muted-foreground/70">
-                Simulation Engine
+                Test Case Engine
               </span>
             </motion.div>
           )}

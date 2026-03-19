@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CheckCircle, Circle, Loader2, Play, ArrowRight, FlaskConical } from "lucide-react";
+import { CheckCircle, Circle, Loader2, Play, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import type { BrdWorkflow } from "@/lib/types";
@@ -23,21 +23,15 @@ function deriveSteps(
   workflow: BrdWorkflow | null,
   onRunPipeline: () => void,
   running: boolean,
-  onRunSimulation?: () => void,
-  simulationRunning?: boolean,
   onGenerateTestCases?: () => void,
   testCaseLoading?: boolean,
   testCaseSuiteId?: string | null,
   testCaseCount?: number
 ): Step[] {
   const rs = workflow?.rule_set;
-  const sim = workflow?.simulation;
 
   const hasRuleSet = !!rs;
   const rulesApproved = rs?.status === "APPROVED";
-  const simCompleted = sim?.status === "COMPLETED";
-  const simRunning = sim?.status === "RUNNING";
-  const awaitingReview = sim?.status === "AWAITING_REVIEW";
 
   // Step 1: Upload BRD — always completed
   const steps: Step[] = [
@@ -85,9 +79,7 @@ function deriveSteps(
       label: "Review Rules",
       description: `${rs.rules_count} rule${rs.rules_count !== 1 ? "s" : ""} ready for review`,
       state: "active",
-      href: sim
-        ? `/rules/${rs.id}?simulationId=${sim.id}`
-        : `/rules/${rs.id}`,
+      href: `/rules/${rs.id}`,
       actionLabel: "Review Rules",
     });
   } else {
@@ -128,53 +120,6 @@ function deriveSteps(
     });
   }
 
-  // Step 5: Run Simulation
-  if (simCompleted) {
-    steps.push({
-      label: "Run Simulation",
-      description: "Simulation completed",
-      state: "completed",
-    });
-  } else if (simRunning || simulationRunning) {
-    steps.push({
-      label: "Run Simulation",
-      description: "Simulation running...",
-      state: "active",
-    });
-  } else if (rulesApproved) {
-    steps.push({
-      label: "Run Simulation",
-      description: "Rules approved — ready to simulate",
-      state: "active",
-      onAction: onRunSimulation,
-      actionLabel: "Run Simulation",
-      actionLoading: simulationRunning,
-    });
-  } else {
-    steps.push({
-      label: "Run Simulation",
-      description: "Simulation runs after rules are approved",
-      state: "pending",
-    });
-  }
-
-  // Step 5: View Results
-  if (simCompleted && sim) {
-    steps.push({
-      label: "View Results",
-      description: "Impact analysis ready",
-      state: "completed",
-      href: `/simulations/${sim.id}`,
-      actionLabel: "View Results",
-    });
-  } else {
-    steps.push({
-      label: "View Results",
-      description: "Results available after simulation completes",
-      state: "pending",
-    });
-  }
-
   return steps;
 }
 
@@ -196,8 +141,6 @@ interface WorkflowStepperProps {
   workflow: BrdWorkflow | null;
   onRunPipeline: () => void;
   running: boolean;
-  onRunSimulation?: () => void;
-  simulationRunning?: boolean;
   onGenerateTestCases?: () => void;
   testCaseLoading?: boolean;
   testCaseSuiteId?: string | null;
@@ -208,14 +151,12 @@ export function WorkflowStepper({
   workflow,
   onRunPipeline,
   running,
-  onRunSimulation,
-  simulationRunning,
   onGenerateTestCases,
   testCaseLoading,
   testCaseSuiteId,
   testCaseCount,
 }: WorkflowStepperProps) {
-  const steps = deriveSteps(workflow, onRunPipeline, running, onRunSimulation, simulationRunning, onGenerateTestCases, testCaseLoading, testCaseSuiteId, testCaseCount);
+  const steps = deriveSteps(workflow, onRunPipeline, running, onGenerateTestCases, testCaseLoading, testCaseSuiteId, testCaseCount);
 
   return (
     <div className="space-y-0">

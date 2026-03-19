@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
-import type { RuleSet, Rule, TestCaseSuite, Dataset } from "@/lib/types";
+import type { RuleSet, Rule, TestCaseSuite } from "@/lib/types";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,17 +16,8 @@ import {
   CheckCircle,
   Shield,
   GitBranch,
-  PlayCircle,
   FlaskConical,
-  Play,
 } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { RuleTable } from "@/components/rules/rule-table";
 import {
   RuleEditorDialog,
@@ -47,9 +38,7 @@ const STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "des
 
 export default function RuleReviewPage() {
   const params = useParams<{ ruleSetId: string }>();
-  const searchParams = useSearchParams();
   const router = useRouter();
-  const simulationId = searchParams.get("simulationId");
 
   const [ruleSet, setRuleSet] = useState<RuleSet | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,10 +57,6 @@ export default function RuleReviewPage() {
   const [testCaseSuite, setTestCaseSuite] = useState<TestCaseSuite | null>(null);
   const [testCaseLoading, setTestCaseLoading] = useState(false);
 
-  // Simulation state
-  const [datasets, setDatasets] = useState<Dataset[]>([]);
-  const [selectedDatasetId, setSelectedDatasetId] = useState<string>("");
-  const [simRunning, setSimRunning] = useState(false);
 
   const fetchRuleSet = useCallback(async () => {
     try {
@@ -160,40 +145,6 @@ export default function RuleReviewPage() {
       setRunningSimulation(false);
     }
   }, [params.ruleSetId, fetchRuleSet, handleGenerateTestCases]);
-
-  const fetchDatasets = useCallback(async () => {
-    try {
-      const { data } = await api.get<Dataset[]>("/datasets");
-      setDatasets(data);
-      if (data.length > 0) setSelectedDatasetId(data[0].id);
-    } catch {
-      // silent
-    }
-  }, []);
-
-  const handleRunSimulation = useCallback(async () => {
-    if (!selectedDatasetId) {
-      toast.error("Please select a dataset first.");
-      return;
-    }
-    setSimRunning(true);
-    try {
-      const dsName = datasets.find((d) => d.id === selectedDatasetId)?.filename ?? "dataset";
-      const rsName = ruleSet?.name?.replace(/^Rules from /, "") ?? "rules";
-      const scenarioName = `${rsName} v${ruleSet?.version ?? 1} × ${dsName.replace(/\.[^.]+$/, "")}`;
-      const { data } = await api.post("/pipeline/run-simulation", {
-        rule_set_id: params.ruleSetId,
-        dataset_id: selectedDatasetId,
-        scenario_name: scenarioName,
-      });
-      toast.success("Simulation completed!");
-      router.push(`/simulations/${data.simulation_id}`);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.detail || "Simulation failed.");
-    } finally {
-      setSimRunning(false);
-    }
-  }, [selectedDatasetId, params.ruleSetId, router]);
 
   const handleEditRule = useCallback((rule: Rule) => {
     setEditingRule(rule);
@@ -409,48 +360,6 @@ export default function RuleReviewPage() {
             />
           </motion.div>
 
-          {/* Continue to Simulation */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-            <Card className="card-elevated p-6 border-border/40">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <PlayCircle className="size-5 text-blue-500" />
-                  <div>
-                    <h2 className="text-sm font-semibold">Continue to Simulation</h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Run the approved rules against a dataset to see impact analysis
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Select
-                    value={selectedDatasetId}
-                    onValueChange={setSelectedDatasetId}
-                    onOpenChange={(open) => { if (open && datasets.length === 0) fetchDatasets(); }}
-                  >
-                    <SelectTrigger className="w-[220px]">
-                      <SelectValue placeholder="Select dataset..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {datasets.map((ds) => (
-                        <SelectItem key={ds.id} value={ds.id}>
-                          {ds.filename}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button onClick={handleRunSimulation} disabled={simRunning || !selectedDatasetId}>
-                    {simRunning ? (
-                      <Loader2 className="mr-2 size-4 animate-spin" />
-                    ) : (
-                      <Play className="mr-2 size-4" />
-                    )}
-                    Run Simulation
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          </motion.div>
         </>
       )}
 

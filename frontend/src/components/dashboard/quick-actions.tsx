@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileText, PlayCircle, GitCompare, ArrowRight } from "lucide-react";
+import { FileText, Database, FlaskConical, ArrowRight } from "lucide-react";
 
 const actions = [
   { href: "/brds", label: "Upload BRD", description: "Parse business rules from documents", icon: FileText, iconBg: "bg-blue-50 dark:bg-blue-500/10", iconColor: "text-blue-600 dark:text-blue-400", hoverBorder: "hover:border-blue-300 dark:hover:border-blue-500/30" },
-  { href: "/simulations/new", label: "New Simulation", description: "Run a policy impact simulation", icon: PlayCircle, iconBg: "bg-violet-50 dark:bg-violet-500/10", iconColor: "text-violet-600 dark:text-violet-400", hoverBorder: "hover:border-violet-300 dark:hover:border-violet-500/30" },
-  { href: "/scenarios", label: "Compare Scenarios", description: "Side-by-side scenario analysis", icon: GitCompare, iconBg: "bg-amber-50 dark:bg-amber-500/10", iconColor: "text-amber-600 dark:text-amber-400", hoverBorder: "hover:border-amber-300 dark:hover:border-amber-500/30" },
+  { href: "/loan-records", label: "Loan Records", description: "Manage loan data for testing", icon: Database, iconBg: "bg-emerald-50 dark:bg-emerald-500/10", iconColor: "text-emerald-600 dark:text-emerald-400", hoverBorder: "hover:border-emerald-300 dark:hover:border-emerald-500/30" },
+  { href: "/test-suites", label: "Test Suites", description: "View and manage test cases", icon: FlaskConical, iconBg: "bg-pink-50 dark:bg-pink-500/10", iconColor: "text-pink-600 dark:text-pink-400", hoverBorder: "hover:border-pink-300 dark:hover:border-pink-500/30" },
 ];
 
 export function QuickActions() {

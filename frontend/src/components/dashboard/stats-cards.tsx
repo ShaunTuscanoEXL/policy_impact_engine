@@ -2,22 +2,18 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { HoverCard, StaggerItem } from "@/components/page-transition";
-import { FileText, PlayCircle, GitCompare, BarChart3 } from "lucide-react";
+import { FileText, Database, FlaskConical } from "lucide-react";
 
 interface StatsCardsProps {
   brdCount: number | null;
-  simulationCount: number | null;
-  scenarioCount: number | null;
-  latestImpactRate: number | null;
   loading: boolean;
 }
 
-export function StatsCards({ brdCount, simulationCount, scenarioCount, latestImpactRate, loading }: StatsCardsProps) {
+export function StatsCards({ brdCount, loading }: StatsCardsProps) {
   const cards = [
     { label: "BRD Documents", value: brdCount, icon: FileText, accent: "from-blue-500 to-blue-600", iconBg: "bg-blue-50 dark:bg-blue-500/10", iconColor: "text-blue-600 dark:text-blue-400", dotColor: "bg-blue-500" },
-    { label: "Simulations", value: simulationCount, icon: PlayCircle, accent: "from-violet-500 to-violet-600", iconBg: "bg-violet-50 dark:bg-violet-500/10", iconColor: "text-violet-600 dark:text-violet-400", dotColor: "bg-violet-500" },
-    { label: "Scenarios", value: scenarioCount, icon: GitCompare, accent: "from-amber-500 to-amber-600", iconBg: "bg-amber-50 dark:bg-amber-500/10", iconColor: "text-amber-600 dark:text-amber-400", dotColor: "bg-amber-500" },
-    { label: "Avg Impact Rate", value: latestImpactRate != null ? `${latestImpactRate.toFixed(1)}%` : "\u2014", icon: BarChart3, accent: "from-emerald-500 to-emerald-600", iconBg: "bg-emerald-50 dark:bg-emerald-500/10", iconColor: "text-emerald-600 dark:text-emerald-400", dotColor: "bg-emerald-500" },
+    { label: "Loan Records", value: "\u2014", icon: Database, accent: "from-emerald-500 to-emerald-600", iconBg: "bg-emerald-50 dark:bg-emerald-500/10", iconColor: "text-emerald-600 dark:text-emerald-400", dotColor: "bg-emerald-500" },
+    { label: "Test Suites", value: "\u2014", icon: FlaskConical, accent: "from-pink-500 to-pink-600", iconBg: "bg-pink-50 dark:bg-pink-500/10", iconColor: "text-pink-600 dark:text-pink-400", dotColor: "bg-pink-500" },
   ];
 
   return (

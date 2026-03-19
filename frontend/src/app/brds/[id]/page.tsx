@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
-import type { BrdDocument, Dataset, BrdWorkflow } from "@/lib/types";
+import type { BrdDocument, BrdWorkflow } from "@/lib/types";
 import { toast } from "sonner";
 import { WorkflowStepper } from "@/components/brds/workflow-stepper";
 import { Card } from "@/components/ui/card";
@@ -38,15 +38,10 @@ export default function BrdDetailPage() {
 
   // Pipeline dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [datasets, setDatasets] = useState<Dataset[]>([]);
+  const [datasets, setDatasets] = useState<any[]>([]);
   const [selectedDataset, setSelectedDataset] = useState<string>("");
   const [autoApprove, setAutoApprove] = useState(false);
   const [running, setRunning] = useState(false);
-
-  // Simulation dialog state
-  const [simDialogOpen, setSimDialogOpen] = useState(false);
-  const [simDataset, setSimDataset] = useState<string>("");
-  const [simulationRunning, setSimulationRunning] = useState(false);
 
   // Workflow state
   const [workflow, setWorkflow] = useState<BrdWorkflow | null>(null);
@@ -100,39 +95,6 @@ export default function BrdDetailPage() {
     loadDatasets();
     setDialogOpen(true);
   }, [loadDatasets]);
-
-  const handleOpenSimDialog = useCallback(() => {
-    loadDatasets();
-    setSimDialogOpen(true);
-  }, [loadDatasets]);
-
-  const handleRunSimulation = useCallback(async () => {
-    if (!simDataset || !workflow?.rule_set) {
-      toast.error("Please select a dataset.");
-      return;
-    }
-
-    setSimulationRunning(true);
-    setSimDialogOpen(false);
-
-    try {
-      const dsName = datasets.find((d) => d.id === simDataset)?.filename ?? "dataset";
-      const brdName = brd?.filename?.replace(/\.[^.]+$/, "") ?? "BRD";
-      const scenarioName = `${brdName} × ${dsName.replace(/\.[^.]+$/, "")}`;
-      const { data } = await api.post("/pipeline/run-simulation", {
-        rule_set_id: workflow.rule_set.id,
-        dataset_id: simDataset,
-        scenario_name: scenarioName,
-      });
-
-      toast.success("Simulation completed successfully.");
-      await fetchWorkflow();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.detail || "Simulation failed.");
-    } finally {
-      setSimulationRunning(false);
-    }
-  }, [simDataset, workflow, fetchWorkflow]);
 
   const handleGenerateTestCases = useCallback(async () => {
     if (!workflow?.rule_set) return;
@@ -252,8 +214,6 @@ export default function BrdDetailPage() {
               workflow={workflow}
               onRunPipeline={handleOpenDialog}
               running={running}
-              onRunSimulation={handleOpenSimDialog}
-              simulationRunning={simulationRunning}
               onGenerateTestCases={handleGenerateTestCases}
               testCaseLoading={testCaseLoading}
               testCaseSuiteId={testCaseSuiteId}
@@ -325,54 +285,6 @@ export default function BrdDetailPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Run Simulation Dialog */}
-        <Dialog open={simDialogOpen} onOpenChange={setSimDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Run Simulation</DialogTitle>
-              <DialogDescription>
-                Select a dataset to simulate the approved rules against.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Dataset</label>
-                <Select
-                  value={simDataset}
-                  onValueChange={(val) => setSimDataset(val ?? "")}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a dataset..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {datasets.length === 0 ? (
-                      <SelectItem value="_none" disabled>
-                        No datasets available
-                      </SelectItem>
-                    ) : (
-                      datasets.map((ds) => (
-                        <SelectItem key={ds.id} value={ds.id}>
-                          {ds.name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <DialogClose render={<Button variant="outline" />}>
-                Cancel
-              </DialogClose>
-              <Button onClick={handleRunSimulation} disabled={!simDataset}>
-                <Play className="mr-2 size-4" />
-                Run Simulation
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </PageTransition>
   );
