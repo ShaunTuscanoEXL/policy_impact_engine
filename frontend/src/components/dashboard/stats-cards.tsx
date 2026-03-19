@@ -26,7 +26,7 @@ export function StatsCards() {
       setLoading(true);
       try {
         const [dashRes, loanRes] = await Promise.allSettled([
-          api.get<DashboardStats>("/dashboard/stats"),
+          api.get<DashboardStats>("/dashboard"),
           api.get<LoanRecordStats>("/loan-records/stats"),
         ]);
 
