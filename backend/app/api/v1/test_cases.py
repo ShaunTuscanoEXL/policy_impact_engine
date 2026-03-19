@@ -26,6 +26,11 @@ async def generate_test_cases(body: TestCaseGenerateRequest, db: AsyncSession = 
     if not rule_set:
         raise HTTPException(404, "Rule set not found")
 
+    # Delete existing suites for this rule set (replace, not accumulate)
+    existing_suites = await test_case_service.get_suites_by_rule_set(body.rule_set_id, db)
+    for old_suite in existing_suites:
+        await test_case_service.delete_suite(str(old_suite.id), db)
+
     counts = {
         "positive_count": body.positive_count,
         "negative_count": body.negative_count,
@@ -155,7 +160,7 @@ async def _build_suite_response(suite, rule_set_name: str | None, db: AsyncSessi
 
         # Fetch matched customer details
         customers = []
-        for loan_id in (tc.matched_loan_ids or [])[:5]:  # Limit to 5 for response size
+        for loan_id in (tc.matched_loan_ids or []):
             from app.models.loan_record import LoanRecord
             from sqlalchemy import select
             lr_result = await db.execute(
