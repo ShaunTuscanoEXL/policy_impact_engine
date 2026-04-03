@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FlaskConical, Loader2, AlertCircle, FileSpreadsheet, FileJson } from "lucide-react";
+import { FlaskConical, Loader2, AlertCircle, FileSpreadsheet, FileJson, FileText } from "lucide-react";
 import { PageTransition } from "@/components/page-transition";
 import { toast } from "sonner";
 
@@ -89,13 +89,18 @@ export default function TestSuitesListPage() {
         <p className="text-xs text-muted-foreground mb-4">Dashboard / Test Suites</p>
 
         <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight">
-              <span className="text-gradient">Test Suites</span>
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              All generated test case suites across BRDs and rule sets
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="icon-badge bg-purple-100 dark:bg-purple-900/30">
+              <FlaskConical className="size-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">
+                <span className="text-gradient">Test Suites</span>
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                All generated test case suites across BRDs and rule sets
+              </p>
+            </div>
           </div>
         </div>
 
@@ -121,6 +126,7 @@ export default function TestSuitesListPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>BRD</TableHead>
                     <TableHead>Rule Set Name</TableHead>
                     <TableHead>Total Cases</TableHead>
                     <TableHead>Categories</TableHead>
@@ -131,6 +137,19 @@ export default function TestSuitesListPage() {
                 <TableBody>
                   {suites.map((suite) => (
                     <TableRow key={suite.id} className="cursor-pointer hover:bg-muted/50">
+                      <TableCell>
+                        {suite.brd_id ? (
+                          <Link
+                            href={`/brds/${suite.brd_id}`}
+                            className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                          >
+                            <FileText className="h-3.5 w-3.5" />
+                            {suite.brd_filename || "View BRD"}
+                          </Link>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">—</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Link
                           href={`/test-suites/${suite.id}`}

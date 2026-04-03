@@ -60,6 +60,8 @@ class TestCaseSuiteListResponse(BaseModel):
     id: str
     rule_set_id: str
     rule_set_name: str | None = None
+    brd_id: str | None = None
+    brd_filename: str | None = None
     total_cases: int
     cases_by_category: dict
     created_at: str

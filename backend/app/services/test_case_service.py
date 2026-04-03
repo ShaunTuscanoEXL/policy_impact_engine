@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.test_case import TestCaseSuite, TestCase, TestCaseCategory
 from app.models.rule import RuleSet, Rule
+from app.models.brd import BrdDocument
 from app.schemas.rule import RuleDefinition, Condition, Action
 from app.pipeline.test_case_generator import generate_test_cases
 from app.services.customer_matcher import match_customers
@@ -106,14 +107,20 @@ async def list_suites(db: AsyncSession):
     )
     suites = result.scalars().all()
 
-    # Resolve rule set names
+    # Resolve rule set names and BRD info
     enriched = []
     for s in suites:
         rs_result = await db.execute(select(RuleSet).where(RuleSet.id == s.rule_set_id))
         rs = rs_result.scalar_one_or_none()
+        brd = None
+        if rs and rs.brd_document_id:
+            brd_result = await db.execute(select(BrdDocument).where(BrdDocument.id == rs.brd_document_id))
+            brd = brd_result.scalar_one_or_none()
         enriched.append({
             "suite": s,
             "rule_set_name": rs.name if rs else None,
+            "brd_id": str(brd.id) if brd else None,
+            "brd_filename": brd.filename if brd else None,
         })
     return enriched
 

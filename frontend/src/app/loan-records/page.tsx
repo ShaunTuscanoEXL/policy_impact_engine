@@ -144,39 +144,41 @@ export default function LoanRecordsPage() {
         {/* Header */}
         <div>
           <p className="text-xs text-muted-foreground mb-4">Dashboard / Loan Records</p>
-          <div className="flex items-center justify-between gap-3">
-            <div className="icon-badge bg-emerald-100 dark:bg-emerald-900/30">
-              <Database className="size-5 text-emerald-600 dark:text-emerald-400" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="icon-badge bg-emerald-100 dark:bg-emerald-900/30">
+                <Database className="size-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">
+                  <span className="text-gradient">Loan Records</span>
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Browse and search loan application data.
+                </p>
+              </div>
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                <span className="text-gradient">Loan Records</span>
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Browse and search loan application data.
-              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.json"
+                className="hidden"
+                onChange={handleUpload}
+              />
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+              >
+                {uploading ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <Upload className="mr-2 size-4" />
+                )}
+                Upload CSV
+              </Button>
             </div>
-          </div>
-          <div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,.json"
-              className="hidden"
-              onChange={handleUpload}
-            />
-            <Button
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-            >
-              {uploading ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : (
-                <Upload className="mr-2 size-4" />
-              )}
-              Upload CSV
-            </Button>
           </div>
         </div>
 

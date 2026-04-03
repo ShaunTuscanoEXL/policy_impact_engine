@@ -90,6 +90,8 @@ export interface TestCaseSuiteListItem {
   id: string;
   rule_set_id: string;
   rule_set_name: string | null;
+  brd_id: string | null;
+  brd_filename: string | null;
   total_cases: number;
   cases_by_category: Record<string, number>;
   created_at: string;
