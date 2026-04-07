@@ -1,7 +1,8 @@
-"""LLM-powered rule extractor using OpenAI.
+"""LLM-powered rule extractor using OpenAI or Azure OpenAI.
 
-Takes parsed BRD document sections and uses an OpenAI model to extract structured
+Takes parsed BRD document sections and uses an LLM to extract structured
 business rules suitable for the downstream Rule Compiler.
+Supports both OpenAI and Azure OpenAI endpoints via LLM_PROVIDER config.
 """
 
 from __future__ import annotations
@@ -10,7 +11,7 @@ import json
 import logging
 import re
 
-from openai import OpenAI
+from openai import AzureOpenAI, OpenAI
 
 from app.config import settings
 from app.pipeline.schemas import DocumentSection, SectionType
@@ -231,11 +232,26 @@ def extract_rules(sections: list[DocumentSection]) -> list[RuleDefinition]:
         logger.warning("Combined section text is empty; returning empty rule list")
         return []
 
-    client = OpenAI(api_key=settings.openai_api_key)
+    # Build client based on provider
+    if settings.llm_provider.lower() == "azure":
+        if not settings.azure_openai_api_key or not settings.azure_openai_endpoint:
+            logger.error("Azure OpenAI selected but AZURE_OPENAI_API_KEY or AZURE_OPENAI_ENDPOINT not set")
+            return []
+        client = AzureOpenAI(
+            api_key=settings.azure_openai_api_key,
+            azure_endpoint=settings.azure_openai_endpoint,
+            api_version=settings.azure_openai_api_version,
+        )
+        model = settings.azure_openai_deployment
+        logger.info("Using Azure OpenAI (endpoint=%s, deployment=%s)", settings.azure_openai_endpoint, model)
+    else:
+        client = OpenAI(api_key=settings.openai_api_key)
+        model = settings.openai_model
+        logger.info("Using OpenAI (model=%s)", model)
 
     try:
         response = client.chat.completions.create(
-            model=settings.openai_model,
+            model=model,
             max_tokens=4096,
             messages=[
                 {"role": "system", "content": EXTRACTION_PROMPT},
@@ -243,7 +259,7 @@ def extract_rules(sections: list[DocumentSection]) -> list[RuleDefinition]:
             ],
         )
     except Exception as exc:
-        logger.error("OpenAI API call failed: %s", exc)
+        logger.error("LLM API call failed: %s", exc)
         return []
 
     response_text = response.choices[0].message.content or ""
