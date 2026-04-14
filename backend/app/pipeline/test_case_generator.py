@@ -271,7 +271,19 @@ def _satisfying_value(cond: Condition) -> Any:
             return v[0]
         return v
     elif op == "not_in":
-        return meta["default"]
+        # Make sure the default isn't in the excluded list
+        default = meta["default"]
+        if isinstance(v, (list, tuple)) and default in v:
+            step = meta.get("step", 1)
+            # Try values around default until one is not in the list
+            for offset in range(1, 100):
+                candidate = default + offset * step
+                if candidate not in v and candidate <= meta.get("max", 1e9):
+                    return candidate
+                candidate = default - offset * step
+                if candidate not in v and candidate >= meta.get("min", -1e9):
+                    return candidate
+        return default
     return meta["default"]
 
 
@@ -334,15 +346,27 @@ def _boundary_values(cond: Condition) -> list[tuple[Any, str, bool]]:
 
     Returns list of (value, human_label, expected_pass).
     """
-    if not _is_numeric(cond.value):
-        return []
-
+    op = cond.operator
     v = cond.value
     meta = _get_field_meta(cond.field)
     step = meta.get("step", 1)
     results = []
 
-    op = cond.operator
+    # Handle between first — cond.value is a list, not a number
+    if op == "between":
+        if isinstance(v, (list, tuple)) and len(v) == 2:
+            lo, hi = v
+            if _is_numeric(lo) and _is_numeric(hi):
+                results.append((lo - step, f"below range ({lo})", False))
+                results.append((lo, f"at lower bound ({lo})", True))
+                results.append((hi, f"at upper bound ({hi})", True))
+                results.append((hi + step, f"above range ({hi})", False))
+        return results
+
+    # All other operators require a numeric scalar value
+    if not _is_numeric(v):
+        return []
+
     if op == ">=":
         results.append((v - step, f"just below {v}", False))
         results.append((v, f"exactly at {v}", True))
@@ -361,13 +385,6 @@ def _boundary_values(cond: Condition) -> list[tuple[Any, str, bool]]:
         results.append((v - step, f"just below {v}", False))
         results.append((v, f"exactly at {v}", True))
         results.append((v + step, f"just above {v}", False))
-    elif op == "between":
-        if isinstance(v, (list, tuple)) and len(v) == 2:
-            lo, hi = v
-            results.append((lo - step, f"below range ({lo})", False))
-            results.append((lo, f"at lower bound ({lo})", True))
-            results.append((hi, f"at upper bound ({hi})", True))
-            results.append((hi + step, f"above range ({hi})", False))
 
     return results
 
@@ -412,27 +429,56 @@ def _build_input_values(rule: RuleDefinition, overrides: dict | None = None) -> 
     return inputs
 
 
-def _build_filters(conditions: list[tuple[Condition, str]], input_values: dict) -> list[dict]:
+def _build_filters(conditions: list[tuple[Condition, str]], input_values: dict, keep_range_operators: bool = True) -> list[dict]:
     """Build filter conditions from resolved conditions and input values.
 
-    For operators like 'between', 'in', 'not_in' the filter value must be
-    the original range/list (used by customer_matcher for SQL queries), not
-    the single scalar test input value.
+    Args:
+        conditions: Resolved conditions with JSON paths.
+        input_values: The concrete input values for this test case.
+        keep_range_operators: If True (default for positive tests), keep between/in/not_in
+            with their original range values for customer matching.
+            If False (for negative/boundary tests where a value is overridden),
+            check whether the input value is INSIDE or OUTSIDE the original range
+            and adjust the filter accordingly.
     """
     filters = []
     for cond, path in conditions:
-        # For range/list operators, keep the original condition value so
-        # the customer matcher can build correct SQL (BETWEEN, IN, NOT IN).
-        if cond.operator in ("between", "in", "not_in"):
-            filter_val = cond.value
-            if cond.operator == "between" and isinstance(cond.value, (list, tuple)) and len(cond.value) == 2:
-                desc = f"{cond.field} between {cond.value[0]} and {cond.value[1]}"
-            elif cond.operator in ("in", "not_in") and isinstance(cond.value, (list, tuple)):
-                desc = f"{cond.field} {cond.operator} [{', '.join(str(v) for v in cond.value)}]"
+        input_val = input_values.get(cond.field)
+
+        if cond.operator == "between" and isinstance(cond.value, (list, tuple)) and len(cond.value) == 2:
+            lo, hi = cond.value
+            # Check if the test input is inside or outside the range
+            if keep_range_operators and _is_numeric(input_val) and _is_numeric(lo) and lo <= input_val <= hi:
+                # Input is within range — use original between for customer matching
+                filter_val = cond.value
+                desc = f"{cond.field} between {lo} and {hi}"
+            elif _is_numeric(input_val):
+                # Input is outside range (negative/boundary test) — use point filter
+                # to find customers matching the violating value
+                if input_val < lo:
+                    filter_val = input_val
+                    desc = f"{cond.field} <= {input_val}"
+                    filters.append(FilterCondition(
+                        field_name=cond.field, json_path=path,
+                        operator="<=", value=filter_val, description=desc,
+                    ).to_dict())
+                    continue
+                else:
+                    filter_val = input_val
+                    desc = f"{cond.field} >= {input_val}"
+                    filters.append(FilterCondition(
+                        field_name=cond.field, json_path=path,
+                        operator=">=", value=filter_val, description=desc,
+                    ).to_dict())
+                    continue
             else:
-                desc = f"{cond.field} {cond.operator} {cond.value}"
+                filter_val = cond.value
+                desc = f"{cond.field} between {lo} and {hi}"
+        elif cond.operator in ("in", "not_in") and isinstance(cond.value, (list, tuple)):
+            filter_val = cond.value
+            desc = f"{cond.field} {cond.operator} [{', '.join(str(v) for v in cond.value)}]"
         else:
-            filter_val = input_values.get(cond.field, cond.value)
+            filter_val = input_val if input_val is not None else cond.value
             desc = f"{cond.field} {cond.operator} {filter_val}"
 
         filters.append(FilterCondition(
@@ -537,7 +583,7 @@ def _gen_negative(
             lo, hi = cond.value
             for violation_val, label in [(lo - step, f"below range ({lo})"), (hi + step, f"above range ({hi})")]:
                 inputs = _build_input_values(rule, overrides={cond.field: violation_val})
-                filters = _build_filters(resolved_conds, inputs)
+                filters = _build_filters(resolved_conds, inputs, keep_range_operators=False)
                 expected = _extract_expected_outcome(rule, satisfied=False)
                 expected["violated_condition"] = f"{cond.field} between {cond.value}"
 
@@ -558,7 +604,7 @@ def _gen_negative(
         else:
             # Standard: single violating value
             inputs = _build_input_values(rule, overrides={cond.field: _violating_value(cond)})
-            filters = _build_filters(resolved_conds, inputs)
+            filters = _build_filters(resolved_conds, inputs, keep_range_operators=False)
             expected = _extract_expected_outcome(rule, satisfied=False)
             expected["violated_condition"] = f"{cond.field} {cond.operator} {cond.value}"
 
@@ -596,7 +642,7 @@ def _gen_boundary(
 
         for bval, label, should_pass in boundary_vals:
             inputs = _build_input_values(rule, overrides={cond.field: bval})
-            filters = _build_filters(resolved_conds, inputs)
+            filters = _build_filters(resolved_conds, inputs, keep_range_operators=False)
             expected = _extract_expected_outcome(rule, satisfied=should_pass)
             if not should_pass:
                 expected["violated_condition"] = f"{cond.field} {cond.operator} {cond.value}"
@@ -633,7 +679,7 @@ def _gen_edge(
 
         for eval_val, label in edge_vals:
             inputs = _build_input_values(rule, overrides={cond.field: eval_val})
-            filters = _build_filters(resolved_conds, inputs)
+            filters = _build_filters(resolved_conds, inputs, keep_range_operators=False)
 
             # Determine if the extreme value satisfies the condition
             satisfies = _check_satisfies(cond, eval_val)
@@ -657,6 +703,38 @@ def _gen_edge(
     return cases
 
 
+def _get_condition_range(cond: Condition) -> tuple[float, float] | None:
+    """Extract the numeric range a condition accepts. Returns (lo, hi) or None."""
+    v = cond.value
+    op = cond.operator
+    meta = _get_field_meta(cond.field)
+
+    if op == "between" and isinstance(v, (list, tuple)) and len(v) == 2:
+        return (float(v[0]), float(v[1]))
+    if not _is_numeric(v):
+        return None
+    if op == "==":
+        return (float(v), float(v))  # Exact match: range is [v, v]
+    if op == ">=":
+        return (float(v), float(meta.get("max", 1e9)))
+    if op == ">":
+        return (float(v) + meta.get("step", 1), float(meta.get("max", 1e9)))
+    if op == "<=":
+        return (float(meta.get("min", -1e9)), float(v))
+    if op == "<":
+        return (float(meta.get("min", -1e9)), float(v) - meta.get("step", 1))
+    return None
+
+
+def _ranges_overlap(r1: tuple[float, float], r2: tuple[float, float]) -> tuple[float, float] | None:
+    """Return the overlap of two ranges, or None if disjoint."""
+    lo = max(r1[0], r2[0])
+    hi = min(r1[1], r2[1])
+    if lo <= hi:
+        return (lo, hi)
+    return None
+
+
 def _gen_interactions(
     resolved_rules: list[tuple[RuleDefinition, list[tuple[Condition, str]]]],
     max_count: int,
@@ -664,8 +742,12 @@ def _gen_interactions(
 ) -> list[GeneratedTestCase]:
     """Interaction cases: inputs that trigger multiple rules simultaneously.
 
-    Finds rule pairs that share fields, builds inputs satisfying both,
-    and checks for conflicts (e.g., one approves, another rejects).
+    Finds rule pairs that share fields. For each pair:
+    - If conditions on shared fields are compatible (overlapping ranges),
+      pick a value that satisfies both → test co-triggering or conflict.
+    - If conditions are mutually exclusive (disjoint ranges),
+      mark as MUTUALLY_EXCLUSIVE and pick a value for each rule separately
+      to show the boundary between them.
     """
     cases = []
     counter = start_counter
@@ -695,7 +777,6 @@ def _gen_interactions(
         r2 = resolved_rules[pair[1]][0]
         a1 = {a.action_type for a in r1.actions}
         a2 = {a.action_type for a in r2.actions}
-        # Higher score if they have different action types (potential conflict)
         return len(a1.symmetric_difference(a2))
 
     pairs.sort(key=conflict_score, reverse=True)
@@ -704,71 +785,162 @@ def _gen_interactions(
         rule_a, conds_a = resolved_rules[idx_a]
         rule_b, conds_b = resolved_rules[idx_b]
 
-        # Build inputs that try to satisfy both rules
-        inputs = {}
-        for cond, _ in conds_a:
-            inputs[cond.field] = _satisfying_value(cond)
-        for cond, _ in conds_b:
-            # If already set, check for conflict
-            if cond.field in inputs:
-                existing = inputs[cond.field]
-                new_val = _satisfying_value(cond)
-                # Use the more restrictive value if both are numeric
-                if _is_numeric(existing) and _is_numeric(new_val):
-                    # For >= conditions, use the higher value
-                    if cond.operator in (">=", ">"):
-                        inputs[cond.field] = max(existing, new_val)
-                    elif cond.operator in ("<=", "<"):
-                        inputs[cond.field] = min(existing, new_val)
-            else:
-                inputs[cond.field] = _satisfying_value(cond)
-
-        # Determine shared fields
-        fields_a = {c.field for c, _ in conds_a}
-        fields_b = {c.field for c, _ in conds_b}
+        # Determine shared fields and check compatibility
+        conds_a_by_field = {c.field: c for c, _ in conds_a}
+        conds_b_by_field = {c.field: c for c, _ in conds_b}
+        fields_a = set(conds_a_by_field.keys())
+        fields_b = set(conds_b_by_field.keys())
         shared = fields_a & fields_b
 
-        # Build combined filters
-        all_conds = conds_a + conds_b
-        filters = _build_filters(all_conds, inputs)
+        # Check if shared field conditions are compatible (overlapping ranges)
+        mutually_exclusive_fields = []
+        compatible = True
+        for field in shared:
+            ca = conds_a_by_field[field]
+            cb = conds_b_by_field[field]
+            range_a = _get_condition_range(ca)
+            range_b = _get_condition_range(cb)
+            if range_a and range_b:
+                overlap = _ranges_overlap(range_a, range_b)
+                if overlap is None:
+                    compatible = False
+                    mutually_exclusive_fields.append(field)
 
-        # Determine expected outcome
         exp_a = _extract_expected_outcome(rule_a, satisfied=True)
         exp_b = _extract_expected_outcome(rule_b, satisfied=True)
 
-        is_conflict = (
-            (exp_a.get("decision") == "REJECTED" and exp_b.get("decision") != "REJECTED")
-            or (exp_a.get("decision") != "REJECTED" and exp_b.get("decision") == "REJECTED")
-        )
+        if compatible:
+            # Ranges overlap — build a single input that triggers BOTH rules
+            inputs = {}
+            for cond, _ in conds_a:
+                inputs[cond.field] = _satisfying_value(cond)
+            for cond, _ in conds_b:
+                if cond.field in inputs:
+                    # Find overlapping range and pick midpoint
+                    ca = conds_a_by_field.get(cond.field)
+                    if ca:
+                        range_a = _get_condition_range(ca)
+                        range_b = _get_condition_range(cond)
+                        if range_a and range_b:
+                            overlap = _ranges_overlap(range_a, range_b)
+                            if overlap:
+                                mid = (overlap[0] + overlap[1]) / 2
+                                meta = _get_field_meta(cond.field)
+                                inputs[cond.field] = int(mid) if meta.get("type") == "int" else mid
+                                continue
+                    # Fallback: keep existing value
+                else:
+                    inputs[cond.field] = _satisfying_value(cond)
 
-        expected = {
-            "decision": "CONFLICT" if is_conflict else "BOTH_TRIGGERED",
-            "rule_a": {"rule_id": rule_a.rule_id, "name": rule_a.rule_name, "outcome": exp_a.get("decision")},
-            "rule_b": {"rule_id": rule_b.rule_id, "name": rule_b.rule_name, "outcome": exp_b.get("decision")},
-            "shared_fields": list(shared),
-            "is_conflict": is_conflict,
-            "applied_rules": [rule_a.rule_id, rule_b.rule_id],
-        }
+            # Verify both rules are actually satisfied
+            a_satisfied = all(_check_satisfies(c, inputs.get(c.field)) for c, _ in conds_a)
+            b_satisfied = all(_check_satisfies(c, inputs.get(c.field)) for c, _ in conds_b)
 
-        counter += 1
-        conflict_label = "CONFLICTING" if is_conflict else "co-triggered"
-        cases.append(GeneratedTestCase(
-            test_case_id=f"TC-INT-{counter:03d}",
-            description=(
-                f"Interaction ({conflict_label}): {rule_a.rule_name} + {rule_b.rule_name} "
-                f"(shared: {', '.join(shared)})"
-            ),
-            source_rule_ids=[rule_a.rule_id, rule_b.rule_id],
-            category=TestCaseCategory.INTERACTION,
-            input_values=inputs,
-            filter_logic=filters,
-            expected_outcome=expected,
-            rationale=(
-                f"{'Conflict test' if is_conflict else 'Co-trigger test'}: "
-                f"both rules share {', '.join(shared)}. "
-                f"Rule A → {exp_a.get('decision')}, Rule B → {exp_b.get('decision')}"
-            ),
-        ))
+            # Build filters — deduplicate shared field conditions, use the input value
+            seen_filter_fields = set()
+            deduped_conds = []
+            for cond, path in conds_a:
+                deduped_conds.append((cond, path))
+                seen_filter_fields.add(cond.field)
+            for cond, path in conds_b:
+                if cond.field not in seen_filter_fields:
+                    deduped_conds.append((cond, path))
+                    seen_filter_fields.add(cond.field)
+            filters = _build_filters(deduped_conds, inputs)
+
+            is_conflict = (
+                a_satisfied and b_satisfied and (
+                    (exp_a.get("decision") == "REJECTED") != (exp_b.get("decision") == "REJECTED")
+                )
+            )
+
+            decision = "CONFLICT" if is_conflict else "BOTH_TRIGGERED"
+            if not a_satisfied or not b_satisfied:
+                decision = "PARTIAL_TRIGGER"
+
+            expected = {
+                "decision": decision,
+                "rule_a": f"{rule_a.rule_id} ({rule_a.rule_name}) → {exp_a.get('decision')}",
+                "rule_b": f"{rule_b.rule_id} ({rule_b.rule_name}) → {exp_b.get('decision')}",
+                "rule_a_fires": a_satisfied,
+                "rule_b_fires": b_satisfied,
+                "shared_fields": list(shared),
+                "applied_rules": [rule_a.rule_id, rule_b.rule_id],
+            }
+
+            counter += 1
+            label = "CONFLICTING" if is_conflict else "co-triggered"
+            cases.append(GeneratedTestCase(
+                test_case_id=f"TC-INT-{counter:03d}",
+                description=(
+                    f"Interaction ({label}): {rule_a.rule_name} + {rule_b.rule_name} "
+                    f"(shared: {', '.join(shared)})"
+                ),
+                source_rule_ids=[rule_a.rule_id, rule_b.rule_id],
+                category=TestCaseCategory.INTERACTION,
+                input_values=inputs,
+                filter_logic=filters,
+                expected_outcome=expected,
+                rationale=(
+                    f"{'Conflict' if is_conflict else 'Co-trigger'}: "
+                    f"both rules share {', '.join(shared)} with overlapping ranges. "
+                    f"Rule A fires={a_satisfied} → {exp_a.get('decision')}, "
+                    f"Rule B fires={b_satisfied} → {exp_b.get('decision')}"
+                ),
+            ))
+        else:
+            # Mutually exclusive — rules can NEVER fire simultaneously
+            # Generate one test case showing the boundary between the two rules
+            inputs_a = {c.field: _satisfying_value(c) for c, _ in conds_a}
+            inputs_b = {c.field: _satisfying_value(c) for c, _ in conds_b}
+
+            # Use rule A's value as the test input (triggers A, not B)
+            filters_a = _build_filters(conds_a, inputs_a)
+
+            counter += 1
+            expected = {
+                "decision": "MUTUALLY_EXCLUSIVE",
+                "rule_a": f"{rule_a.rule_id} ({rule_a.rule_name}) → {exp_a.get('decision')}",
+                "rule_b": f"{rule_b.rule_id} ({rule_b.rule_name}) → {exp_b.get('decision')}",
+                "rule_a_fires": True,
+                "rule_b_fires": False,
+                "exclusive_fields": mutually_exclusive_fields,
+                "shared_fields": list(shared),
+                "explanation": (
+                    f"Rules cannot fire simultaneously: "
+                    f"{', '.join(mutually_exclusive_fields)} has disjoint ranges. "
+                    f"Testing with Rule A's range."
+                ),
+                "applied_rules": [rule_a.rule_id],
+            }
+
+            # Build description showing the disjoint ranges
+            range_desc_parts = []
+            for field in mutually_exclusive_fields:
+                ca = conds_a_by_field[field]
+                cb = conds_b_by_field[field]
+                range_desc_parts.append(
+                    f"{field}: Rule A needs {ca.operator} {ca.value}, "
+                    f"Rule B needs {cb.operator} {cb.value}"
+                )
+
+            cases.append(GeneratedTestCase(
+                test_case_id=f"TC-INT-{counter:03d}",
+                description=(
+                    f"Mutually exclusive: {rule_a.rule_name} vs {rule_b.rule_name} "
+                    f"(disjoint: {', '.join(mutually_exclusive_fields)})"
+                ),
+                source_rule_ids=[rule_a.rule_id, rule_b.rule_id],
+                category=TestCaseCategory.INTERACTION,
+                input_values=inputs_a,
+                filter_logic=filters_a,
+                expected_outcome=expected,
+                rationale=(
+                    f"Mutually exclusive rules: {'; '.join(range_desc_parts)}. "
+                    f"These rules partition the input space — only one can fire at a time. "
+                    f"Input satisfies Rule A → {exp_a.get('decision')}"
+                ),
+            ))
 
     return cases
 
