@@ -1042,20 +1042,24 @@ def _gen_interactions(
     Finds rule pairs that share fields. For each pair:
     - If conditions on shared fields are compatible (overlapping ranges),
       pick a value that satisfies both → test co-triggering or conflict.
-    - If conditions are mutually exclusive (disjoint ranges),
-      mark as MUTUALLY_EXCLUSIVE and pick a value for each rule separately
-      to show the boundary between them.
+    - Skips trivial interactions:
+      - Self-pairs (same rule paired with itself)
+      - Tiered thresholds: rules that are mutually exclusive on their ONLY
+        shared field (designed as tiers, e.g., >5 reject, 4-5 reduce)
     """
     cases = []
     counter = start_counter
 
-    # Build field → rules index
+    # Build field → rules index (deduplicated per rule)
     field_rules: dict[str, list[int]] = defaultdict(list)
     for idx, (rule, conds) in enumerate(resolved_rules):
+        seen_fields_for_rule: set[str] = set()
         for cond, _ in conds:
-            field_rules[cond.field].append(idx)
+            if cond.field not in seen_fields_for_rule:
+                field_rules[cond.field].append(idx)
+                seen_fields_for_rule.add(cond.field)
 
-    # Find overlapping pairs
+    # Find overlapping pairs (skip self-pairs)
     seen_pairs = set()
     pairs = []
     for field, indices in field_rules.items():
@@ -1063,6 +1067,8 @@ def _gen_interactions(
             continue
         for i in range(len(indices)):
             for j in range(i + 1, len(indices)):
+                if indices[i] == indices[j]:
+                    continue  # Skip self-pairs
                 pair = (min(indices[i], indices[j]), max(indices[i], indices[j]))
                 if pair not in seen_pairs:
                     seen_pairs.add(pair)
@@ -1074,7 +1080,11 @@ def _gen_interactions(
         r2 = resolved_rules[pair[1]][0]
         a1 = {a.action_type for a in r1.actions}
         a2 = {a.action_type for a in r2.actions}
-        return len(a1.symmetric_difference(a2))
+        # Bonus for rules with multiple shared fields (cross-dimensional interactions)
+        conds_a_fields = {c.field for c, _ in resolved_rules[pair[0]][1]}
+        conds_b_fields = {c.field for c, _ in resolved_rules[pair[1]][1]}
+        shared_count = len(conds_a_fields & conds_b_fields)
+        return len(a1.symmetric_difference(a2)) + shared_count
 
     pairs.sort(key=conflict_score, reverse=True)
 
@@ -1095,18 +1105,41 @@ def _gen_interactions(
         shared = fields_a & fields_b
 
         # Check if shared field conditions are compatible (overlapping ranges)
-        # For multi-condition fields, intersect all conditions from each rule first
+        # For multi-condition fields, check per-condition pairwise overlap to handle
+        # OR logic correctly (e.g., bureau_score == 0 OR bureau_score == "" should
+        # check each condition's range independently, not intersect them)
         mutually_exclusive_fields = []
         compatible = True
         for field in shared:
-            # Get effective range for each rule on this field
-            range_a = _effective_field_range(conds_a_by_field[field])
-            range_b = _effective_field_range(conds_b_by_field[field])
-            if range_a and range_b:
-                overlap = _ranges_overlap(range_a, range_b)
-                if overlap is None:
+            a_ranges = [_get_condition_range(c) for c in conds_a_by_field[field]]
+            b_ranges = [_get_condition_range(c) for c in conds_b_by_field[field]]
+            a_valid = [r for r in a_ranges if r is not None]
+            b_valid = [r for r in b_ranges if r is not None]
+            if a_valid and b_valid:
+                # Check if ANY condition range from A overlaps with ANY from B
+                any_overlap = False
+                for ra in a_valid:
+                    for rb in b_valid:
+                        if _ranges_overlap(ra, rb) is not None:
+                            any_overlap = True
+                            break
+                    if any_overlap:
+                        break
+                if not any_overlap:
                     compatible = False
                     mutually_exclusive_fields.append(field)
+
+        # Skip trivial tiered-threshold interactions: if rules are mutually exclusive
+        # on their ONLY shared field, they're designed as tiers — not interesting to test
+        if not compatible and len(shared) == len(mutually_exclusive_fields):
+            # ALL shared fields are mutually exclusive — these rules can never co-fire
+            # Only worth showing if they have multiple shared fields (complex partitioning)
+            if len(shared) <= 1:
+                logger.debug(
+                    "Skipping tiered-threshold interaction: %s vs %s (exclusive on %s)",
+                    rule_a.rule_id, rule_b.rule_id, ", ".join(mutually_exclusive_fields),
+                )
+                continue
 
         exp_a = _extract_expected_outcome(rule_a, satisfied=True)
         exp_b = _extract_expected_outcome(rule_b, satisfied=True)
@@ -1117,25 +1150,40 @@ def _gen_interactions(
             # For fields only in rule B, add their satisfying values
             for field, b_conds in conds_b_by_field.items():
                 if field in shared:
-                    # Shared field: find the overlap of both rules' effective ranges
-                    range_a = _effective_field_range(conds_a_by_field[field])
-                    range_b = _effective_field_range(b_conds)
-                    if range_a and range_b:
-                        overlap = _ranges_overlap(range_a, range_b)
-                        if overlap:
-                            mid = (overlap[0] + overlap[1]) / 2
-                            meta = _get_field_meta(field)
-                            inputs[field] = int(mid) if meta.get("type") == "int" else mid
-                            continue
+                    # Shared field: find pairwise overlap between any condition range
+                    # from rule A and any condition range from rule B
+                    a_ranges = [_get_condition_range(c) for c in conds_a_by_field[field]]
+                    b_ranges = [_get_condition_range(c) for c in b_conds]
+                    a_valid = [r for r in a_ranges if r is not None]
+                    b_valid = [r for r in b_ranges if r is not None]
+                    best_overlap = None
+                    for ra in a_valid:
+                        for rb in b_valid:
+                            overlap = _ranges_overlap(ra, rb)
+                            if overlap:
+                                # Prefer wider overlap (more room for test value)
+                                if best_overlap is None or (overlap[1] - overlap[0]) > (best_overlap[1] - best_overlap[0]):
+                                    best_overlap = overlap
+                    if best_overlap:
+                        mid = (best_overlap[0] + best_overlap[1]) / 2
+                        meta = _get_field_meta(field)
+                        inputs[field] = int(mid) if meta.get("type") == "int" else mid
+                        continue
                     # Fallback: keep rule A's value
                 else:
                     # Non-shared field: use rule B's satisfying value
                     for cond in b_conds:
                         inputs[field] = _satisfying_value(cond)
 
-            # Verify both rules are actually satisfied
-            a_satisfied = all(_check_satisfies(c, inputs.get(c.field)) for c, _ in conds_a)
-            b_satisfied = all(_check_satisfies(c, inputs.get(c.field)) for c, _ in conds_b)
+            # Verify both rules are actually satisfied (OR-aware)
+            if _has_or_logic(rule_a):
+                a_satisfied = _rule_fires_with_or(rule_a, inputs)
+            else:
+                a_satisfied = all(_check_satisfies(c, inputs.get(c.field)) for c, _ in conds_a)
+            if _has_or_logic(rule_b):
+                b_satisfied = _rule_fires_with_or(rule_b, inputs)
+            else:
+                b_satisfied = all(_check_satisfies(c, inputs.get(c.field)) for c, _ in conds_b)
 
             # Build filters — deduplicate shared field conditions, use the input value
             seen_filter_fields = set()
