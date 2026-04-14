@@ -356,9 +356,16 @@ def _normalize_field(raw: str) -> str:
 
 
 def _normalize_value(value, field: str):
-    """Normalize a value — handle string numbers, percentages, currency."""
+    """Normalize a value — handle string numbers, percentages, currency.
+
+    Also normalizes list elements for between/in/not_in operators.
+    """
     if value is None:
         return value
+
+    # Normalize list elements individually (for between, in, not_in)
+    if isinstance(value, list):
+        return [_normalize_value(elem, field) for elem in value]
 
     # String → number
     if isinstance(value, str):

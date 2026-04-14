@@ -424,13 +424,39 @@ def _edge_values(cond: Condition) -> list[tuple[Any, str]]:
 def _build_input_values(rule: RuleDefinition, overrides: dict | None = None) -> dict:
     """Build a complete input value set that satisfies all conditions of a rule.
 
-    Starts with defaults for all referenced fields, then applies satisfying
-    values for each condition. Overrides let specific tests change one field.
+    When multiple conditions reference the same field (e.g., > 30 AND <= 60),
+    finds the intersection range and picks the midpoint. Single conditions
+    use the standard satisfying value.
     """
-    inputs = {}
+    # Group conditions by field
+    field_conds: dict[str, list[Condition]] = defaultdict(list)
     for cond in rule.conditions:
-        val = _satisfying_value(cond)
-        inputs[cond.field] = val
+        field_conds[cond.field].append(cond)
+
+    inputs = {}
+    for field, conds in field_conds.items():
+        if len(conds) == 1:
+            inputs[field] = _satisfying_value(conds[0])
+        else:
+            # Multiple conditions on same field — find intersection range
+            ranges = [_get_condition_range(c) for c in conds]
+            valid_ranges = [r for r in ranges if r is not None]
+
+            if len(valid_ranges) >= 2:
+                # Intersect all ranges
+                lo = max(r[0] for r in valid_ranges)
+                hi = min(r[1] for r in valid_ranges)
+                if lo <= hi:
+                    meta = _get_field_meta(field)
+                    mid = (lo + hi) / 2
+                    inputs[field] = int(mid) if meta.get("type") == "int" else mid
+                else:
+                    # Impossible intersection — use first condition's value
+                    inputs[field] = _satisfying_value(conds[0])
+            else:
+                # Not all conditions have numeric ranges — use last satisfying value
+                for cond in conds:
+                    inputs[field] = _satisfying_value(cond)
 
     if overrides:
         inputs.update(overrides)
@@ -548,6 +574,31 @@ def _invert_operator(op: str) -> str:
     return inversions.get(op, op)
 
 
+def _has_or_logic(rule: RuleDefinition) -> bool:
+    """Check if a rule has any OR-chained conditions."""
+    return any(c.logic.upper() == "OR" for c in rule.conditions)
+
+
+def _get_or_groups(rule: RuleDefinition) -> list[list[int]]:
+    """Partition conditions into AND/OR groups.
+
+    Returns list of groups. Conditions within a group are OR'd together,
+    and groups are AND'd. E.g., [A AND B OR C AND D] → [[0], [1, 2], [3]]
+    """
+    if not rule.conditions:
+        return []
+    groups: list[list[int]] = [[0]]
+    for i in range(1, len(rule.conditions)):
+        prev = rule.conditions[i - 1]
+        if prev.logic.upper() == "OR":
+            # This condition is OR'd with the previous → same group
+            groups[-1].append(i)
+        else:
+            # AND → new group
+            groups.append([i])
+    return groups
+
+
 # ---------------------------------------------------------------------------
 # Per-category generators
 # ---------------------------------------------------------------------------
@@ -582,11 +633,70 @@ def _gen_negative(
     """One negative case per condition: violate exactly one condition at a time.
 
     For 'between' conditions, generates TWO cases: below-range AND above-range.
+
+    OR logic awareness: if conditions are OR'd (e.g., tenure >= 12 OR tenure >= 24),
+    violating just one isn't enough — the rule still fires via the other OR branch.
+    For OR groups, we generate a single negative test that violates ALL conditions
+    in the group simultaneously.
     """
     cases = []
     counter = start_counter
 
+    # Identify OR groups so we know which conditions must be violated together
+    or_groups = _get_or_groups(rule)
+    # Map condition index → group index
+    cond_to_group: dict[int, int] = {}
+    or_group_indices: set[int] = set()  # groups with >1 member
+    for gi, group in enumerate(or_groups):
+        for ci in group:
+            cond_to_group[ci] = gi
+        if len(group) > 1:
+            or_group_indices.add(gi)
+
+    # Track which OR groups we've already generated negative tests for
+    processed_or_groups: set[int] = set()
+
     for idx, (cond, path) in enumerate(resolved_conds):
+        gi = cond_to_group.get(idx)
+
+        # If this condition is part of an OR group, handle the whole group at once
+        if gi is not None and gi in or_group_indices:
+            if gi in processed_or_groups:
+                continue  # Already generated negative test for this OR group
+            processed_or_groups.add(gi)
+
+            # Violate ALL conditions in the OR group simultaneously
+            group_conds = [(resolved_conds[ci], ci) for ci in or_groups[gi] if ci < len(resolved_conds)]
+            overrides = {}
+            violated_parts = []
+            for (gc, gp), ci in group_conds:
+                overrides[gc.field] = _violating_value(gc)
+                violated_parts.append(f"{gc.field} {gc.operator} {gc.value}")
+
+            inputs = _build_input_values(rule, overrides=overrides)
+            filters = _build_filters(resolved_conds, inputs, keep_range_operators=False)
+            expected = _extract_expected_outcome(rule, satisfied=False)
+            expected["violated_condition"] = " OR ".join(violated_parts)
+            expected["or_group"] = True
+
+            counter += 1
+            cases.append(GeneratedTestCase(
+                test_case_id=f"TC-{rule.rule_id}-NEG-{counter:03d}",
+                description=(
+                    f"Violates OR group ({' OR '.join(violated_parts)}) "
+                    f"→ {rule.rule_name} should NOT fire"
+                ),
+                source_rule_ids=[rule.rule_id],
+                category=TestCaseCategory.NEGATIVE,
+                input_values=inputs,
+                filter_logic=filters,
+                expected_outcome=expected,
+                rationale=(
+                    f"OR group: all {len(group_conds)} conditions must be violated "
+                    f"simultaneously to prevent rule from firing"
+                ),
+            ))
+            continue
         meta = _get_field_meta(cond.field)
         step = meta.get("step", 1)
 
@@ -738,6 +848,23 @@ def _get_condition_range(cond: Condition) -> tuple[float, float] | None:
     return None
 
 
+def _effective_field_range(conds: list[Condition]) -> tuple[float, float] | None:
+    """Get the effective range for a field with possibly multiple conditions.
+
+    Intersects all condition ranges (AND semantics).
+    E.g., '> 30 AND <= 60' → (31, 60)
+    """
+    ranges = [_get_condition_range(c) for c in conds]
+    valid = [r for r in ranges if r is not None]
+    if not valid:
+        return None
+    lo = max(r[0] for r in valid)
+    hi = min(r[1] for r in valid)
+    if lo <= hi:
+        return (lo, hi)
+    return None  # Impossible intersection
+
+
 def _ranges_overlap(r1: tuple[float, float], r2: tuple[float, float]) -> tuple[float, float] | None:
     """Return the overlap of two ranges, or None if disjoint."""
     lo = max(r1[0], r2[0])
@@ -798,20 +925,25 @@ def _gen_interactions(
         rule_b, conds_b = resolved_rules[idx_b]
 
         # Determine shared fields and check compatibility
-        conds_a_by_field = {c.field: c for c, _ in conds_a}
-        conds_b_by_field = {c.field: c for c, _ in conds_b}
+        # Use lists to handle multiple conditions per field per rule
+        conds_a_by_field: dict[str, list[Condition]] = defaultdict(list)
+        conds_b_by_field: dict[str, list[Condition]] = defaultdict(list)
+        for c, _ in conds_a:
+            conds_a_by_field[c.field].append(c)
+        for c, _ in conds_b:
+            conds_b_by_field[c.field].append(c)
         fields_a = set(conds_a_by_field.keys())
         fields_b = set(conds_b_by_field.keys())
         shared = fields_a & fields_b
 
         # Check if shared field conditions are compatible (overlapping ranges)
+        # For multi-condition fields, intersect all conditions from each rule first
         mutually_exclusive_fields = []
         compatible = True
         for field in shared:
-            ca = conds_a_by_field[field]
-            cb = conds_b_by_field[field]
-            range_a = _get_condition_range(ca)
-            range_b = _get_condition_range(cb)
+            # Get effective range for each rule on this field
+            range_a = _effective_field_range(conds_a_by_field[field])
+            range_b = _effective_field_range(conds_b_by_field[field])
             if range_a and range_b:
                 overlap = _ranges_overlap(range_a, range_b)
                 if overlap is None:
@@ -823,26 +955,25 @@ def _gen_interactions(
 
         if compatible:
             # Ranges overlap — build a single input that triggers BOTH rules
-            inputs = {}
-            for cond, _ in conds_a:
-                inputs[cond.field] = _satisfying_value(cond)
-            for cond, _ in conds_b:
-                if cond.field in inputs:
-                    # Find overlapping range and pick midpoint
-                    ca = conds_a_by_field.get(cond.field)
-                    if ca:
-                        range_a = _get_condition_range(ca)
-                        range_b = _get_condition_range(cond)
-                        if range_a and range_b:
-                            overlap = _ranges_overlap(range_a, range_b)
-                            if overlap:
-                                mid = (overlap[0] + overlap[1]) / 2
-                                meta = _get_field_meta(cond.field)
-                                inputs[cond.field] = int(mid) if meta.get("type") == "int" else mid
-                                continue
-                    # Fallback: keep existing value
+            inputs = _build_input_values(rule_a)
+            # For fields only in rule B, add their satisfying values
+            for field, b_conds in conds_b_by_field.items():
+                if field in shared:
+                    # Shared field: find the overlap of both rules' effective ranges
+                    range_a = _effective_field_range(conds_a_by_field[field])
+                    range_b = _effective_field_range(b_conds)
+                    if range_a and range_b:
+                        overlap = _ranges_overlap(range_a, range_b)
+                        if overlap:
+                            mid = (overlap[0] + overlap[1]) / 2
+                            meta = _get_field_meta(field)
+                            inputs[field] = int(mid) if meta.get("type") == "int" else mid
+                            continue
+                    # Fallback: keep rule A's value
                 else:
-                    inputs[cond.field] = _satisfying_value(cond)
+                    # Non-shared field: use rule B's satisfying value
+                    for cond in b_conds:
+                        inputs[field] = _satisfying_value(cond)
 
             # Verify both rules are actually satisfied
             a_satisfied = all(_check_satisfies(c, inputs.get(c.field)) for c, _ in conds_a)
@@ -903,8 +1034,7 @@ def _gen_interactions(
         else:
             # Mutually exclusive — rules can NEVER fire simultaneously
             # Generate one test case showing the boundary between the two rules
-            inputs_a = {c.field: _satisfying_value(c) for c, _ in conds_a}
-            inputs_b = {c.field: _satisfying_value(c) for c, _ in conds_b}
+            inputs_a = _build_input_values(rule_a)
 
             # Use rule A's value as the test input (triggers A, not B)
             filters_a = _build_filters(conds_a, inputs_a)
@@ -929,11 +1059,12 @@ def _gen_interactions(
             # Build description showing the disjoint ranges
             range_desc_parts = []
             for field in mutually_exclusive_fields:
-                ca = conds_a_by_field[field]
-                cb = conds_b_by_field[field]
+                ca_list = conds_a_by_field[field]
+                cb_list = conds_b_by_field[field]
+                a_desc = " AND ".join(f"{c.operator} {c.value}" for c in ca_list)
+                b_desc = " AND ".join(f"{c.operator} {c.value}" for c in cb_list)
                 range_desc_parts.append(
-                    f"{field}: Rule A needs {ca.operator} {ca.value}, "
-                    f"Rule B needs {cb.operator} {cb.value}"
+                    f"{field}: Rule A needs {a_desc}, Rule B needs {b_desc}"
                 )
 
             cases.append(GeneratedTestCase(
