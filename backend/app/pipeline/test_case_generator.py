@@ -1129,167 +1129,113 @@ def _gen_interactions(
                     compatible = False
                     mutually_exclusive_fields.append(field)
 
-        # Skip trivial tiered-threshold interactions: if rules are mutually exclusive
-        # on their ONLY shared field, they're designed as tiers — not interesting to test
-        if not compatible and len(shared) == len(mutually_exclusive_fields):
-            # ALL shared fields are mutually exclusive — these rules can never co-fire
-            # Only worth showing if they have multiple shared fields (complex partitioning)
-            if len(shared) <= 1:
-                logger.debug(
-                    "Skipping tiered-threshold interaction: %s vs %s (exclusive on %s)",
-                    rule_a.rule_id, rule_b.rule_id, ", ".join(mutually_exclusive_fields),
-                )
-                continue
+        # Skip mutually exclusive pairs entirely — rules that can never fire
+        # simultaneously don't produce useful interaction tests
+        if not compatible:
+            logger.debug(
+                "Skipping mutually exclusive pair: %s vs %s (disjoint on %s)",
+                rule_a.rule_id, rule_b.rule_id, ", ".join(mutually_exclusive_fields),
+            )
+            continue
 
+        # --- Compatible: ranges overlap — build input that triggers BOTH rules ---
         exp_a = _extract_expected_outcome(rule_a, satisfied=True)
         exp_b = _extract_expected_outcome(rule_b, satisfied=True)
 
-        if compatible:
-            # Ranges overlap — build a single input that triggers BOTH rules
-            inputs = _build_input_values(rule_a)
-            # For fields only in rule B, add their satisfying values
-            for field, b_conds in conds_b_by_field.items():
-                if field in shared:
-                    # Shared field: find pairwise overlap between any condition range
-                    # from rule A and any condition range from rule B
-                    a_ranges = [_get_condition_range(c) for c in conds_a_by_field[field]]
-                    b_ranges = [_get_condition_range(c) for c in b_conds]
-                    a_valid = [r for r in a_ranges if r is not None]
-                    b_valid = [r for r in b_ranges if r is not None]
-                    best_overlap = None
-                    for ra in a_valid:
-                        for rb in b_valid:
-                            overlap = _ranges_overlap(ra, rb)
-                            if overlap:
-                                # Prefer wider overlap (more room for test value)
-                                if best_overlap is None or (overlap[1] - overlap[0]) > (best_overlap[1] - best_overlap[0]):
-                                    best_overlap = overlap
-                    if best_overlap:
-                        mid = (best_overlap[0] + best_overlap[1]) / 2
-                        meta = _get_field_meta(field)
-                        inputs[field] = int(mid) if meta.get("type") == "int" else mid
-                        continue
-                    # Fallback: keep rule A's value
-                else:
-                    # Non-shared field: use rule B's satisfying value
-                    for cond in b_conds:
-                        inputs[field] = _satisfying_value(cond)
-
-            # Verify both rules are actually satisfied (OR-aware)
-            if _has_or_logic(rule_a):
-                a_satisfied = _rule_fires_with_or(rule_a, inputs)
+        inputs = _build_input_values(rule_a)
+        # For fields in rule B, add their satisfying values
+        for field, b_conds in conds_b_by_field.items():
+            if field in shared:
+                # Shared field: find pairwise overlap between any condition range
+                # from rule A and any condition range from rule B
+                a_ranges = [_get_condition_range(c) for c in conds_a_by_field[field]]
+                b_ranges = [_get_condition_range(c) for c in b_conds]
+                a_valid = [r for r in a_ranges if r is not None]
+                b_valid = [r for r in b_ranges if r is not None]
+                best_overlap = None
+                for ra in a_valid:
+                    for rb in b_valid:
+                        overlap = _ranges_overlap(ra, rb)
+                        if overlap:
+                            if best_overlap is None or (overlap[1] - overlap[0]) > (best_overlap[1] - best_overlap[0]):
+                                best_overlap = overlap
+                if best_overlap:
+                    mid = (best_overlap[0] + best_overlap[1]) / 2
+                    meta = _get_field_meta(field)
+                    inputs[field] = int(mid) if meta.get("type") == "int" else mid
+                    continue
+                # Fallback: keep rule A's value
             else:
-                a_satisfied = all(_check_satisfies(c, inputs.get(c.field)) for c, _ in conds_a)
-            if _has_or_logic(rule_b):
-                b_satisfied = _rule_fires_with_or(rule_b, inputs)
-            else:
-                b_satisfied = all(_check_satisfies(c, inputs.get(c.field)) for c, _ in conds_b)
+                # Non-shared field: use rule B's satisfying value
+                for cond in b_conds:
+                    inputs[field] = _satisfying_value(cond)
 
-            # Build filters — deduplicate shared field conditions, use the input value
-            seen_filter_fields = set()
-            deduped_conds = []
-            for cond, path in conds_a:
+        # Verify both rules are actually satisfied (OR-aware)
+        if _has_or_logic(rule_a):
+            a_satisfied = _rule_fires_with_or(rule_a, inputs)
+        else:
+            a_satisfied = all(_check_satisfies(c, inputs.get(c.field)) for c, _ in conds_a)
+        if _has_or_logic(rule_b):
+            b_satisfied = _rule_fires_with_or(rule_b, inputs)
+        else:
+            b_satisfied = all(_check_satisfies(c, inputs.get(c.field)) for c, _ in conds_b)
+
+        # Skip if we couldn't actually satisfy both rules
+        if not a_satisfied or not b_satisfied:
+            logger.debug(
+                "Skipping interaction: couldn't satisfy both %s (fires=%s) and %s (fires=%s)",
+                rule_a.rule_id, a_satisfied, rule_b.rule_id, b_satisfied,
+            )
+            continue
+
+        # Build filters — deduplicate shared field conditions
+        seen_filter_fields = set()
+        deduped_conds = []
+        for cond, path in conds_a:
+            deduped_conds.append((cond, path))
+            seen_filter_fields.add(cond.field)
+        for cond, path in conds_b:
+            if cond.field not in seen_filter_fields:
                 deduped_conds.append((cond, path))
                 seen_filter_fields.add(cond.field)
-            for cond, path in conds_b:
-                if cond.field not in seen_filter_fields:
-                    deduped_conds.append((cond, path))
-                    seen_filter_fields.add(cond.field)
-            filters = _build_filters(deduped_conds, inputs)
+        filters = _build_filters(deduped_conds, inputs)
 
-            is_conflict = (
-                a_satisfied and b_satisfied and (
-                    (exp_a.get("decision") == "REJECTED") != (exp_b.get("decision") == "REJECTED")
-                )
-            )
+        is_conflict = (
+            (exp_a.get("decision") == "REJECTED") != (exp_b.get("decision") == "REJECTED")
+        )
 
-            decision = "CONFLICT" if is_conflict else "BOTH_TRIGGERED"
-            if not a_satisfied or not b_satisfied:
-                decision = "PARTIAL_TRIGGER"
+        decision = "CONFLICT" if is_conflict else "BOTH_TRIGGERED"
 
-            expected = {
-                "decision": decision,
-                "rule_a": f"{rule_a.rule_id} ({rule_a.rule_name}) → {exp_a.get('decision')}",
-                "rule_b": f"{rule_b.rule_id} ({rule_b.rule_name}) → {exp_b.get('decision')}",
-                "rule_a_fires": a_satisfied,
-                "rule_b_fires": b_satisfied,
-                "shared_fields": list(shared),
-                "applied_rules": [rule_a.rule_id, rule_b.rule_id],
-            }
+        expected = {
+            "decision": decision,
+            "rule_a": f"{rule_a.rule_id} ({rule_a.rule_name}) → {exp_a.get('decision')}",
+            "rule_b": f"{rule_b.rule_id} ({rule_b.rule_name}) → {exp_b.get('decision')}",
+            "rule_a_fires": True,
+            "rule_b_fires": True,
+            "shared_fields": list(shared),
+            "applied_rules": [rule_a.rule_id, rule_b.rule_id],
+        }
 
-            counter += 1
-            label = "CONFLICTING" if is_conflict else "co-triggered"
-            cases.append(GeneratedTestCase(
-                test_case_id=f"TC-INT-{counter:03d}",
-                description=(
-                    f"Interaction ({label}): {rule_a.rule_name} + {rule_b.rule_name} "
-                    f"(shared: {', '.join(shared)})"
-                ),
-                source_rule_ids=[rule_a.rule_id, rule_b.rule_id],
-                category=TestCaseCategory.INTERACTION,
-                input_values=inputs,
-                filter_logic=filters,
-                expected_outcome=expected,
-                rationale=(
-                    f"{'Conflict' if is_conflict else 'Co-trigger'}: "
-                    f"both rules share {', '.join(shared)} with overlapping ranges. "
-                    f"Rule A fires={a_satisfied} → {exp_a.get('decision')}, "
-                    f"Rule B fires={b_satisfied} → {exp_b.get('decision')}"
-                ),
-            ))
-        else:
-            # Mutually exclusive — rules can NEVER fire simultaneously
-            # Generate one test case showing the boundary between the two rules
-            inputs_a = _build_input_values(rule_a)
-
-            # Use rule A's value as the test input (triggers A, not B)
-            filters_a = _build_filters(conds_a, inputs_a)
-
-            counter += 1
-            expected = {
-                "decision": "MUTUALLY_EXCLUSIVE",
-                "rule_a": f"{rule_a.rule_id} ({rule_a.rule_name}) → {exp_a.get('decision')}",
-                "rule_b": f"{rule_b.rule_id} ({rule_b.rule_name}) → {exp_b.get('decision')}",
-                "rule_a_fires": True,
-                "rule_b_fires": False,
-                "exclusive_fields": mutually_exclusive_fields,
-                "shared_fields": list(shared),
-                "explanation": (
-                    f"Rules cannot fire simultaneously: "
-                    f"{', '.join(mutually_exclusive_fields)} has disjoint ranges. "
-                    f"Testing with Rule A's range."
-                ),
-                "applied_rules": [rule_a.rule_id],
-            }
-
-            # Build description showing the disjoint ranges
-            range_desc_parts = []
-            for field in mutually_exclusive_fields:
-                ca_list = conds_a_by_field[field]
-                cb_list = conds_b_by_field[field]
-                a_desc = " AND ".join(f"{c.operator} {c.value}" for c in ca_list)
-                b_desc = " AND ".join(f"{c.operator} {c.value}" for c in cb_list)
-                range_desc_parts.append(
-                    f"{field}: Rule A needs {a_desc}, Rule B needs {b_desc}"
-                )
-
-            cases.append(GeneratedTestCase(
-                test_case_id=f"TC-INT-{counter:03d}",
-                description=(
-                    f"Mutually exclusive: {rule_a.rule_name} vs {rule_b.rule_name} "
-                    f"(disjoint: {', '.join(mutually_exclusive_fields)})"
-                ),
-                source_rule_ids=[rule_a.rule_id, rule_b.rule_id],
-                category=TestCaseCategory.INTERACTION,
-                input_values=inputs_a,
-                filter_logic=filters_a,
-                expected_outcome=expected,
-                rationale=(
-                    f"Mutually exclusive rules: {'; '.join(range_desc_parts)}. "
-                    f"These rules partition the input space — only one can fire at a time. "
-                    f"Input satisfies Rule A → {exp_a.get('decision')}"
-                ),
-            ))
+        counter += 1
+        label = "CONFLICTING" if is_conflict else "co-triggered"
+        cases.append(GeneratedTestCase(
+            test_case_id=f"TC-INT-{counter:03d}",
+            description=(
+                f"Interaction ({label}): {rule_a.rule_name} + {rule_b.rule_name} "
+                f"(shared: {', '.join(shared)})"
+            ),
+            source_rule_ids=[rule_a.rule_id, rule_b.rule_id],
+            category=TestCaseCategory.INTERACTION,
+            input_values=inputs,
+            filter_logic=filters,
+            expected_outcome=expected,
+            rationale=(
+                f"{'Conflict' if is_conflict else 'Co-trigger'}: "
+                f"both rules fire simultaneously. "
+                f"Rule A → {exp_a.get('decision')}, Rule B → {exp_b.get('decision')}. "
+                f"Shared: {', '.join(shared)}"
+            ),
+        ))
 
     return cases
 
