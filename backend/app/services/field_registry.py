@@ -74,21 +74,54 @@ FIELD_REGISTRY: dict[str, str] = {
     "max_eligible_amount": "decision_context.max_eligible_amount",
     "risk_segment": "decision_context.risk_segment",
     "pricing_tier": "decision_context.pricing_tier",
+    "decision_status": "decision_context.decision_status",
+    "interest_rate": "decision_context.interest_rate",
+
+    # Bureau — additional
+    "settled_accounts": "borrower_credit_model.bureau_credits.settled_accounts",
+    "write_offs_bureau_history": "borrower_credit_model.bureau_credits.write_offs",
+    "write_offs": "borrower_credit_model.bureau_credits.write_offs",
+
+    # Banking — additional
+    "cash_deposits_6m": "borrower_credit_model.banking_inputs.cash_deposits_6m",
+
+    # Fraud / AML
+    "same_pan_applications_30d": "borrower_credit_model.fraud_signals.same_pan_applications_30d",
+    "geographic_risk_flag": "borrower_credit_model.fraud_signals.geographic_risk_flag",
+
+    # Derived flags
+    "employment_stability_passed": "calculated_attributes.employment_stability_passed",
+    "exception_requested": "decision_context.exception_requested",
 }
 
 
 def resolve_field_path(field_name: str) -> str | None:
     """Resolve a rule field name to its JSON path in request_payload.
 
-    Tries exact match first, then normalized (lowercase, underscored).
-    Returns None if field is unknown.
+    Tries: exact match → normalized → alias lookup → substring match.
+    Returns None only if no mapping exists.
     """
-    # Exact match
+    # 1. Exact match
     if field_name in FIELD_REGISTRY:
         return FIELD_REGISTRY[field_name]
-    # Normalized match
+
+    # 2. Normalized match (lowercase, underscored)
     normalized = field_name.lower().strip().replace(" ", "_").replace("-", "_")
-    return FIELD_REGISTRY.get(normalized)
+    if normalized in FIELD_REGISTRY:
+        return FIELD_REGISTRY[normalized]
+
+    # 3. Alias lookup — handles LLM field name variations
+    from app.pipeline.rule_extractor import FIELD_ALIASES
+    canonical = FIELD_ALIASES.get(normalized)
+    if canonical and canonical in FIELD_REGISTRY:
+        return FIELD_REGISTRY[canonical]
+
+    # 4. Substring match — last resort for close matches
+    for key, path in FIELD_REGISTRY.items():
+        if normalized in key or key in normalized:
+            return path
+
+    return None
 
 
 def json_path_to_sql(json_path: str) -> str:

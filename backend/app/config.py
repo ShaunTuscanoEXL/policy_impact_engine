@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
     # OpenAI settings
     openai_api_key: str = ""
-    openai_model: str = "gpt-4o"
+    openai_model: str = "gpt-5.4-mini"
 
     # Azure OpenAI settings
     azure_openai_api_key: str = ""

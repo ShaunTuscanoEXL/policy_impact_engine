@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,15 +13,35 @@ from app.schemas.test_case import (
     TestCaseSuiteListResponse,
     TestCaseResponse,
     MatchedCustomer,
+    SuggestCountsRequest,
+    SuggestedCountsResponse,
 )
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/test-cases", tags=["Test Cases"])
 
 
+@router.post("/suggest-counts", response_model=SuggestedCountsResponse)
+async def suggest_counts(body: SuggestCountsRequest, db: AsyncSession = Depends(get_db)):
+    """Auto-suggest test case counts based on rule set complexity.
+
+    Analyzes the number of rules, conditions, numeric thresholds,
+    and overlapping rule pairs to recommend how many test cases
+    of each type would provide comprehensive coverage.
+    """
+    result = await test_case_service.suggest_test_counts(body.rule_set_id, db)
+    if result is None:
+        raise HTTPException(404, "Rule set not found")
+    return SuggestedCountsResponse(**result)
+
+
 @router.post("/generate", response_model=TestCaseSuiteResponse)
 async def generate_test_cases(body: TestCaseGenerateRequest, db: AsyncSession = Depends(get_db)):
-    """Generate test cases from a rule set with configurable counts per category."""
+    """Generate test cases from a rule set.
+
+    If counts are omitted (None), auto-suggests based on rule complexity.
+    If counts are provided, uses them as maximums per category.
+    """
     rule_set = await rule_service.get_rule_set(body.rule_set_id, db)
     if not rule_set:
         raise HTTPException(404, "Rule set not found")
@@ -158,7 +178,15 @@ async def _build_suite_response(suite, rule_set_name: str | None, db: AsyncSessi
         # Build human-readable filter description
         filter_parts = []
         for f in (tc.filter_logic or []):
-            filter_parts.append(f"{f.get('field_name', '')} {f.get('operator', '')} {f.get('value', '')}")
+            op = f.get('operator', '')
+            val = f.get('value', '')
+            field = f.get('field_name', '')
+            if op == 'between' and isinstance(val, (list, tuple)) and len(val) == 2:
+                filter_parts.append(f"{field} between {val[0]} and {val[1]}")
+            elif op in ('in', 'not_in') and isinstance(val, (list, tuple)):
+                filter_parts.append(f"{field} {op} [{', '.join(str(v) for v in val)}]")
+            else:
+                filter_parts.append(f"{field} {op} {val}")
 
         # Fetch matched customer details
         customers = []
@@ -184,13 +212,21 @@ async def _build_suite_response(suite, rule_set_name: str | None, db: AsyncSessi
             description=tc.description,
             source_rule_ids=tc.source_rule_ids or [],
             category=tc.category.value if hasattr(tc.category, 'value') else tc.category,
+            input_values=tc.input_values or {},
             filter_logic=tc.filter_logic or [],
             filter_description=" AND ".join(filter_parts) if filter_parts else None,
             expected_outcome=tc.expected_outcome or {},
+            rationale=tc.rationale,
             matched_loan_ids=tc.matched_loan_ids or [],
             match_count=tc.match_count or 0,
             matched_customers=customers,
         ))
+
+    # Sort by category order, then by test_case_id within each category
+    category_order = {"POSITIVE": 0, "NEGATIVE": 1, "BOUNDARY": 2, "EDGE": 3, "INTERACTION": 4}
+    test_case_responses.sort(
+        key=lambda tc: (category_order.get(tc.category, 99), tc.test_case_id)
+    )
 
     return TestCaseSuiteResponse(
         id=str(suite.id),
@@ -198,6 +234,8 @@ async def _build_suite_response(suite, rule_set_name: str | None, db: AsyncSessi
         rule_set_name=rule_set_name,
         total_cases=suite.total_cases,
         cases_by_category=suite.cases_by_category,
+        coverage_stats=suite.coverage_stats or {},
+        suggested_counts=suite.suggested_counts or {},
         test_cases=test_case_responses,
         created_at=suite.created_at.isoformat(),
     )

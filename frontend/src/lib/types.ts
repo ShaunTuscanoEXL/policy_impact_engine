@@ -62,6 +62,7 @@ export interface TestCase {
   description: string;
   source_rule_ids: string[];
   category: string;
+  input_values: Record<string, any>;
   filter_logic: Array<{
     field_name: string;
     json_path: string;
@@ -71,6 +72,7 @@ export interface TestCase {
   }>;
   filter_description: string | null;
   expected_outcome: Record<string, any>;
+  rationale: string | null;
   matched_loan_ids: string[];
   match_count: number;
   matched_customers: MatchedCustomer[];
@@ -82,8 +84,20 @@ export interface TestCaseSuite {
   rule_set_name: string | null;
   total_cases: number;
   cases_by_category: Record<string, number>;
+  coverage_stats: Record<string, any>;
+  suggested_counts: Record<string, number>;
   test_cases: TestCase[];
   created_at: string;
+}
+
+export interface SuggestedCounts {
+  positive: number;
+  negative: number;
+  boundary: number;
+  edge: number;
+  interaction: number;
+  total: number;
+  rationale: Record<string, any>;
 }
 
 export interface TestCaseSuiteListItem {

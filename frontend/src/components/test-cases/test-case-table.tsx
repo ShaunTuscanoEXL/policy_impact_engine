@@ -127,12 +127,22 @@ export function TestCaseTable({ testCases, casesByCategory }: TestCaseTableProps
                         <div>
                           <h4 className="font-semibold text-sm mb-2">Filter Conditions</h4>
                           <div className="space-y-1">
-                            {(Array.isArray(tc.filter_logic) ? tc.filter_logic : []).map((f, idx) => (
-                              <div key={idx} className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">{f.field_name}:</span>
-                                <span className="font-mono">{f.operator} {String(f.value)}</span>
-                              </div>
-                            ))}
+                            {(Array.isArray(tc.filter_logic) ? tc.filter_logic : []).map((f, idx) => {
+                              let displayValue: string;
+                              if (f.operator === "between" && Array.isArray(f.value) && f.value.length === 2) {
+                                displayValue = `${f.value[0]} – ${f.value[1]}`;
+                              } else if ((f.operator === "in" || f.operator === "not_in") && Array.isArray(f.value)) {
+                                displayValue = `[${f.value.join(", ")}]`;
+                              } else {
+                                displayValue = String(f.value);
+                              }
+                              return (
+                                <div key={idx} className="flex justify-between text-sm">
+                                  <span className="text-muted-foreground">{f.field_name}:</span>
+                                  <span className="font-mono">{f.operator} {displayValue}</span>
+                                </div>
+                              );
+                            })}
                             {(!tc.filter_logic || tc.filter_logic.length === 0) && (
                               <p className="text-xs text-muted-foreground">No filter conditions</p>
                             )}

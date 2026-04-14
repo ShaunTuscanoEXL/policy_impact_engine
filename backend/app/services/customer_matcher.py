@@ -31,6 +31,33 @@ async def match_customers(
 
         sql_accessor = json_path_to_sql(path)
 
+        # Handle between operator — generates a BETWEEN clause
+        if op == "between":
+            if isinstance(val, (list, tuple)) and len(val) == 2:
+                where_parts.append(f"({sql_accessor})::numeric BETWEEN {val[0]} AND {val[1]}")
+            continue
+
+        # Handle in / not_in operators
+        if op == "in":
+            if isinstance(val, (list, tuple)) and val:
+                if all(isinstance(v, (int, float)) for v in val):
+                    vals_str = ", ".join(str(v) for v in val)
+                    where_parts.append(f"({sql_accessor})::numeric IN ({vals_str})")
+                else:
+                    vals_str = ", ".join(f"'{v}'" for v in val)
+                    where_parts.append(f"{sql_accessor} IN ({vals_str})")
+            continue
+
+        if op == "not_in":
+            if isinstance(val, (list, tuple)) and val:
+                if all(isinstance(v, (int, float)) for v in val):
+                    vals_str = ", ".join(str(v) for v in val)
+                    where_parts.append(f"({sql_accessor})::numeric NOT IN ({vals_str})")
+                else:
+                    vals_str = ", ".join(f"'{v}'" for v in val)
+                    where_parts.append(f"{sql_accessor} NOT IN ({vals_str})")
+            continue
+
         # Skip unsupported operators
         if op not in (">=", "<=", ">", "<", "==", "!="):
             continue

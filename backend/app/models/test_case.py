@@ -1,7 +1,7 @@
 import uuid
 import enum
 from datetime import datetime
-from sqlalchemy import String, Text, Integer, DateTime, Enum as SAEnum, JSON, ForeignKey
+from sqlalchemy import String, Text, Integer, Float, DateTime, Enum as SAEnum, JSON, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
@@ -22,6 +22,8 @@ class TestCaseSuite(Base):
     rule_set_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("rule_sets.id"))
     total_cases: Mapped[int] = mapped_column(Integer, default=0)
     cases_by_category: Mapped[dict] = mapped_column(JSON)
+    coverage_stats: Mapped[dict] = mapped_column(JSON, default=dict)
+    suggested_counts: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     rule_set = relationship("RuleSet", back_populates="test_case_suites")
@@ -37,10 +39,12 @@ class TestCase(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_rule_ids: Mapped[dict] = mapped_column(JSON)
     category: Mapped[TestCaseCategory] = mapped_column(SAEnum(TestCaseCategory))
+    input_values: Mapped[dict] = mapped_column(JSON, default=dict)
     filter_logic: Mapped[dict] = mapped_column(JSON)
     matched_loan_ids: Mapped[list] = mapped_column(JSON, default=list)
     match_count: Mapped[int] = mapped_column(Integer, default=0)
     expected_outcome: Mapped[dict] = mapped_column(JSON)
+    rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     suite = relationship("TestCaseSuite", back_populates="test_cases")

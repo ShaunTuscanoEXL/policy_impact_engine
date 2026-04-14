@@ -125,6 +125,15 @@ async def extract_rules_from_brd(brd_id: str, db: AsyncSession = Depends(get_db)
     if not sections:
         raise HTTPException(422, "Could not parse document into sections")
 
+    # Save parsed text to BRD record for UI visibility
+    parsed_text = "\n\n".join(s.content for s in sections)
+    brd.parsed_content = parsed_text
+    brd.metadata_json = {
+        "sections_count": len(sections),
+        "total_chars": len(parsed_text),
+        "section_titles": [s.title for s in sections],
+    }
+
     # Extract rules using AI
     rule_definitions = extract_rules(sections)
 

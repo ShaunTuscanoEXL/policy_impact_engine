@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from enum import Enum
+from typing import Any
 
 
 class TestCaseCategoryEnum(str, Enum):
@@ -12,12 +13,26 @@ class TestCaseCategoryEnum(str, Enum):
 
 class TestCaseGenerateRequest(BaseModel):
     rule_set_id: str
-    positive_count: int = 3
-    negative_count: int = 3
-    boundary_count: int = 5
-    edge_count: int = 3
-    interaction_count: int = 2
+    positive_count: int | None = None   # None = auto-suggest
+    negative_count: int | None = None
+    boundary_count: int | None = None
+    edge_count: int | None = None
+    interaction_count: int | None = None
     max_matches: int = 10
+
+
+class SuggestCountsRequest(BaseModel):
+    rule_set_id: str
+
+
+class SuggestedCountsResponse(BaseModel):
+    positive: int
+    negative: int
+    boundary: int
+    edge: int
+    interaction: int
+    total: int
+    rationale: dict
 
 
 class MatchedCustomer(BaseModel):
@@ -34,14 +49,25 @@ class TestCaseResponse(BaseModel):
     description: str | None
     source_rule_ids: list[str]
     category: str
+    input_values: dict = {}
     filter_logic: list[dict]
     filter_description: str | None = None
     expected_outcome: dict
+    rationale: str | None = None
     matched_loan_ids: list[str] = []
     match_count: int = 0
     matched_customers: list[MatchedCustomer] = []
 
     model_config = {"from_attributes": True}
+
+
+class CoverageStats(BaseModel):
+    total_rules: int = 0
+    rules_with_test_cases: int = 0
+    rule_coverage_pct: float = 0.0
+    total_conditions: int = 0
+    conditions_tested_negative: int = 0
+    unresolved_fields: list[str] = []
 
 
 class TestCaseSuiteResponse(BaseModel):
@@ -50,6 +76,8 @@ class TestCaseSuiteResponse(BaseModel):
     rule_set_name: str | None = None
     total_cases: int
     cases_by_category: dict
+    coverage_stats: dict = {}
+    suggested_counts: dict = {}
     test_cases: list[TestCaseResponse] = []
     created_at: str
 

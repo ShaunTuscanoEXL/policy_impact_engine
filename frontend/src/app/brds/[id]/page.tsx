@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
-import type { BrdDocument, BrdWorkflow } from "@/lib/types";
+import type { BrdDocument, BrdWorkflow, SuggestedCounts } from "@/lib/types";
 import { toast } from "sonner";
 import {
   WorkflowStepper,
@@ -37,6 +37,25 @@ export default function BrdDetailPage() {
     ...DEFAULT_TEST_CASE_COUNTS,
   });
   const [maxMatches, setMaxMatches] = useState(10);
+  const [countsLoaded, setCountsLoaded] = useState(false);
+
+  const fetchSuggestedCounts = useCallback(async (ruleSetId: string) => {
+    try {
+      const { data } = await api.post<SuggestedCounts>("/test-cases/suggest-counts", {
+        rule_set_id: ruleSetId,
+      });
+      setTestCaseCounts({
+        POSITIVE: data.positive,
+        NEGATIVE: data.negative,
+        BOUNDARY: data.boundary,
+        EDGE: data.edge,
+        INTERACTION: data.interaction,
+      });
+      setCountsLoaded(true);
+    } catch {
+      // Fall back to zeros if suggest-counts fails
+    }
+  }, []);
 
   const fetchWorkflow = useCallback(async () => {
     try {
@@ -48,10 +67,14 @@ export default function BrdDetailPage() {
         setTestCaseSuiteId(data.test_case_suite.id);
         setTestCaseCount(data.test_case_suite.total_cases);
       }
+      // Auto-fetch suggested counts when rule set is approved
+      if (data.rule_set?.status === "APPROVED" && !data.test_case_suite) {
+        fetchSuggestedCounts(data.rule_set.id);
+      }
     } catch {
       // Workflow endpoint may not exist yet for fresh BRDs
     }
-  }, [params.id]);
+  }, [params.id, fetchSuggestedCounts]);
 
   useEffect(() => {
     async function fetchBrd() {

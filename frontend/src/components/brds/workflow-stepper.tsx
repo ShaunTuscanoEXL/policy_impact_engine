@@ -29,12 +29,13 @@ export interface TestCaseCounts {
   INTERACTION: number;
 }
 
+/** Fallback only — the real defaults come from POST /test-cases/suggest-counts */
 export const DEFAULT_TEST_CASE_COUNTS: TestCaseCounts = {
-  POSITIVE: 3,
-  NEGATIVE: 3,
-  BOUNDARY: 5,
-  EDGE: 3,
-  INTERACTION: 2,
+  POSITIVE: 0,
+  NEGATIVE: 0,
+  BOUNDARY: 0,
+  EDGE: 0,
+  INTERACTION: 0,
 };
 
 function deriveSteps(
@@ -138,7 +139,6 @@ function deriveSteps(
               <Input
                 type="number"
                 min={0}
-                max={20}
                 value={testCaseCounts[cat]}
                 onChange={(e) => onCountChange(cat, parseInt(e.target.value) || 0)}
                 className="h-8 text-sm"

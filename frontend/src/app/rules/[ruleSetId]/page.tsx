@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
-import type { RuleSet, Rule, TestCaseSuite } from "@/lib/types";
+import type { RuleSet, Rule, TestCaseSuite, SuggestedCounts } from "@/lib/types";
 import {
   type TestCaseCounts,
   DEFAULT_TEST_CASE_COUNTS,
@@ -66,19 +66,41 @@ export default function RuleReviewPage() {
     ...DEFAULT_TEST_CASE_COUNTS,
   });
   const [maxMatches, setMaxMatches] = useState(10);
+  const [countsLoaded, setCountsLoaded] = useState(false);
 
+  const fetchSuggestedCounts = useCallback(async (ruleSetId: string) => {
+    try {
+      const { data } = await api.post<SuggestedCounts>("/test-cases/suggest-counts", {
+        rule_set_id: ruleSetId,
+      });
+      setTestCaseCounts({
+        POSITIVE: data.positive,
+        NEGATIVE: data.negative,
+        BOUNDARY: data.boundary,
+        EDGE: data.edge,
+        INTERACTION: data.interaction,
+      });
+      setCountsLoaded(true);
+    } catch {
+      // Fall back to zeros if suggest-counts fails
+    }
+  }, []);
 
   const fetchRuleSet = useCallback(async () => {
     try {
       const { data } = await api.get(`/rule-sets/${params.ruleSetId}`);
       setRuleSet(data);
+      // Auto-fetch suggested counts when rule set is approved
+      if (data.status === "APPROVED") {
+        fetchSuggestedCounts(params.ruleSetId);
+      }
     } catch {
       toast.error("Failed to load rule set.");
       router.push("/brds");
     } finally {
       setLoading(false);
     }
-  }, [params.ruleSetId, router]);
+  }, [params.ruleSetId, router, fetchSuggestedCounts]);
 
   const fetchTestCases = useCallback(async () => {
     try {
@@ -153,10 +175,11 @@ export default function RuleReviewPage() {
   const handleApproveAndGenerateTests = useCallback(async () => {
     setRunningSimulation(true);
     try {
-      // Approve the rule set, then show count configuration
+      // Approve the rule set, then fetch suggested counts
       await api.patch(`/rule-sets/${params.ruleSetId}/approve`);
       toast.success("Rules approved. Configure test case counts below and click Generate.");
       await fetchRuleSet();
+      // fetchRuleSet will trigger fetchSuggestedCounts since status is now APPROVED
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || "Failed to approve rule set.");
     } finally {
@@ -362,7 +385,6 @@ export default function RuleReviewPage() {
                   <Input
                     type="number"
                     min={0}
-                    max={20}
                     value={testCaseCounts[cat]}
                     onChange={(e) => handleCountChange(cat, parseInt(e.target.value) || 0)}
                     className="h-9"
