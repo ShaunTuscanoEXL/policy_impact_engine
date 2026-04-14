@@ -153,14 +153,29 @@ export function TestCaseTable({ testCases, casesByCategory }: TestCaseTableProps
                         <div>
                           <h4 className="font-semibold text-sm mb-2">Expected Outcome</h4>
                           <div className="space-y-1">
-                            {Object.entries(tc.expected_outcome).map(([key, val]) => (
-                              <div key={key} className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">{key}:</span>
-                                <span className="font-mono">
-                                  {Array.isArray(val) ? val.join(", ") : String(val)}
-                                </span>
-                              </div>
-                            ))}
+                            {Object.entries(tc.expected_outcome).map(([key, val]) => {
+                              let display: string;
+                              if (val === null || val === undefined) {
+                                display = "N/A";
+                              } else if (Array.isArray(val)) {
+                                display = val.join(", ");
+                              } else if (typeof val === "object") {
+                                // Render nested objects like rule_a/rule_b inline
+                                display = Object.entries(val)
+                                  .map(([k, v]) => `${k}: ${v}`)
+                                  .join(", ");
+                              } else {
+                                display = String(val);
+                              }
+                              return (
+                                <div key={key} className="flex justify-between text-sm gap-4">
+                                  <span className="text-muted-foreground shrink-0">{key}:</span>
+                                  <span className="font-mono text-right break-all">
+                                    {display}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       </div>
