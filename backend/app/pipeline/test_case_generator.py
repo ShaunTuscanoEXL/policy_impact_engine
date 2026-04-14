@@ -195,7 +195,9 @@ def suggest_counts(rules: list[RuleDefinition]) -> dict:
     # Calculate counts
     positive = n_rules  # 1 per rule: all conditions satisfied
     negative = total_conditions + between_conditions  # 1 per condition + extra for between (below + above)
-    boundary = numeric_conditions * 3  # at, just-below, just-above per numeric condition (between gets 4)
+    # Standard numeric conditions get 3 boundary values (below, at, above)
+    # Between conditions get 4 (below-lower, at-lower, at-upper, above-upper)
+    boundary = (numeric_conditions - between_conditions) * 3 + between_conditions * 4
     edge = max(numeric_conditions * 2, n_rules)  # extreme high + low per numeric, at least 1 per rule
     interaction = min(len(overlap_pairs), max(10, n_rules // 5))  # cap at reasonable number
 
@@ -233,18 +235,50 @@ def _satisfying_value(cond: Condition) -> Any:
     """Generate a value that satisfies a condition."""
     meta = _get_field_meta(cond.field)
     v = cond.value
+    op = cond.operator
 
+    # Handle list-based operators FIRST (before the _is_numeric guard)
+    if op == "between":
+        if isinstance(v, (list, tuple)) and len(v) == 2:
+            lo, hi = v
+            if _is_numeric(lo) and _is_numeric(hi):
+                mid = (lo + hi) / 2
+                if isinstance(lo, int) and isinstance(hi, int):
+                    return int(mid)
+                return mid
+            return lo
+        return meta["default"]
+
+    if op == "in":
+        if isinstance(v, (list, tuple)) and v:
+            return v[0]
+        return v if v is not None else meta["default"]
+
+    if op == "not_in":
+        default = meta["default"]
+        if isinstance(v, (list, tuple)) and default in v:
+            step = meta.get("step", 1)
+            for offset in range(1, 100):
+                candidate = default + offset * step
+                if candidate not in v and candidate <= meta.get("max", 1e9):
+                    return candidate
+                candidate = default - offset * step
+                if candidate not in v and candidate >= meta.get("min", -1e9):
+                    return candidate
+        return default
+
+    # String/enum conditions
     if isinstance(v, str) and not _is_numeric(v):
-        return v  # For enum/string conditions, the value itself satisfies ==
+        return v
 
+    # Non-numeric, non-list values — use default
     if not _is_numeric(v):
         return meta["default"]
 
-    op = cond.operator
+    # Numeric scalar comparisons
     step = meta.get("step", 1)
-
     if op == ">=":
-        return v  # Exactly at threshold satisfies >=
+        return v
     elif op == ">":
         return v + step
     elif op == "<=":
@@ -255,35 +289,6 @@ def _satisfying_value(cond: Condition) -> Any:
         return v
     elif op == "!=":
         return v + step if _is_numeric(v) else meta["default"]
-    elif op == "between":
-        if isinstance(v, (list, tuple)) and len(v) == 2:
-            lo, hi = v
-            if _is_numeric(lo) and _is_numeric(hi):
-                mid = (lo + hi) / 2
-                # Return int if both bounds are int
-                if isinstance(lo, int) and isinstance(hi, int):
-                    return int(mid)
-                return mid
-            return lo
-        return v
-    elif op == "in":
-        if isinstance(v, list) and v:
-            return v[0]
-        return v
-    elif op == "not_in":
-        # Make sure the default isn't in the excluded list
-        default = meta["default"]
-        if isinstance(v, (list, tuple)) and default in v:
-            step = meta.get("step", 1)
-            # Try values around default until one is not in the list
-            for offset in range(1, 100):
-                candidate = default + offset * step
-                if candidate not in v and candidate <= meta.get("max", 1e9):
-                    return candidate
-                candidate = default - offset * step
-                if candidate not in v and candidate >= meta.get("min", -1e9):
-                    return candidate
-        return default
     return meta["default"]
 
 
@@ -291,29 +296,49 @@ def _violating_value(cond: Condition) -> Any:
     """Generate a value that violates a condition."""
     meta = _get_field_meta(cond.field)
     v = cond.value
+    op = cond.operator
     step = meta.get("step", 1)
 
+    # Handle list-based operators FIRST (before the _is_numeric guard)
+    if op == "between":
+        if isinstance(v, (list, tuple)) and len(v) == 2:
+            return v[1] + step  # Above range (below-range covered by boundary tests)
+        return meta.get("max", 999999)
+
+    if op == "in":
+        if isinstance(v, (list, tuple)) and v:
+            if all(_is_numeric(x) for x in v):
+                return max(v) + step
+            else:
+                return "INVALID_VALUE"
+        return meta.get("max", 999999)
+
+    if op == "not_in":
+        if isinstance(v, (list, tuple)) and v:
+            return v[0]  # Return something that IS in the list
+        return v
+
+    # String/enum conditions
     if isinstance(v, str) and not _is_numeric(v):
-        # For enum conditions, pick a different value (case-insensitive match)
         normalized = cond.field.lower().strip().replace(" ", "_").replace("-", "_")
         if normalized in ENUM_FIELD_VALUES:
             others = [x for x in ENUM_FIELD_VALUES[normalized] if x.lower() != v.lower()]
             return others[0] if others else "INVALID"
-        # Try partial match on field name
         for key, vals in ENUM_FIELD_VALUES.items():
             if key in normalized or normalized in key:
                 others = [x for x in vals if x.lower() != v.lower()]
                 return others[0] if others else "INVALID"
         return "INVALID_VALUE"
 
+    # Non-numeric, non-list values — use default
     if not _is_numeric(v):
         return meta["default"]
 
-    op = cond.operator
+    # Numeric scalar comparisons
     if op == ">=":
-        return v - step  # Just below
+        return v - step
     elif op == ">":
-        return v  # At threshold (not above)
+        return v
     elif op == "<=":
         return v + step
     elif op == "<":
@@ -322,22 +347,6 @@ def _violating_value(cond: Condition) -> Any:
         return v + step
     elif op == "!=":
         return v  # Exact value violates !=
-    elif op == "between":
-        if isinstance(v, (list, tuple)) and len(v) == 2:
-            return v[1] + step  # Above range (below-range covered by boundary tests)
-        return v
-    elif op == "in":
-        # For numeric lists, pick a value not in the list
-        if isinstance(v, list) and v:
-            if all(_is_numeric(x) for x in v):
-                return max(v) + step
-            else:
-                return "INVALID_VALUE"
-        return meta.get("max", 999999)
-    elif op == "not_in":
-        if isinstance(v, list) and v:
-            return v[0]  # Return something that IS in the list
-        return v
     return meta.get("max", 999999)
 
 
@@ -516,6 +525,9 @@ def _extract_expected_outcome(rule: RuleDefinition, satisfied: bool) -> dict:
         elif action.action_type == "ADJUST":
             outcome[f"adjust_{action.target_field}"] = action.value
             outcome[f"adjust_desc_{action.target_field}"] = action.description
+
+    # Add rule_id once (not per action)
+    if rule.actions:
         outcome["applied_rules"].append(rule.rule_id)
 
     if outcome["decision"] == "UNKNOWN" and rule.actions:
