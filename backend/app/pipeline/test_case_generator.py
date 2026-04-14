@@ -180,6 +180,18 @@ def suggest_counts(rules: list[RuleDefinition]) -> dict:
         if isinstance(c.value, str) or _is_enum_field(c.field)
     )
 
+    # Count OR groups: OR groups generate 1 negative test per group instead of per condition
+    or_group_savings = 0  # conditions "saved" by grouping
+    or_rules_count = 0
+    for r in rules:
+        if _has_or_logic(r):
+            or_rules_count += 1
+            groups = _get_or_groups(r)
+            for group in groups:
+                if len(group) > 1:
+                    # Group of N conditions generates 1 test instead of N
+                    or_group_savings += len(group) - 1
+
     # Find overlapping rule pairs (rules sharing fields)
     field_to_rules: dict[str, list[str]] = defaultdict(list)
     for r in rules:
@@ -193,8 +205,10 @@ def suggest_counts(rules: list[RuleDefinition]) -> dict:
                     overlap_pairs.add((rule_ids[i], rule_ids[j]))
 
     # Calculate counts
-    positive = n_rules  # 1 per rule: all conditions satisfied
-    negative = total_conditions + between_conditions  # 1 per condition + extra for between (below + above)
+    positive = n_rules  # 1 per rule: all conditions satisfied (+ OR branch variants)
+    # Negative: 1 per AND condition + 2 per between (below+above),
+    # but OR groups collapse N conditions into 1 test
+    negative = (total_conditions - or_group_savings) + between_conditions
     # Standard numeric conditions get 3 boundary values (below, at, above)
     # Between conditions get 4 (below-lower, at-lower, at-upper, above-upper)
     boundary = (numeric_conditions - between_conditions) * 3 + between_conditions * 4
@@ -216,10 +230,13 @@ def suggest_counts(rules: list[RuleDefinition]) -> dict:
             "numeric_conditions": numeric_conditions,
             "between_conditions": between_conditions,
             "enum_conditions": enum_conditions,
+            "or_rules": or_rules_count,
+            "or_group_savings": or_group_savings,
             "overlapping_rule_pairs": len(overlap_pairs),
             "explanation": (
                 f"{n_rules} rules with {total_conditions} conditions "
-                f"({numeric_conditions} numeric incl. {between_conditions} between, {enum_conditions} enum). "
+                f"({numeric_conditions} numeric incl. {between_conditions} between, {enum_conditions} enum"
+                f"{f', {or_rules_count} rules with OR logic saving {or_group_savings} negative tests' if or_group_savings else ''}). "
                 f"{len(overlap_pairs)} rule pairs share fields. "
                 f"Recommended {total} total test cases for comprehensive coverage."
             ),
@@ -584,6 +601,9 @@ def _get_or_groups(rule: RuleDefinition) -> list[list[int]]:
 
     Returns list of groups. Conditions within a group are OR'd together,
     and groups are AND'd. E.g., [A AND B OR C AND D] → [[0], [1, 2], [3]]
+
+    IMPORTANT: Indices are into rule.conditions, NOT resolved_conds.
+    Use _build_resolved_index_map() to translate when working with resolved_conds.
     """
     if not rule.conditions:
         return []
@@ -599,6 +619,57 @@ def _get_or_groups(rule: RuleDefinition) -> list[list[int]]:
     return groups
 
 
+def _build_resolved_index_map(
+    rule: RuleDefinition,
+    resolved_conds: list[tuple[Condition, str]],
+) -> tuple[dict[int, int], dict[int, int]]:
+    """Build bidirectional mapping between resolved_conds and rule.conditions indices.
+
+    Returns:
+        (resolved_to_orig, orig_to_resolved)
+        - resolved_to_orig: resolved_conds index → rule.conditions index
+        - orig_to_resolved: rule.conditions index → resolved_conds index
+    """
+    resolved_to_orig: dict[int, int] = {}
+    orig_to_resolved: dict[int, int] = {}
+
+    for ri, (cond, _path) in enumerate(resolved_conds):
+        for oi, orig_cond in enumerate(rule.conditions):
+            if cond is orig_cond and oi not in orig_to_resolved.values():
+                resolved_to_orig[ri] = oi
+                orig_to_resolved[oi] = ri
+                break
+
+    return resolved_to_orig, orig_to_resolved
+
+
+def _rule_fires_with_or(rule: RuleDefinition, input_values: dict) -> bool:
+    """Check if a rule fires given input values, respecting OR/AND logic.
+
+    A rule fires when ALL AND-groups are satisfied. Within each AND-group,
+    at least ONE condition must be satisfied (OR semantics).
+    """
+    or_groups = _get_or_groups(rule)
+    if not or_groups:
+        return False
+
+    for group in or_groups:
+        # At least one condition in this group must be satisfied
+        group_satisfied = False
+        for ci in group:
+            if ci >= len(rule.conditions):
+                continue
+            cond = rule.conditions[ci]
+            val = input_values.get(cond.field)
+            if val is not None and _check_satisfies(cond, val):
+                group_satisfied = True
+                break
+        if not group_satisfied:
+            return False
+
+    return True
+
+
 # ---------------------------------------------------------------------------
 # Per-category generators
 # ---------------------------------------------------------------------------
@@ -608,12 +679,19 @@ def _gen_positive(
     resolved_conds: list[tuple[Condition, str]],
     counter: int,
 ) -> list[GeneratedTestCase]:
-    """One positive case per rule: all conditions satisfied → rule fires."""
+    """Positive cases: all conditions satisfied → rule fires.
+
+    For rules with OR logic, generates additional positive tests — one per
+    OR branch — to verify the rule fires when only one branch is satisfied.
+    """
+    cases = []
+
+    # Standard positive: satisfy everything
     inputs = _build_input_values(rule)
     filters = _build_filters(resolved_conds, inputs)
     expected = _extract_expected_outcome(rule, satisfied=True)
 
-    return [GeneratedTestCase(
+    cases.append(GeneratedTestCase(
         test_case_id=f"TC-{rule.rule_id}-POS-{counter:03d}",
         description=f"All conditions satisfied → {rule.rule_name}",
         source_rule_ids=[rule.rule_id],
@@ -622,7 +700,53 @@ def _gen_positive(
         filter_logic=filters,
         expected_outcome=expected,
         rationale=f"Verify rule fires when all {len(rule.conditions)} conditions are met",
-    )]
+    ))
+
+    # OR-branch positive variants: satisfy only one branch of each OR group
+    if _has_or_logic(rule):
+        or_groups = _get_or_groups(rule)
+        for gi, group in enumerate(or_groups):
+            if len(group) <= 1:
+                continue
+            # For each branch in the OR group, generate a test that satisfies
+            # ONLY that branch (by violating all other branches in the group)
+            for branch_idx in group:
+                if branch_idx >= len(rule.conditions):
+                    continue
+                branch_cond = rule.conditions[branch_idx]
+                overrides = {}
+                other_branches = [ci for ci in group if ci != branch_idx and ci < len(rule.conditions)]
+                for other_ci in other_branches:
+                    other_cond = rule.conditions[other_ci]
+                    # Only override if it's the same field — otherwise both are independently satisfied
+                    if other_cond.field == branch_cond.field:
+                        overrides[other_cond.field] = _satisfying_value(branch_cond)
+
+                if not overrides:
+                    continue  # No same-field OR branches to differentiate
+
+                variant_inputs = _build_input_values(rule, overrides=overrides)
+                variant_filters = _build_filters(resolved_conds, variant_inputs)
+
+                counter += 1
+                cases.append(GeneratedTestCase(
+                    test_case_id=f"TC-{rule.rule_id}-POS-{counter:03d}",
+                    description=(
+                        f"OR branch: {branch_cond.field} {branch_cond.operator} {branch_cond.value} "
+                        f"satisfied → {rule.rule_name}"
+                    ),
+                    source_rule_ids=[rule.rule_id],
+                    category=TestCaseCategory.POSITIVE,
+                    input_values=variant_inputs,
+                    filter_logic=variant_filters,
+                    expected_outcome=_extract_expected_outcome(rule, satisfied=True),
+                    rationale=(
+                        f"OR branch test: verify rule fires when only "
+                        f"{branch_cond.field} {branch_cond.operator} {branch_cond.value} is satisfied"
+                    ),
+                ))
+
+    return cases
 
 
 def _gen_negative(
@@ -642,9 +766,12 @@ def _gen_negative(
     cases = []
     counter = start_counter
 
+    # Build index mapping: resolved_conds indices ↔ rule.conditions indices
+    resolved_to_orig, orig_to_resolved = _build_resolved_index_map(rule, resolved_conds)
+
     # Identify OR groups so we know which conditions must be violated together
     or_groups = _get_or_groups(rule)
-    # Map condition index → group index
+    # Map original condition index → group index
     cond_to_group: dict[int, int] = {}
     or_group_indices: set[int] = set()  # groups with >1 member
     for gi, group in enumerate(or_groups):
@@ -657,7 +784,9 @@ def _gen_negative(
     processed_or_groups: set[int] = set()
 
     for idx, (cond, path) in enumerate(resolved_conds):
-        gi = cond_to_group.get(idx)
+        # Map resolved index back to original rule.conditions index
+        orig_idx = resolved_to_orig.get(idx, -1)
+        gi = cond_to_group.get(orig_idx)
 
         # If this condition is part of an OR group, handle the whole group at once
         if gi is not None and gi in or_group_indices:
@@ -666,7 +795,12 @@ def _gen_negative(
             processed_or_groups.add(gi)
 
             # Violate ALL conditions in the OR group simultaneously
-            group_conds = [(resolved_conds[ci], ci) for ci in or_groups[gi] if ci < len(resolved_conds)]
+            # Map OR group's original indices → resolved_conds entries
+            group_conds = []
+            for ci in or_groups[gi]:
+                ri = orig_to_resolved.get(ci)
+                if ri is not None and ri < len(resolved_conds):
+                    group_conds.append((resolved_conds[ri], ci))
             overrides = {}
             violated_parts = []
             for (gc, gp), ci in group_conds:
@@ -753,9 +887,14 @@ def _gen_boundary(
     resolved_conds: list[tuple[Condition, str]],
     start_counter: int,
 ) -> list[GeneratedTestCase]:
-    """Boundary cases for every numeric condition: at, above, below threshold."""
+    """Boundary cases for every numeric condition: at, above, below threshold.
+
+    OR-aware: if a boundary value violates one condition but the rule still fires
+    via another OR branch, should_pass is corrected to True.
+    """
     cases = []
     counter = start_counter
+    has_or = _has_or_logic(rule)
 
     for cond, path in resolved_conds:
         boundary_vals = _boundary_values(cond)
@@ -764,6 +903,13 @@ def _gen_boundary(
 
         for bval, label, should_pass in boundary_vals:
             inputs = _build_input_values(rule, overrides={cond.field: bval})
+
+            # OR-aware correction: if this condition fails but the rule still
+            # fires via another OR branch, the test should expect PASS
+            if has_or and not should_pass:
+                if _rule_fires_with_or(rule, inputs):
+                    should_pass = True
+
             filters = _build_filters(resolved_conds, inputs, keep_range_operators=False)
             expected = _extract_expected_outcome(rule, satisfied=should_pass)
             if not should_pass:
@@ -790,9 +936,14 @@ def _gen_edge(
     resolved_conds: list[tuple[Condition, str]],
     start_counter: int,
 ) -> list[GeneratedTestCase]:
-    """Edge cases: extreme values, zeros, negatives for each numeric condition."""
+    """Edge cases: extreme values, zeros, negatives for each numeric condition.
+
+    OR-aware: if an extreme value violates one condition but the rule still fires
+    via another OR branch, satisfies is corrected to True.
+    """
     cases = []
     counter = start_counter
+    has_or = _has_or_logic(rule)
 
     for cond, path in resolved_conds:
         edge_vals = _edge_values(cond)
@@ -805,6 +956,13 @@ def _gen_edge(
 
             # Determine if the extreme value satisfies the condition
             satisfies = _check_satisfies(cond, eval_val)
+
+            # OR-aware correction: if this condition fails but the rule still
+            # fires via another OR branch, the test should expect PASS
+            if has_or and not satisfies:
+                if _rule_fires_with_or(rule, inputs):
+                    satisfies = True
+
             expected = _extract_expected_outcome(rule, satisfied=satisfies)
             if not satisfies:
                 expected["violated_condition"] = f"{cond.field} {cond.operator} {cond.value}"
@@ -1253,14 +1411,31 @@ def generate_test_cases(
         cats[tc.category.value] = cats.get(tc.category.value, 0) + 1
 
     # Coverage statistics
+    total_conditions_count = sum(len(r.conditions) for r in rules)
+    resolved_conditions_count = sum(len(conds) for _, conds in resolved_rules)
     coverage = {
         "total_rules": len(rules),
         "rules_with_test_cases": len(rules_covered),
+        "rules_skipped": len(rules) - len(resolved_rules),
         "rule_coverage_pct": round(len(rules_covered) / len(rules) * 100, 1) if rules else 0,
-        "total_conditions": sum(len(r.conditions) for r in rules),
+        "total_conditions": total_conditions_count,
+        "resolved_conditions": resolved_conditions_count,
         "conditions_tested_negative": len(conditions_covered),
-        "unresolved_fields": list(unresolved_fields),
+        "field_resolution_rate": round(
+            resolved_conditions_count / total_conditions_count * 100, 1
+        ) if total_conditions_count else 100.0,
+        "unresolved_fields": sorted(unresolved_fields),
+        "unresolved_field_count": len(unresolved_fields),
     }
+
+    if unresolved_fields:
+        logger.warning(
+            "Field registry gaps: %d unresolved fields (%s). "
+            "These conditions are excluded from test generation. "
+            "Add mappings to FIELD_REGISTRY in field_registry.py to fix.",
+            len(unresolved_fields),
+            ", ".join(sorted(unresolved_fields)),
+        )
 
     logger.info(
         "Generated %d test cases: %s (coverage: %d/%d rules = %.1f%%)",

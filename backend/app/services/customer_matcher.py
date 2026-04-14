@@ -18,12 +18,16 @@ async def match_customers(
     Each filter: {"field_name": "bureau_score", "json_path": "borrower_credit_model.bureau_credits.bureau_score",
                   "operator": ">=", "value": 700}
 
+    Uses parameterized queries to prevent SQL injection.
     Returns list of matched records with match_reason.
     """
     if not filter_logic:
         return []
 
     where_parts = []
+    params: dict = {"limit": limit}
+    param_idx = 0
+
     for f in filter_logic:
         path = f.get("json_path", "")
         op = f.get("operator", "=")
@@ -31,31 +35,32 @@ async def match_customers(
 
         sql_accessor = json_path_to_sql(path)
 
-        # Handle between operator — generates a BETWEEN clause
+        # Handle between operator
         if op == "between":
             if isinstance(val, (list, tuple)) and len(val) == 2:
-                where_parts.append(f"({sql_accessor})::numeric BETWEEN {val[0]} AND {val[1]}")
+                p_lo = f"p{param_idx}"
+                p_hi = f"p{param_idx + 1}"
+                params[p_lo] = float(val[0])
+                params[p_hi] = float(val[1])
+                where_parts.append(f"({sql_accessor})::numeric BETWEEN :{p_lo} AND :{p_hi}")
+                param_idx += 2
             continue
 
         # Handle in / not_in operators
-        if op == "in":
+        if op in ("in", "not_in"):
             if isinstance(val, (list, tuple)) and val:
+                sql_kw = "NOT IN" if op == "not_in" else "IN"
+                placeholders = []
+                for v in val:
+                    p_name = f"p{param_idx}"
+                    params[p_name] = v
+                    placeholders.append(f":{p_name}")
+                    param_idx += 1
+                joined = ", ".join(placeholders)
                 if all(isinstance(v, (int, float)) for v in val):
-                    vals_str = ", ".join(str(v) for v in val)
-                    where_parts.append(f"({sql_accessor})::numeric IN ({vals_str})")
+                    where_parts.append(f"({sql_accessor})::numeric {sql_kw} ({joined})")
                 else:
-                    vals_str = ", ".join(f"'{v}'" for v in val)
-                    where_parts.append(f"{sql_accessor} IN ({vals_str})")
-            continue
-
-        if op == "not_in":
-            if isinstance(val, (list, tuple)) and val:
-                if all(isinstance(v, (int, float)) for v in val):
-                    vals_str = ", ".join(str(v) for v in val)
-                    where_parts.append(f"({sql_accessor})::numeric NOT IN ({vals_str})")
-                else:
-                    vals_str = ", ".join(f"'{v}'" for v in val)
-                    where_parts.append(f"{sql_accessor} NOT IN ({vals_str})")
+                    where_parts.append(f"{sql_accessor} {sql_kw} ({joined})")
             continue
 
         # Skip unsupported operators
@@ -65,12 +70,16 @@ async def match_customers(
         # Normalize == to =
         sql_op = "=" if op == "==" else ("<>" if op == "!=" else op)
 
+        p_name = f"p{param_idx}"
+        params[p_name] = val
+        param_idx += 1
+
         if isinstance(val, (int, float)):
-            where_parts.append(f"({sql_accessor})::numeric {sql_op} {val}")
+            where_parts.append(f"({sql_accessor})::numeric {sql_op} :{p_name}")
         elif isinstance(val, str):
-            where_parts.append(f"{sql_accessor} {sql_op} '{val}'")
+            where_parts.append(f"{sql_accessor} {sql_op} :{p_name}")
         elif isinstance(val, bool):
-            where_parts.append(f"({sql_accessor})::boolean {sql_op} {str(val).lower()}")
+            where_parts.append(f"({sql_accessor})::boolean {sql_op} :{p_name}")
 
     if not where_parts:
         return []
@@ -78,12 +87,13 @@ async def match_customers(
     where_clause = " AND ".join(where_parts)
 
     # Build proximity ordering for boundary ranking
-    # Order by how close the first numeric filter value is to the threshold
     order_clause = "created_at DESC"
     for f in filter_logic:
         if isinstance(f.get("value"), (int, float)):
             sql_accessor = json_path_to_sql(f["json_path"])
-            order_clause = f"ABS(({sql_accessor})::numeric - {f['value']}) ASC"
+            p_order = f"p_order"
+            params[p_order] = float(f["value"])
+            order_clause = f"ABS(({sql_accessor})::numeric - :{p_order}) ASC"
             break
 
     query = text(f"""
@@ -95,10 +105,10 @@ async def match_customers(
     """)
 
     try:
-        result = await db.execute(query, {"limit": limit})
+        result = await db.execute(query, params)
         rows = result.fetchall()
     except Exception as e:
-        logger.warning(f"Customer matching query failed: {e}")
+        logger.warning("Customer matching query failed: %s", e)
         return []
 
     matched = []
