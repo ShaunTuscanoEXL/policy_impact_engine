@@ -47,9 +47,13 @@ Desktop.ini
 
 # Project-specific
 backend/data/uploads/
+data/uploads/
 backend/.env
 *.db
 *.sqlite3
+
+# MS Office temp lock files
+~$*
 
 # Alembic
 backend/alembic/versions/*.pyc
