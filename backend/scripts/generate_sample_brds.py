@@ -157,7 +157,7 @@ def create_brd_001():
         title="Personal Loan DTI Ratio Cap Revision\nand Bureau Score Threshold Update",
         version="1.0",
         date_str="2026-02-15",
-        author="Rajesh Mehta, Senior Credit Policy Analyst",
+        author="Michael Anderson, Senior Credit Policy Analyst",
         department="Credit Risk & Policy",
         status="Draft - Pending Approval",
     )
@@ -195,9 +195,9 @@ def create_brd_001():
     )
     doc.add_paragraph(
         "Simultaneously, bureau-level data indicates that applicants with "
-        "CIBIL scores in the 700-719 band exhibit a default rate 1.8x higher "
+        "FICO scores in the 700-719 band exhibit a default rate 1.8x higher "
         "than those scoring 720 or above. Raising the floor to 720 aligns "
-        "with peer-lender benchmarks observed in recent RBI supervisory reports."
+        "with peer-lender benchmarks observed in recent CFPB supervisory highlights."
     )
 
     # 3.0 Current State
@@ -244,9 +244,10 @@ def create_brd_001():
     # 4.2
     _add_heading(doc, "4.2 Increase Bureau Score Minimum", level=2)
     doc.add_paragraph(
-        "The minimum CIBIL bureau score required for eligibility shall be "
+        "The minimum FICO bureau score required for eligibility shall be "
         "increased from 700 to 720. Applications where bureau_score is below "
-        "720 will be rejected."
+        "720 will be rejected. An FCRA-compliant adverse-action notice will "
+        "be issued automatically for any rejected application."
     )
     _add_table(doc,
                headers=["Attribute", "Current Value", "Proposed Value"],
@@ -309,9 +310,9 @@ def create_brd_001():
 
     # 7.0 Approval
     _add_approval_section(doc, [
-        ("Rajesh Mehta", "Senior Credit Policy Analyst"),
-        ("Priya Sharma", "Head of Credit Risk"),
-        ("Vikram Desai", "Chief Risk Officer"),
+        ("Michael Anderson", "Senior Credit Policy Analyst"),
+        ("Sarah Johnson", "Head of Credit Risk"),
+        ("David Williams", "Chief Risk Officer"),
     ])
 
     out = OUTPUT_DIR / "BRD-001-DTI-Cap-Tightening.docx"
@@ -332,7 +333,7 @@ def create_brd_002():
         title="Enhanced Income and Banking Verification Standards\nfor High-Value Personal Loans",
         version="1.0",
         date_str="2026-02-20",
-        author="Anita Kulkarni, Credit Policy Manager",
+        author="Jennifer Martinez, Credit Policy Manager",
         department="Credit Risk & Policy",
         status="Draft - Pending Approval",
     )
@@ -343,7 +344,7 @@ def create_brd_002():
         "This document outlines proposed enhancements to the income and "
         "banking verification standards applied to personal loan applications. "
         "The changes focus on three areas: establishing a minimum income "
-        "requirement for high-value loans, tightening the salary credit "
+        "requirement for high-value loans, tightening the direct deposit "
         "consistency threshold, and introducing a banking stability floor."
     )
     doc.add_paragraph(
@@ -351,7 +352,8 @@ def create_brd_002():
         "verification signals used in the underwriting process, particularly "
         "for larger loan exposures where the cost of default is proportionally "
         "higher. The changes build upon recent improvements in banking data "
-        "availability through Account Aggregator integrations."
+        "availability through open banking aggregator (Plaid / MX / Finicity) "
+        "integrations."
     )
 
     # 2.0 Background & Rationale
@@ -360,14 +362,14 @@ def create_brd_002():
         "Post-pandemic lending data reveals a growing segment of borrowers "
         "who qualify on bureau score alone but whose income stability metrics "
         "indicate elevated repayment risk. In particular, high-value personal "
-        "loans (above INR 1,50,000) originated to borrowers with monthly "
-        "income below INR 50,000 have exhibited a 60+ DPD rate that is 2.3x "
+        "loans (above $7,500) originated to borrowers with monthly "
+        "income below $8,000 have exhibited a 60+ DPD rate that is 2.3x "
         "the portfolio average."
     )
     doc.add_paragraph(
-        "Furthermore, relaxed salary consistency thresholds introduced during "
+        "Furthermore, relaxed direct deposit consistency thresholds introduced during "
         "COVID concessions (0.80) have not been revisited despite a return to "
-        "normalised labour market conditions. Restoring a higher threshold "
+        "normalized labor market conditions. Restoring a higher threshold "
         "of 0.85 aligns with the pre-pandemic standard and is supported by "
         "current risk analytics."
     )
@@ -396,26 +398,26 @@ def create_brd_002():
     _add_heading(doc, "4.1 Minimum Income for High-Value Loans", level=2)
     doc.add_paragraph(
         "A new eligibility rule shall be introduced requiring that applicants "
-        "requesting a loan amount (desired_amount) exceeding 150,000 must "
-        "demonstrate a monthly_income of at least 50,000. Applications that "
+        "requesting a loan amount (desired_amount) exceeding 7,500 must "
+        "demonstrate a monthly_income of at least 8,000. Applications that "
         "do not meet this combined condition will be rejected."
     )
     _add_table(doc,
                headers=["Attribute", "Value"],
                rows=[
-                   ["Condition", "desired_amount > 150000 AND monthly_income < 50000"],
+                   ["Condition", "desired_amount > 7500 AND monthly_income < 8000"],
                    ["Action", "REJECT"],
                    ["Rationale", "Ensure debt serviceability for large exposures"],
                ],
                col_widths=[2.0, 4.5])
 
     # 4.2
-    _add_heading(doc, "4.2 Salary Credit Consistency Requirement", level=2)
+    _add_heading(doc, "4.2 Direct Deposit Consistency Requirement", level=2)
     doc.add_paragraph(
-        "The minimum acceptable salary credit consistency score over a "
+        "The minimum acceptable direct deposit consistency score over a "
         "trailing 6-month window shall be increased from 0.80 to 0.85. "
-        "This metric measures the regularity and predictability of salary "
-        "credits into the applicant's primary bank account. Applications "
+        "This metric measures the regularity and predictability of direct "
+        "deposits into the applicant's primary bank account. Applications "
         "where salary_credit_consistency_6m is below 0.85 will be rejected."
     )
     _add_table(doc,
@@ -473,7 +475,7 @@ def create_brd_002():
                headers=["Milestone", "Target Date"],
                rows=[
                    ["Policy Committee Approval", "2026-03-05"],
-                   ["Account Aggregator Data Validation", "2026-03-10"],
+                   ["Open Banking Aggregator Data Validation", "2026-03-10"],
                    ["Rule Engine Configuration", "2026-03-15"],
                    ["UAT & Parallel Run", "2026-03-20 to 2026-03-30"],
                    ["Production Deployment", "2026-04-05"],
@@ -482,9 +484,9 @@ def create_brd_002():
 
     # 7.0 Approval
     _add_approval_section(doc, [
-        ("Anita Kulkarni", "Credit Policy Manager"),
-        ("Suresh Iyer", "VP - Risk Analytics"),
-        ("Priya Sharma", "Head of Credit Risk"),
+        ("Jennifer Martinez", "Credit Policy Manager"),
+        ("Robert Chen", "VP - Risk Analytics"),
+        ("Sarah Johnson", "Head of Credit Risk"),
     ])
 
     out = OUTPUT_DIR / "BRD-002-Income-Verification-Enhancement.docx"
@@ -505,7 +507,7 @@ def create_brd_003():
         title="Risk-Based Pricing Tier Restructure\nfor Personal Loan Portfolio",
         version="1.0",
         date_str="2026-02-25",
-        author="Deepak Nair, Pricing Strategy Lead",
+        author="James Thompson, Pricing Strategy Lead",
         department="Product & Pricing",
         status="Draft - Pending Approval",
     )
@@ -648,9 +650,9 @@ def create_brd_003():
 
     # 7.0 Approval
     _add_approval_section(doc, [
-        ("Deepak Nair", "Pricing Strategy Lead"),
-        ("Kavitha Raman", "Head of Product"),
-        ("Vikram Desai", "Chief Risk Officer"),
+        ("James Thompson", "Pricing Strategy Lead"),
+        ("Emily Rodriguez", "Head of Product"),
+        ("David Williams", "Chief Risk Officer"),
     ])
 
     out = OUTPUT_DIR / "BRD-003-Pricing-Tier-Restructure.docx"
@@ -671,7 +673,7 @@ def create_brd_004():
         title="Post-Pandemic Risk Mitigation Framework\nEnhanced Eligibility Criteria",
         version="1.0",
         date_str="2026-03-01",
-        author="Priya Sharma, Head of Credit Risk",
+        author="Sarah Johnson, Head of Credit Risk",
         department="Credit Risk & Policy",
         status="Urgent - Executive Review",
     )
@@ -705,9 +707,9 @@ def create_brd_004():
     doc.add_paragraph(
         "Leading economic indicators suggest a potential contraction in "
         "consumer credit quality over the next 6-12 months. Key concerns "
-        "include rising unemployment in the informal sector, declining "
+        "include rising unemployment in the gig and 1099 economy, declining "
         "real wage growth, and an increase in household leverage ratios. "
-        "The RBI's Financial Stability Report has flagged personal loan "
+        "The OCC Semiannual Risk Perspective has flagged personal loan "
         "portfolios as an area of supervisory focus."
     )
     doc.add_paragraph(
@@ -745,11 +747,12 @@ def create_brd_004():
     # 4.1
     _add_heading(doc, "4.1 Bureau Score Floor Raised", level=2)
     doc.add_paragraph(
-        "The minimum CIBIL bureau score for personal loan eligibility "
+        "The minimum FICO bureau score for personal loan eligibility "
         "shall be increased from 700 to 750. This is a significant "
         "tightening that will exclude a substantial portion of the "
         "current applicant pool but is deemed necessary given the "
-        "projected deterioration in credit quality."
+        "projected deterioration in credit quality. Rejected applicants "
+        "will receive an FCRA-compliant adverse-action notice."
     )
     _add_table(doc,
                headers=["Attribute", "Current Value", "Proposed Value"],
@@ -799,20 +802,20 @@ def create_brd_004():
                col_widths=[2.5, 3.5])
 
     # 4.4
-    _add_heading(doc, "4.4 Self-Employed Loan Cap", level=2)
+    _add_heading(doc, "4.4 Self-Employed (1099) Loan Cap", level=2)
     doc.add_paragraph(
-        "Self-employed applicants (employment_type == \"SELF_EMPLOYED\") "
-        "shall be subject to a maximum loan amount cap of 100,000. If a "
+        "Self-employed (1099) applicants (employment_type == \"SELF_EMPLOYED_1099\") "
+        "shall be subject to a maximum loan amount cap of $5,000. If a "
         "self-employed applicant requests a desired_amount exceeding "
-        "100,000, the eligible_amount shall be set to 100,000 rather "
+        "5,000, the eligible_amount shall be set to 5,000 rather "
         "than rejecting the application outright."
     )
     _add_table(doc,
                headers=["Attribute", "Value"],
                rows=[
                    ["Condition",
-                    "employment_type == \"SELF_EMPLOYED\" AND desired_amount > 100000"],
-                   ["Action", "SET eligible_amount to 100000"],
+                    "employment_type == \"SELF_EMPLOYED_1099\" AND desired_amount > 5000"],
+                   ["Action", "SET eligible_amount to 5000"],
                    ["Type", "Amount cap (not a rejection)"],
                ],
                col_widths=[2.0, 4.5])
@@ -873,9 +876,9 @@ def create_brd_004():
 
     # 7.0 Approval
     _add_approval_section(doc, [
-        ("Priya Sharma", "Head of Credit Risk"),
-        ("Vikram Desai", "Chief Risk Officer"),
-        ("Arjun Kapoor", "Managing Director - Retail Lending"),
+        ("Sarah Johnson", "Head of Credit Risk"),
+        ("David Williams", "Chief Risk Officer"),
+        ("Christopher Lee", "Managing Director - Retail Lending"),
         ("Board Risk Committee", "Governance"),
     ])
 

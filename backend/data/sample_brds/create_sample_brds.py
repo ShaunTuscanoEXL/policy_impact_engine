@@ -55,7 +55,7 @@ def create_brd1():
 
     doc.add_heading("2.0 Background", level=1)
     doc.add_paragraph(
-        "Our current personal loan underwriting policy sets the minimum bureau (CIBIL) score "
+        "Our current personal loan underwriting policy sets the minimum bureau (FICO) score "
         "at 650 for all applicants. Analysis of the 2024-2025 portfolio shows that borrowers "
         "in the 650-679 range have a 12.3% default rate compared to 4.1% for those scoring "
         "680 and above. The risk-adjusted return on this segment is negative after accounting "
@@ -65,10 +65,10 @@ def create_brd1():
     doc.add_heading("3.0 Current State", level=1)
     doc.add_paragraph("The current lending rules for personal loans are:")
     doc.add_paragraph("• Minimum bureau score: 650", style="List Bullet")
-    doc.add_paragraph("• Interest rate: Flat 14.5% for all approved applicants", style="List Bullet")
-    doc.add_paragraph("• Maximum loan amount: ₹15,00,000", style="List Bullet")
+    doc.add_paragraph("• Interest rate: Flat 14.99% for all approved applicants", style="List Bullet")
+    doc.add_paragraph("• Maximum loan amount: $50,000", style="List Bullet")
     doc.add_paragraph("• Maximum DTI ratio: 50%", style="List Bullet")
-    doc.add_paragraph("• Minimum monthly income: ₹25,000", style="List Bullet")
+    doc.add_paragraph("• Minimum monthly income: $4,200", style="List Bullet")
 
     doc.add_heading("4.0 Proposed Changes", level=1)
 
@@ -87,10 +87,10 @@ def create_brd1():
     for i, h in enumerate(headers):
         table.rows[0].cells[i].text = h
     data = [
-        ("680 - 719", "Medium-High", "16.5%"),
-        ("720 - 749", "Medium", "14.5%"),
-        ("750 - 799", "Low-Medium", "12.5%"),
-        ("800+", "Low", "11.0%"),
+        ("680 - 719", "Medium-High", "16.99%"),
+        ("720 - 749", "Medium", "14.99%"),
+        ("750 - 799", "Low-Medium", "12.49%"),
+        ("800+", "Low", "9.99%"),
     ]
     for row_idx, (score, band, rate) in enumerate(data, 1):
         table.rows[row_idx].cells[0].text = score
@@ -105,9 +105,9 @@ def create_brd1():
 
     doc.add_heading("4.4 High-Value Loan Restriction", level=2)
     doc.add_paragraph(
-        "For loan amounts exceeding ₹10,00,000 (10 lakh), require a minimum bureau score of "
-        "720 and minimum monthly income of ₹50,000. Applications not meeting both criteria "
-        "should be capped at ₹10,00,000 eligible amount."
+        "For loan amounts exceeding $40,000, require a minimum bureau score of "
+        "720 and minimum monthly income of $8,000. Applications not meeting both criteria "
+        "should be capped at $40,000 eligible amount."
     )
 
     doc.add_heading("5.0 Expected Impact", level=1)
@@ -116,7 +116,7 @@ def create_brd1():
         "• Approval rate reduction: ~8% (from 62% to ~57%)\n"
         "• Expected default rate reduction: 35% in first year\n"
         "• Portfolio quality improvement: Average risk band shifts from Medium-High to Medium\n"
-        "• Revenue impact: +₹2.3Cr net (higher rates on medium-risk, fewer defaults)"
+        "• Revenue impact: +$2.5M net (higher rates on medium-risk, fewer defaults)"
     )
 
     doc.add_heading("6.0 Implementation Timeline", level=1)
@@ -139,40 +139,40 @@ def create_brd2():
 
     doc.add_paragraph(
         "Following the quarterly portfolio review, we are tightening lending criteria for "
-        "self-employed applicants effective May 1, 2026. The self-employed segment has shown "
-        "elevated delinquency rates (18.7% vs 6.2% for salaried) and inconsistent income "
-        "verification remains a challenge."
+        "self-employed (1099) applicants effective May 1, 2026. The self-employed segment "
+        "has shown elevated delinquency rates (18.7% vs 6.2% for W-2 employees) and "
+        "inconsistent income verification remains a challenge."
     )
 
     doc.add_paragraph("")
     doc.add_heading("What's Changing", level=2)
 
     doc.add_paragraph(
-        "1. Minimum bureau score for self-employed applicants increases from 680 to 720.\n\n"
-        "2. Monthly income floor raised to ₹40,000 (from ₹25,000) for self-employed.\n\n"
+        "1. Minimum bureau score for self-employed (1099) applicants increases from 680 to 720.\n\n"
+        "2. Monthly income floor raised to $6,500 (from $4,200) for self-employed.\n\n"
         "3. Banking stability index must be at least 0.65 (currently no minimum enforced).\n\n"
-        "4. Salary credit consistency over 6 months must be at least 70% (0.70).\n\n"
-        "5. Maximum loan amount for self-employed capped at ₹8,00,000 regardless of "
-        "income (currently ₹15,00,000 same as salaried).\n\n"
+        "4. Direct deposit consistency over 6 months must be at least 70% (0.70).\n\n"
+        "5. Maximum loan amount for self-employed capped at $30,000 regardless of "
+        "income (currently $50,000 same as W-2 employees).\n\n"
         "6. DTI ratio cap tightened to 35% for self-employed (from 50%).\n\n"
         "7. Applicants with more than 3 active loans should be auto-rejected.\n\n"
-        "8. Cash deposits exceeding ₹5,00,000 in the last 6 months will trigger a "
+        "8. Cash deposits exceeding $20,000 in the last 6 months will trigger a "
         "manual review flag."
     )
 
     doc.add_paragraph("")
     doc.add_heading("Rationale", level=2)
     doc.add_paragraph(
-        "Self-employed applicants make up 28% of our loan book but account for 47% of NPAs. "
-        "The new criteria target the highest-risk sub-segments while preserving access for "
-        "well-qualified self-employed borrowers. Backtesting shows these criteria would have "
-        "prevented 62% of defaults in this segment over the past 12 months."
+        "Self-employed (1099) applicants make up 28% of our loan book but account for 47% "
+        "of charge-offs. The new criteria target the highest-risk sub-segments while preserving "
+        "access for well-qualified self-employed borrowers. Backtesting shows these criteria "
+        "would have prevented 62% of defaults in this segment over the past 12 months."
     )
 
     doc.add_paragraph("")
     doc.add_heading("Exceptions", level=2)
     doc.add_paragraph(
-        "Self-employed professionals (doctors, lawyers, CAs) with professional license "
+        "Self-employed professionals (doctors, attorneys, CPAs) with professional license "
         "verification may be exempted from the banking stability requirement at the "
         "discretion of the credit manager."
     )
@@ -193,7 +193,7 @@ def create_brd3():
     doc.add_heading("Purpose", level=1)
     doc.add_paragraph(
         "Update the credit risk scoring thresholds and introduce new risk bands to align "
-        "with the revised regulatory guidelines from RBI circular 2025/14. This impacts "
+        "with the revised regulatory guidelines from CFPB Bulletin 2025-04. This impacts "
         "eligibility, pricing, and exposure limits across all unsecured lending products."
     )
 
@@ -206,11 +206,11 @@ def create_brd3():
     for i, val in enumerate(h):
         table.rows[0].cells[i].text = val
     rows = [
-        ("Prime", "800+", "50%", "10.5%", "₹25,00,000"),
-        ("Near-Prime", "750-799", "45%", "12.5%", "₹15,00,000"),
-        ("Standard", "700-749", "40%", "14.5%", "₹10,00,000"),
-        ("Sub-Standard", "680-699", "35%", "17.0%", "₹5,00,000"),
-        ("Decline", "Below 680", "N/A", "N/A", "₹0 (Auto-reject)"),
+        ("Prime", "800+", "50%", "9.99%", "$100,000"),
+        ("Near-Prime", "750-799", "45%", "12.49%", "$50,000"),
+        ("Standard", "700-749", "40%", "14.99%", "$40,000"),
+        ("Sub-Standard", "680-699", "35%", "16.99%", "$20,000"),
+        ("Decline", "Below 680", "N/A", "N/A", "$0 (Auto-reject)"),
     ]
     for r, (band, score, dti, rate, exp) in enumerate(rows, 1):
         table.rows[r].cells[0].text = band
@@ -231,7 +231,7 @@ def create_brd3():
         ("G-01", "Max DPD in last 12 months", "> 30 days", "Auto-reject"),
         ("G-02", "Overdue accounts", "> 0", "Auto-reject"),
         ("G-03", "Credit inquiries in last 3 months", "> 5", "Flag for manual review"),
-        ("G-04", "Cheque bounces in last 6 months", "> 2", "Auto-reject"),
+        ("G-04", "Check / payment returns in last 6 months", "> 2", "Auto-reject"),
         ("G-05", "Unsecured loans count", "> 4", "Flag for manual review"),
         ("G-06", "Credit utilization ratio", "> 80%", "Reduce max exposure by 30%"),
     ]
@@ -255,9 +255,9 @@ def create_brd3():
     for i, val in enumerate(h3):
         table3.rows[0].cells[i].text = val
     income_rows = [
-        ("Tier 1", "₹30,000", "6 months"),
-        ("Tier 2", "₹25,000", "12 months"),
-        ("Tier 3", "₹20,000", "18 months"),
+        ("Tier 1 (Top-25 MSA)", "$5,000", "6 months"),
+        ("Tier 2 (Mid-sized MSA)", "$4,200", "12 months"),
+        ("Tier 3 (Small MSA / Rural)", "$3,500", "18 months"),
     ]
     for r, (tier, income, vintage) in enumerate(income_rows, 1):
         table3.rows[r].cells[0].text = tier
@@ -315,27 +315,27 @@ def create_brd4():
 
     doc.add_heading("Change 4: City Tier 3 Restrictions", level=1)
     doc.add_paragraph(
-        "For applications from Tier 3 cities, apply the following additional restrictions:\n"
-        "• Maximum loan amount capped at ₹5,00,000\n"
+        "For applications from Tier 3 (Small MSA / Rural) markets, apply the following additional restrictions:\n"
+        "• Maximum loan amount capped at $20,000\n"
         "• Minimum employment tenure increased to 24 months (from 12)\n"
         "• Minimum bureau score increased to 720 (from 680)\n\n"
         "These restrictions aim to address the 22% higher default rate observed in "
-        "Tier 3 city applications."
+        "Tier 3 market applications."
     )
 
     doc.add_heading("Change 5: Digital Lending Scorecard", level=1)
     doc.add_paragraph(
-        "Introduce a net monthly surplus floor of ₹10,000 for all applications. "
+        "Introduce a net monthly surplus floor of $1,500 for all applications. "
         "Applicants whose calculated net monthly surplus (income minus all obligations) "
-        "falls below ₹10,000 should be rejected regardless of other criteria.\n\n"
+        "falls below $1,500 should be rejected regardless of other criteria.\n\n"
         "Additionally, applicants with a transaction volatility index above 0.75 should "
         "be flagged for enhanced due diligence."
     )
 
-    doc.add_heading("Change 6: EMI Bounce Protection", level=1)
+    doc.add_heading("Change 6: Payment Return Protection", level=1)
     doc.add_paragraph(
         "Applicants with more than 2 loan repayment bounces in the last 12 months "
-        "should be auto-rejected. Those with exactly 1-2 bounces should have their "
+        "should be auto-rejected. Those with exactly 1-2 returns should have their "
         "eligible amount reduced by 25%.\n\n"
         "Condition 1: loan_repayment_bounces_12m > 2 → REJECT\n"
         "Condition 2: loan_repayment_bounces_12m >= 1 AND loan_repayment_bounces_12m <= 2 "
@@ -352,35 +352,37 @@ def create_brd4():
 def create_brd5():
     doc = Document()
     set_style(doc)
-    add_title_page(doc, "Regulatory Compliance Update - RBI Fair Lending Guidelines 2026",
+    add_title_page(doc, "Regulatory Compliance Update - Equal Credit Opportunity Act (Regulation B) 2026",
                    "Compliance & Legal Team", "April 2026")
 
     doc.add_paragraph(
-        "In compliance with the Reserve Bank of India's updated Fair Lending Practice "
-        "Guidelines (Circular No. RBI/2026/45, dated March 15, 2026), the following "
-        "modifications to our lending criteria are mandated effective June 1, 2026."
+        "In compliance with the Consumer Financial Protection Bureau's updated Equal "
+        "Credit Opportunity Act (Regulation B) guidance (CFPB Bulletin 2026-04, dated "
+        "March 15, 2026), the following modifications to our lending criteria are "
+        "mandated effective June 1, 2026."
     )
 
     doc.add_paragraph("")
     doc.add_paragraph(
-        "The circular requires all NBFCs to implement the following safeguards in their "
-        "personal loan underwriting process. Non-compliance attracts penalties under "
-        "Section 45-IA of the RBI Act."
+        "The bulletin requires all consumer lenders (including non-bank fintech lenders) "
+        "to implement the following safeguards in their personal loan underwriting "
+        "process. Non-compliance attracts penalties under Section 615 of the FCRA "
+        "(Fair Credit Reporting Act)."
     )
 
     doc.add_heading("Income Verification Mandate", level=2)
     doc.add_paragraph(
-        "All applicants must have a verified monthly income of at least ₹15,000. "
-        "The system must reject applications where monthly_income < 15000 with "
-        "reason code 'RBI_MIN_INCOME_NOT_MET'. This is a hard regulatory floor "
+        "All applicants must have a verified monthly income of at least $2,500. "
+        "The system must reject applications where monthly_income < 2500 with "
+        "reason code 'CFPB_MIN_INCOME_NOT_MET'. This is a hard regulatory floor "
         "and cannot be overridden by any approval authority."
     )
 
     doc.add_heading("Maximum Leverage Ratio", level=2)
     doc.add_paragraph(
         "The total loan exposure (desired_amount) must not exceed 10 times the "
-        "applicant's monthly income. For example, an applicant earning ₹50,000 "
-        "per month cannot be approved for more than ₹5,00,000. If desired_amount > "
+        "applicant's monthly income. For example, an applicant earning $8,000 "
+        "per month cannot be approved for more than $80,000. If desired_amount > "
         "monthly_income * 10, the eligible amount must be capped at monthly_income * 10."
     )
 
@@ -390,7 +392,7 @@ def create_brd5():
         "of 0 or missing bureau data must be declined. The minimum acceptable bureau "
         "score is 650 for regulatory purposes (individual lenders may set higher "
         "thresholds). Applications with bureau_score < 650 must be rejected with "
-        "reason 'RBI_BUREAU_MINIMUM'."
+        "reason 'CFPB_BUREAU_MINIMUM' and an FCRA-compliant adverse-action notice."
     )
 
     doc.add_heading("Cooling Period After Rejection", level=2)
@@ -411,16 +413,17 @@ def create_brd5():
 
     doc.add_heading("Interest Rate Ceiling", level=2)
     doc.add_paragraph(
-        "Per the revised usury guidelines, the maximum interest rate for personal "
-        "loans cannot exceed 24.0% per annum. Any risk-based pricing that would "
-        "result in a rate above 24.0% must be capped at 24.0%. The system should "
+        "Per the revised state-level usury guidelines aggregated under the TILA / "
+        "Regulation Z disclosure framework, the maximum interest rate for personal "
+        "loans cannot exceed 35.99% APR. Any risk-based pricing that would "
+        "result in a rate above 35.99% must be capped at 35.99%. The system should "
         "flag such cases for compliance review."
     )
 
     doc.add_heading("Minimum Age Requirement", level=2)
     doc.add_paragraph(
         "Applicants must be at least 21 years of age for unsecured personal loans. "
-        "Applications with age < 21 must be rejected with reason 'RBI_MIN_AGE'. "
+        "Applications with age < 21 must be rejected with reason 'CFPB_MIN_AGE'. "
         "Additionally, applicants above 60 years must provide additional income "
         "verification — flag these for manual document review."
     )
