@@ -22,6 +22,27 @@ class RuleType(str, enum.Enum):
     SCORING = "SCORING"
 
 
+class Subsystem(str, enum.Enum):
+    """Finer-grained classification of rules — used by the live rule
+    repository for grouping in codegen output and routing in HITL UI.
+
+    See docs/plans/2026-04-30-live-rule-repository.md §5 for definitions.
+    """
+    BUREAU_GATE = "BUREAU_GATE"
+    INCOME_GATE = "INCOME_GATE"
+    DTI_GATE = "DTI_GATE"
+    EMPLOYMENT_GATE = "EMPLOYMENT_GATE"
+    BANKING_BEHAVIOR = "BANKING_BEHAVIOR"
+    PRICING_TIER = "PRICING_TIER"
+    RATE_MODIFIER = "RATE_MODIFIER"
+    AMOUNT_CAP = "AMOUNT_CAP"
+    FRAUD_SIGNAL = "FRAUD_SIGNAL"
+    REGULATORY_FLOOR = "REGULATORY_FLOOR"
+    EXPOSURE_LIMIT = "EXPOSURE_LIMIT"
+    SCORING_MODEL = "SCORING_MODEL"
+    UNCLASSIFIED = "UNCLASSIFIED"
+
+
 class RuleSet(Base):
     __tablename__ = "rule_sets"
 
@@ -55,6 +76,33 @@ class Rule(Base):
     source_section: Mapped[str | None] = mapped_column(Text, nullable=True)
     has_conflicts: Mapped[bool] = mapped_column(Boolean, default=False)
     conflict_details: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+    # ── Live Rule Repository support (Slice 0) ────────────────────────────
+    # Stable cross-BRD identity. Same rule reappearing in a later BRD will
+    # produce the same canonical_key so the merge engine can recognize it.
+    canonical_key: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+
+    # Finer-grained subsystem (BUREAU_GATE, DTI_GATE, …). RuleType stays as
+    # the broad category (ELIGIBILITY/PRICING/…); Subsystem is what the
+    # codegen output and HITL workbench group by.
+    subsystem: Mapped[Subsystem] = mapped_column(
+        SAEnum(Subsystem),
+        default=Subsystem.UNCLASSIFIED,
+        index=True,
+    )
+
+    # Normalized form of the rule used for diffing. Shape:
+    # {"fields": [...], "operators": [...], "thresholds": [...],
+    #  "action_types": [...], "logic": "AND|OR"}
+    semantic_signature: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+    # Lineage: when this rule replaces another via SUPERSEDE in a merge.
+    supersedes_rule_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("rules.id"),
+        nullable=True,
+    )
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     rule_set = relationship("RuleSet", back_populates="rules")

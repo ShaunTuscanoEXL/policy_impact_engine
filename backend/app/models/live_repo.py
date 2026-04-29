@@ -1,0 +1,112 @@
+"""Live Rule Repository — authoritative versioned rule baseline.
+
+A LiveRuleRepository represents the current production rule set for a
+(product, jurisdiction) pair. Each merge of a BRD produces a new
+LiveRuleVersion (full snapshot + generated python_export). LiveRuleEntry
+rows denormalize the HEAD snapshot for fast reads.
+
+See docs/plans/2026-04-30-live-rule-repository.md §4 for the full data
+model rationale.
+"""
+import uuid
+from datetime import datetime
+from sqlalchemy import (
+    String, Text, Integer, Boolean, DateTime, JSON, ForeignKey, UniqueConstraint
+)
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from app.database import Base
+
+
+class LiveRuleRepository(Base):
+    __tablename__ = "live_rule_repositories"
+    __table_args__ = (
+        UniqueConstraint("product", "jurisdiction", name="uq_live_repo_product_jurisdiction"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(256))
+    product: Mapped[str] = mapped_column(String(64))           # e.g. "PERSONAL"
+    jurisdiction: Mapped[str] = mapped_column(String(8))       # e.g. "US"
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    current_version: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    versions = relationship(
+        "LiveRuleVersion",
+        back_populates="repository",
+        cascade="all, delete-orphan",
+        order_by="LiveRuleVersion.version_number",
+    )
+    entries = relationship(
+        "LiveRuleEntry",
+        back_populates="repository",
+        cascade="all, delete-orphan",
+    )
+
+
+class LiveRuleVersion(Base):
+    __tablename__ = "live_rule_versions"
+    __table_args__ = (
+        UniqueConstraint("repository_id", "version_number", name="uq_live_version_repo_n"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    repository_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("live_rule_repositories.id")
+    )
+    version_number: Mapped[int] = mapped_column(Integer)
+
+    # Lineage
+    parent_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("live_rule_versions.id"), nullable=True
+    )
+    source_brd_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("brd_documents.id"), nullable=True
+    )
+    merge_proposal_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("merge_proposals.id"), nullable=True
+    )
+
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Full snapshot of all active rules at this version. Each entry is the
+    # rule's serialized form (id, rule_id, rule_name, subsystem, conditions,
+    # actions, priority, canonical_key, semantic_signature, …).
+    rule_snapshot: Mapped[list] = mapped_column(JSON, default=list)
+
+    # Generated rules.py for this version (cached at apply time).
+    python_export: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+    repository = relationship("LiveRuleRepository", back_populates="versions")
+
+
+class LiveRuleEntry(Base):
+    """HEAD-only denormalized index of the active rules in a repo.
+
+    Rebuilt on every apply. Lets us answer 'what is the active rule for
+    canonical_key X right now?' in O(log n) without parsing the snapshot
+    JSON.
+    """
+    __tablename__ = "live_rule_entries"
+    __table_args__ = (
+        UniqueConstraint("repository_id", "canonical_key", name="uq_live_entry_repo_key"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    repository_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("live_rule_repositories.id")
+    )
+    rule_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("rules.id"))
+    canonical_key: Mapped[str] = mapped_column(String(128), index=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    added_in_version: Mapped[int] = mapped_column(Integer)
+    last_modified_in_version: Mapped[int] = mapped_column(Integer)
+
+    repository = relationship("LiveRuleRepository", back_populates="entries")
