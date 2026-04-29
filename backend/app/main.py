@@ -11,6 +11,7 @@ from app.api.v1.test_cases import router as test_cases_router
 from app.api.v1.loan_records import router as loan_records_router
 from app.api.v1.live_repo import router as live_repo_router
 from app.api.v1.merge import router as merge_router
+from app.api.v1.impact import router as impact_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -20,6 +21,7 @@ async def lifespan(app: FastAPI):
     import app.models.loan_record
     import app.models.live_repo  # registers LiveRuleRepository / Version / Entry
     import app.models.merge      # registers MergeProposal / MergeProposalItem
+    import app.models.impact     # registers ImpactRun
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
@@ -41,6 +43,7 @@ app.include_router(test_cases_router, prefix="/api/v1")
 app.include_router(loan_records_router, prefix="/api/v1")
 app.include_router(live_repo_router, prefix="/api/v1")
 app.include_router(merge_router, prefix="/api/v1")
+app.include_router(impact_router, prefix="/api/v1")
 
 
 @app.get("/health")

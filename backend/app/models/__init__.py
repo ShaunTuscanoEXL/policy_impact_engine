@@ -11,6 +11,7 @@ from app.models.merge import (
     MergeItemSeverity,
     MergeSuggestedAction,
 )
+from app.models.impact import ImpactRun, ImpactRunStatus
 
 __all__ = [
     "BrdDocument", "FileType",
@@ -21,4 +22,5 @@ __all__ = [
     "MergeProposal", "MergeProposalItem",
     "MergeProposalStatus", "MergeItemCategory", "MergeItemSeverity",
     "MergeSuggestedAction",
+    "ImpactRun", "ImpactRunStatus",
 ]
