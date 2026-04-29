@@ -13,6 +13,9 @@ import {
   Zap,
   Sun,
   Moon,
+  GitBranch,
+  GitMerge,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +24,9 @@ const navItems = [
   { href: "/brds", label: "BRDs", icon: FileText, color: "text-blue-500" },
   { href: "/loan-records", label: "Loan Records", icon: Database, color: "text-emerald-500" },
   { href: "/test-suites", label: "Test Suites", icon: FlaskConical, color: "text-pink-500" },
+  { href: "/live-repo", label: "Live Repo", icon: GitBranch, color: "text-amber-500" },
+  { href: "/merge-workbench", label: "Merge Workbench", icon: GitMerge, color: "text-violet-500" },
+  { href: "/impact-runs", label: "Impact Runs", icon: Activity, color: "text-rose-500" },
 ];
 
 export function Sidebar() {

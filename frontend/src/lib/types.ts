@@ -17,6 +17,12 @@ export interface RuleSet {
   created_at: string;
 }
 
+export type Subsystem =
+  | "BUREAU_GATE" | "INCOME_GATE" | "DTI_GATE" | "EMPLOYMENT_GATE"
+  | "BANKING_BEHAVIOR" | "PRICING_TIER" | "RATE_MODIFIER" | "AMOUNT_CAP"
+  | "FRAUD_SIGNAL" | "REGULATORY_FLOOR" | "EXPOSURE_LIMIT"
+  | "SCORING_MODEL" | "UNCLASSIFIED";
+
 export interface Rule {
   id: string;
   rule_set_id: string;
@@ -24,6 +30,8 @@ export interface Rule {
   rule_name: string;
   description: string;
   rule_type: "ELIGIBILITY" | "PRICING" | "CAP" | "THRESHOLD" | "SCORING";
+  subsystem?: Subsystem | null;
+  canonical_key?: string | null;
   conditions: Condition[];
   actions: Action[];
   priority: number;
@@ -114,7 +122,172 @@ export interface TestCaseSuiteListItem {
 export interface BrdWorkflow {
   brd_id: string;
   rule_set: { id: string; status: string; rules_count: number } | null;
-  test_case_suite?: { id: string; total_cases: number } | null;
+  test_case_suite?: { id: string; total_cases: number; cases_by_category?: Record<string, number> } | null;
+  merge_proposal?: {
+    id: string;
+    status: "PENDING" | "APPROVED" | "REJECTED" | "APPLIED";
+    repository_id: string;
+    base_version: number;
+    summary: string | null;
+    decided_by: string | null;
+  } | null;
+  live_repo_version?: {
+    repository_id: string;
+    version_number: number;
+    version_id: string;
+    summary: string | null;
+  } | null;
+}
+
+
+// ── Live Rule Repository ───────────────────────────────────────────────
+
+export interface LiveRepository {
+  id: string;
+  name: string;
+  product: string;
+  jurisdiction: string;
+  description: string | null;
+  current_version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LiveRepositoryDetail extends LiveRepository {
+  versions: LiveVersionSummary[];
+}
+
+export interface LiveVersionSummary {
+  id: string;
+  version_number: number;
+  parent_version_id: string | null;
+  source_brd_id: string | null;
+  merge_proposal_id: string | null;
+  summary: string | null;
+  rule_count: number;
+  created_at: string;
+  created_by: string | null;
+}
+
+export interface LiveVersionDetail extends LiveVersionSummary {
+  rule_snapshot: Array<Record<string, any>>;
+}
+
+
+// ── Merge proposals ────────────────────────────────────────────────────
+
+export type MergeCategory =
+  | "EXACT_DUPLICATE" | "THRESHOLD_TIGHTENING" | "THRESHOLD_RELAXATION"
+  | "OPPOSITE_DIRECTION" | "TIERED_REPLACEMENT" | "OVERLAPPING_RANGE"
+  | "NEW_RULE" | "REMOVED_RULE" | "ACTION_DRIFT" | "COVERAGE_GAP";
+
+export type MergeSeverity = "INFO" | "SOFT" | "HARD";
+
+export type MergeAction =
+  | "ACCEPT" | "REJECT" | "SUPERSEDE" | "SUPERSEDE_GROUP"
+  | "DROP" | "KEEP_BOTH" | "EDIT_NEEDED" | "RETIRE" | "NEEDS_HUMAN";
+
+export interface MergeItem {
+  id: string;
+  category: MergeCategory;
+  severity: MergeSeverity;
+  canonical_key: string | null;
+  incoming_rule_id: string | null;
+  live_rule_id: string | null;
+  diff: Record<string, any> | null;
+  suggested_action: MergeAction;
+  user_action: MergeAction | null;
+  user_edits: Record<string, any> | null;
+  notes: string | null;
+  rationale: string | null;
+  confidence: number;
+}
+
+export interface MergeProposal {
+  id: string;
+  repository_id: string;
+  base_version: number;
+  source_brd_id: string;
+  source_rule_set_id: string;
+  status: "PENDING" | "APPROVED" | "REJECTED" | "APPLIED";
+  summary: string | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  created_at: string;
+  items: MergeItem[];
+  counts_by_category: Record<string, number>;
+  counts_by_severity: Record<string, number>;
+  blockers: string[];
+}
+
+export interface MergeApplyResult {
+  applied: boolean;
+  new_version_number: number | null;
+  new_version_id: string | null;
+  blockers: string[];
+  summary: string | null;
+}
+
+
+// ── Impact runs ────────────────────────────────────────────────────────
+
+export type ImpactRunStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
+
+export interface ImpactRun {
+  id: string;
+  repository_id: string;
+  base_version_id: string | null;
+  candidate_version_id: string;
+  status: ImpactRunStatus;
+  summary: ImpactRunSummary | null;
+  error: string | null;
+  created_at: string;
+  completed_at: string | null;
+  created_by: string | null;
+}
+
+export interface ImpactRunSummary {
+  total_loans: number;
+  decision_distribution: {
+    base: Record<string, number>;
+    candidate: Record<string, number>;
+  };
+  decision_flips: Record<string, number>;
+  by_subsystem: Record<string, { flips_caused: number }>;
+  by_segment: Record<string, {
+    loans: number;
+    base_approval_rate: number;
+    candidate_approval_rate: number;
+    approval_rate_change: number;
+  }>;
+}
+
+
+// ── Test suite execution report ────────────────────────────────────────
+
+export interface TestCaseExecutionReport {
+  test_case_id: string;
+  category: string;
+  expected_decision: string;
+  matched_loan_count: number;
+  actual_distribution: Record<string, number>;
+  matches_expected: number;
+  deviates_from_expected: number;
+  first_deviation_reason: string | null;
+}
+
+export interface SuiteExecutionResponse {
+  suite_id: string;
+  version_id: string;
+  version_number: number;
+  total_cases: number;
+  cases_evaluated: number;
+  results: TestCaseExecutionReport[];
+  summary: {
+    matches_expected: number;
+    deviates_from_expected: number;
+    by_category: Record<string, { matches: number; deviates: number }>;
+  };
 }
 
 export interface LoanRecord {
