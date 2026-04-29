@@ -15,7 +15,6 @@ import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   Activity,
   ArrowLeft,
@@ -136,8 +135,8 @@ export default function ImpactRunDetailPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-6">
-        <p className="text-xs text-muted-foreground mb-4">
+      <div className="space-y-8">
+        <p className="text-xs text-muted-foreground">
           Dashboard /{" "}
           <Link href="/impact-runs" className="hover:underline">
             Impact Runs
@@ -145,73 +144,89 @@ export default function ImpactRunDetailPage() {
           / {baseLabel} → {candLabel}
         </p>
 
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-4">
-            <Link href="/impact-runs">
-              <Button variant="ghost" size="icon-sm">
-                <ArrowLeft className="size-4" />
-              </Button>
-            </Link>
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <div className="icon-badge bg-rose-100 dark:bg-rose-900/30">
-                  <Activity className="size-5 text-rose-600 dark:text-rose-400" />
+        {/* Header card with gradient + version comparison hero */}
+        <Card className="card-elevated relative overflow-hidden border-border/50 p-6">
+          <div
+            className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-gradient-to-br from-rose-500/15 via-violet-500/10 to-transparent blur-3xl"
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute -left-16 -bottom-16 h-40 w-40 rounded-full bg-gradient-to-br from-blue-500/15 via-emerald-500/5 to-transparent blur-3xl"
+            aria-hidden
+          />
+          <div className="relative flex flex-wrap items-start justify-between gap-6">
+            <div className="flex items-start gap-4">
+              <Link href="/impact-runs">
+                <Button variant="ghost" size="icon-sm" className="mt-1">
+                  <ArrowLeft className="size-4" />
+                </Button>
+              </Link>
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="icon-badge bg-rose-500/15 ring-1 ring-inset ring-rose-500/20">
+                    <Activity className="size-5 text-rose-600 dark:text-rose-400" />
+                  </div>
+                  <h1 className="text-2xl font-bold tracking-tight">
+                    <span className="text-gradient">Impact Run</span>
+                  </h1>
+                  <Badge
+                    variant="outline"
+                    className={STATUS_STYLES[run.status] || ""}
+                  >
+                    <StatusIcon status={run.status} />
+                    <span className="ml-1">{run.status}</span>
+                  </Badge>
                 </div>
-                <h1 className="text-2xl font-bold tracking-tight">
-                  <span className="text-gradient">Impact Run</span>
-                </h1>
-                <Badge
-                  variant="outline"
-                  className={STATUS_STYLES[run.status] || ""}
-                >
-                  <StatusIcon status={run.status} />
-                  {run.status}
-                </Badge>
-              </div>
 
-              <div className="ml-9 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                 {repo && (
                   <Link
                     href={`/live-repo/${repo.id}`}
-                    className="inline-flex items-center gap-1.5 hover:text-primary hover:underline"
+                    className="inline-flex items-center gap-1.5 text-sm hover:text-primary hover:underline"
+                    title={repo.id}
                   >
-                    <GitBranch className="size-4" />
-                    {repo.name}
+                    <GitBranch className="size-4 text-amber-500" />
+                    <span className="font-medium">{repo.name}</span>
                     {repo.product && repo.jurisdiction && (
-                      <span className="text-xs">
-                        ({repo.product} · {repo.jurisdiction})
+                      <span className="text-xs text-muted-foreground">
+                        · {repo.product} · {repo.jurisdiction}
                       </span>
                     )}
                   </Link>
                 )}
-                <span>
-                  Base{" "}
-                  <Badge variant="outline" className="ml-1">
-                    {baseLabel}
-                  </Badge>
-                </span>
-                <span>
-                  Candidate{" "}
-                  <Badge variant="secondary" className="ml-1">
-                    {candLabel}
-                  </Badge>
-                </span>
-                {run.created_by && (
-                  <span>
-                    by{" "}
-                    <span className="font-medium text-foreground">
-                      {run.created_by}
-                    </span>
+
+                {/* Version comparison hero */}
+                <div className="inline-flex items-center gap-3 rounded-lg border border-border/40 bg-card/60 p-2 shadow-sm">
+                  <span className="rounded-md bg-slate-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-700 ring-1 ring-inset ring-slate-500/20 dark:text-slate-300">
+                    Base {baseLabel}
                   </span>
-                )}
-                <span>{formatDate(run.created_at)}</span>
+                  <span className="text-muted-foreground/70">→</span>
+                  <span className="rounded-md bg-blue-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-700 ring-1 ring-inset ring-blue-500/20 dark:text-blue-300">
+                    Candidate {candLabel}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                  {run.created_by && (
+                    <span>
+                      by{" "}
+                      <span className="font-medium text-foreground">
+                        {run.created_by}
+                      </span>
+                    </span>
+                  )}
+                  <span>·</span>
+                  <span>{formatDate(run.created_at)}</span>
+                  {run.completed_at && (
+                    <>
+                      <span>·</span>
+                      <span>completed {formatDate(run.completed_at)}</span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-
-        <Separator />
+        </Card>
 
         {run.status === "FAILED" && (
           <Card className="card-elevated border-red-500/40 bg-red-500/5 p-6">
