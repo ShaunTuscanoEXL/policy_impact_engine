@@ -20,6 +20,7 @@ from app.models.merge import (
     MergeSuggestedAction,
 )
 from app.services.canonical_key import (
+    _first_non_guard,
     operator_class,
     pairing_key_from_dict,
     primary_action,
@@ -31,10 +32,17 @@ from app.services.canonical_key import (
 # ── Helpers ──────────────────────────────────────────────────────────────
 
 def _primary_threshold(conditions: list[dict] | None) -> Any:
-    if not conditions:
+    """Threshold of the first non-guard condition.
+
+    Skipping guards (loan_type/application_type/...) is critical here: the
+    LLM commonly emits scoping conditions first and the actual policy
+    threshold second, and we don't want the diff to surface 'PERSONAL'
+    as the threshold when the real one is e.g. 0.43.
+    """
+    cond = _first_non_guard(conditions)
+    if not cond:
         return None
-    first = conditions[0] if isinstance(conditions[0], dict) else {}
-    return first.get("value")
+    return cond.get("value")
 
 
 def _safe_float(v: Any) -> float | None:
@@ -279,13 +287,19 @@ def _spec_collision(incoming: dict, live: dict) -> ProposalItemSpec:
             confidence=0.95,
         )
 
-    # 2) Hard: same key/threshold but different action class (REJECT → FLAG)
-    if (
-        in_op == live_op
-        and _is_numeric_pair(in_thr, live_thr)
-        and _safe_float(in_thr) == _safe_float(live_thr)
-        and in_act != live_act
-    ):
+    # 2) Hard: same operator on the same field but different action class
+    # (FLAG -> REJECT, REJECT -> FLAG, ...). Threshold may or may not also
+    # change — the semantic shift in the *action* is what we want to surface.
+    if in_op == live_op and in_act != live_act:
+        same_threshold = (
+            _is_numeric_pair(in_thr, live_thr)
+            and _safe_float(in_thr) == _safe_float(live_thr)
+        )
+        threshold_part = (
+            "Same threshold"
+            if same_threshold
+            else f"Threshold also moved {live_thr} → {in_thr}"
+        )
         return ProposalItemSpec(
             category=MergeItemCategory.ACTION_DRIFT,
             severity=MergeItemSeverity.HARD,
@@ -295,8 +309,8 @@ def _spec_collision(incoming: dict, live: dict) -> ProposalItemSpec:
             canonical_key=canonical,
             diff=base_diff,
             rationale=(
-                f"Same threshold on `{field}` but action changed from "
-                f"`{live_act}` to `{in_act}`. Semantic shift requires review."
+                f"Action on `{field}` changed from `{live_act}` to `{in_act}`. "
+                f"{threshold_part}. Semantic shift requires reviewer decision."
             ),
             confidence=0.95,
         )

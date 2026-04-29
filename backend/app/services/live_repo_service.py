@@ -454,14 +454,26 @@ async def build_merge_proposal(
     db.add(proposal)
     await db.flush()
 
+    def _maybe_uuid(v):
+        """Snapshot rules from the Python-import path use the original
+        rule_id (a non-UUID string) as their id. Don't try to FK those
+        back into the rules table — store None so the item still
+        carries the canonical_key / diff for HITL display."""
+        if not v:
+            return None
+        try:
+            return uuid.UUID(str(v))
+        except (TypeError, ValueError):
+            return None
+
     for spec in item_specs:
         db.add(MergeProposalItem(
             proposal_id=proposal.id,
             category=spec.category,
             severity=spec.severity,
             suggested_action=spec.suggested_action,
-            incoming_rule_id=uuid.UUID(spec.incoming_rule_id) if spec.incoming_rule_id else None,
-            live_rule_id=uuid.UUID(spec.live_rule_id) if spec.live_rule_id else None,
+            incoming_rule_id=_maybe_uuid(spec.incoming_rule_id),
+            live_rule_id=_maybe_uuid(spec.live_rule_id),
             canonical_key=spec.canonical_key,
             diff=spec.diff,
             rationale=spec.rationale,

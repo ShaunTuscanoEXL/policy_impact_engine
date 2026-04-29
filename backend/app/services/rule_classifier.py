@@ -135,10 +135,17 @@ def classify(
          primary field is a guard like loan_type)
       4. Fallback to RuleType default
     """
+    # 1. Action target wins when it points at a pricing/amount field —
+    #    a "bureau >= 750 → ADJUST interest_rate" is RATE_MODIFIER, not
+    #    BUREAU_GATE.
     by_action = _from_action(actions)
     if by_action is not None:
         return by_action
 
+    # 2. First non-guard condition field. Guards (loan_type,
+    #    application_type, …) commonly appear FIRST in LLM-extracted
+    #    rules; walking the full list lets us pick the actual policy
+    #    field rather than the scope filter.
     for cond in conditions or []:
         if not isinstance(cond, dict):
             continue
@@ -146,4 +153,5 @@ def classify(
         if field in _FIELD_TO_SUBSYSTEM:
             return _FIELD_TO_SUBSYSTEM[field]
 
+    # 3. RuleType default
     return _from_rule_type(rule_type)

@@ -95,19 +95,57 @@ def normalize_field(name: str | None) -> str:
     )
 
 
-def primary_field(conditions: list[dict] | None) -> str:
-    """Return the field of the first condition (or 'unknown_field')."""
+# Guard fields are scoping filters (loan_type=PERSONAL, application_type=...,
+# repeat_type=..., credit_policy=...) that the LLM frequently puts in
+# condition[0]. They aren't the rule's actual policy field — that's the
+# threshold being checked next. We skip past these when picking the
+# "primary" field for canonical_key/pairing_key purposes.
+_GUARD_FIELDS = frozenset({
+    "loan_type", "application_type", "repeat_type", "credit_policy",
+    "credit_policy_version", "loan_purpose", "currency", "customer_segment",
+    "segment", "product", "product_type", "borrower_segment",
+})
+
+
+def _first_non_guard(conditions: list[dict] | None) -> dict:
+    """Return the first condition whose field isn't a generic guard
+    (loan_type/application_type/etc.). Falls back to conditions[0] if
+    every field is a guard, and to {} if there are no conditions."""
     if not conditions:
+        return {}
+    for cond in conditions:
+        if not isinstance(cond, dict):
+            continue
+        field = normalize_field(cond.get("field"))
+        if field not in _GUARD_FIELDS and field != "unknown_field":
+            return cond
+    # All fields were guards — fall back to the first dict-shaped condition
+    for cond in conditions:
+        if isinstance(cond, dict):
+            return cond
+    return {}
+
+
+def primary_field(conditions: list[dict] | None) -> str:
+    """Return the field of the first non-guard condition (or fall back).
+
+    Skipping guard fields (`loan_type`, `application_type`, …) is what
+    makes the canonical_key meaningful when the LLM emits rules in the
+    "guard then policy threshold" shape that BRDs commonly express in
+    prose. Without this skip, every "for personal loans, X" rule ends
+    up with the same canonical_key regardless of X.
+    """
+    cond = _first_non_guard(conditions)
+    if not cond:
         return "unknown_field"
-    first = conditions[0] if isinstance(conditions[0], dict) else {}
-    return normalize_field(first.get("field"))
+    return normalize_field(cond.get("field"))
 
 
 def primary_operator(conditions: list[dict] | None) -> str:
-    if not conditions:
+    cond = _first_non_guard(conditions)
+    if not cond:
         return "UNK"
-    first = conditions[0] if isinstance(conditions[0], dict) else {}
-    return operator_class(first.get("operator"))
+    return operator_class(cond.get("operator"))
 
 
 def primary_action(actions: list[dict] | None) -> str:

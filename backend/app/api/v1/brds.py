@@ -13,7 +13,7 @@ from app.models.merge import MergeProposal
 from app.models.rule import RuleSet, Rule, RuleSetStatus, RuleType
 from app.models.test_case import TestCaseSuite
 from app.pipeline.document_parser import parse_document
-from app.pipeline.rule_extractor import extract_rules
+from app.pipeline.rule_extractor import extract_rules, extract_rules_with_retirements
 from app.pipeline.rule_validator import validate_rules
 
 logger = logging.getLogger(__name__)
@@ -172,11 +172,17 @@ async def extract_rules_from_brd(brd_id: str, db: AsyncSession = Depends(get_db)
         "section_titles": [s.title for s in sections],
     }
 
-    # Extract rules using AI
-    rule_definitions = extract_rules(sections)
+    # Extract rules using AI — also pull retirement signals (LLM-emitted
+    # `retires_pattern` blocks) so propose_from_brd can surface
+    # REMOVED_RULE merge items downstream.
+    rule_definitions, retirement_signals = extract_rules_with_retirements(sections)
 
     if not rule_definitions:
         raise HTTPException(422, "No rules could be extracted from the document")
+    logger.info(
+        "extract-rules: %d rules + %d retirement signals from %s",
+        len(rule_definitions), len(retirement_signals), brd.filename,
+    )
 
     # Validate rules
     validated = validate_rules(rule_definitions)
@@ -233,6 +239,7 @@ async def extract_rules_from_brd(brd_id: str, db: AsyncSession = Depends(get_db)
             jurisdiction="US",
             auto_apply_when_empty=True,
             decided_by="auto-baseline",
+            retirement_signals=retirement_signals or None,
         )
         if proposal:
             proposal_id = str(proposal.id)

@@ -764,6 +764,24 @@ def _two_pass_extract(
 # Main extraction function
 # ---------------------------------------------------------------------------
 
+def extract_rules_with_retirements(
+    sections: list[DocumentSection],
+) -> tuple[list[RuleDefinition], list[dict]]:
+    """Same as :func:`extract_rules` but also returns the LLM-emitted
+    retirement signals (Layer-1 retirement strategy).
+
+    Returns ``(rules, retirement_signals)``. Retirement signals follow
+    the shape consumed by :mod:`app.services.retirement_signals` and
+    are forwarded to :func:`live_repo_service.propose_from_brd` so the
+    merge engine can emit REMOVED_RULE / RETIRE items.
+    """
+    from app.services.retirement_signals import extract_retirement_signals
+
+    rules, raw_dicts = _extract_rules_internal(sections)
+    signals = extract_retirement_signals(raw_dicts)
+    return rules, signals
+
+
 def extract_rules(sections: list[DocumentSection]) -> list[RuleDefinition]:
     """Extract rules from parsed document sections.
 
@@ -781,19 +799,28 @@ def extract_rules(sections: list[DocumentSection]) -> list[RuleDefinition]:
     Returns:
         List of RuleDefinition objects. Empty list on failure.
     """
+    rules, _ = _extract_rules_internal(sections)
+    return rules
+
+
+def _extract_rules_internal(
+    sections: list[DocumentSection],
+) -> tuple[list[RuleDefinition], list[dict]]:
+    """Inner implementation that returns BOTH the parsed RuleDefinitions
+    and the raw LLM dicts (for retirement-signal extraction)."""
     if not sections:
-        return []
+        return [], []
 
     client, model = _build_client()
     if client is None:
-        return []
+        return [], []
 
     # Combine all section content in order — just raw text
     full_text = "\n\n".join(s.content for s in sections)
 
     if len(full_text.strip()) < 20:
         logger.warning("Document text too short (%d chars)", len(full_text))
-        return []
+        return [], []
 
     doc_title = sections[0].title if sections else "BRD Document"
     logger.info("Extracting rules from '%s' (%d chars, ~%d tokens estimated)",
@@ -895,7 +922,7 @@ def extract_rules(sections: list[DocumentSection]) -> list[RuleDefinition]:
 
     if not all_raw_rules:
         logger.warning("No rules extracted from document")
-        return []
+        return [], []
 
     # Deduplicate if we used multiple chunks or passes
     if use_chunking:
@@ -920,4 +947,4 @@ def extract_rules(sections: list[DocumentSection]) -> list[RuleDefinition]:
         seen.add(rule.rule_id)
 
     logger.info("Extracted %d rules from '%s' (%d chunks)", len(rules), doc_title, len(chunks))
-    return rules
+    return rules, all_raw_rules
