@@ -134,12 +134,13 @@ def test_classify_pair_threshold_relaxation():
 
 
 def test_classify_pair_action_drift_is_hard():
+    """REJECT vs FLAG on the same condition is paired by the merge engine
+    via pairing_key (which strips action_class) and surfaces as
+    ACTION_DRIFT, blocking apply."""
     live = _rule("L1", "DTI_GATE::dti_ratio::GT::REJECT",
                  "dti_ratio", ">", 0.43, action="REJECT")
     inc = _rule("I1", "DTI_GATE::dti_ratio::GT::FLAG",
                 "dti_ratio", ">", 0.43, action="FLAG")
-    # Same canonical key path requires we force them to look at the same key
-    inc["canonical_key"] = "DTI_GATE::dti_ratio::GT::REJECT"
     spec = classify_pair(inc, live)
     assert spec.category == MergeItemCategory.ACTION_DRIFT
     assert spec.severity == MergeItemSeverity.HARD

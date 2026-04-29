@@ -13,10 +13,13 @@ import uuid
 import enum
 from datetime import datetime
 from sqlalchemy import (
-    String, Text, Integer, DateTime, JSON, ForeignKey, Enum as SAEnum
+    String, Text, Integer, DateTime, JSON, ForeignKey, Enum as SAEnum, Uuid,
 )
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+
+def UUID(as_uuid: bool = True):  # noqa: N802 — dialect-agnostic alias
+    return Uuid(as_uuid=as_uuid)
 from app.database import Base
 
 

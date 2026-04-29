@@ -9,7 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.schemas.live_repo import (
+    BackfillResponse,
     CreateRepositoryRequest,
+    ProposeFromBrdRequest,
+    ProposeFromBrdResponse,
     RepositoryDetail,
     RepositorySummary,
     VersionDetail,
@@ -119,3 +122,47 @@ async def export_version_python(
         media_type="text/x-python",
         headers={"Content-Disposition": f'attachment; filename="rules_repo_{repo_id}_v{n}.py"'},
     )
+
+
+# ── Slice 1: BRD upload → proposal helper + admin backfill ───────────────
+
+
+@router.post("/propose-from-brd", response_model=ProposeFromBrdResponse, status_code=201)
+async def propose_from_brd_endpoint(
+    payload: ProposeFromBrdRequest, db: AsyncSession = Depends(get_db)
+):
+    """One-shot helper: takes a BRD id, locates its latest rule_set,
+    finds (or creates) the default live repo for (product, jurisdiction),
+    and creates a merge proposal. If the live repo is empty, auto-applies
+    the proposal immediately so the BRD baselines the repository as v1."""
+    try:
+        proposal, version = await svc.propose_from_brd(
+            db,
+            brd_id=uuid.UUID(payload.brd_id),
+            repository_id=uuid.UUID(payload.repository_id) if payload.repository_id else None,
+            product=payload.product,
+            jurisdiction=payload.jurisdiction,
+            auto_apply_when_empty=payload.auto_apply_when_empty,
+            decided_by=payload.decided_by,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return ProposeFromBrdResponse(
+        proposal_id=str(proposal.id),
+        repository_id=str(proposal.repository_id),
+        auto_applied=version is not None,
+        new_version_number=version.version_number if version else None,
+        summary=(version.summary if version else proposal.summary),
+    )
+
+
+@router.post("/admin/backfill", response_model=BackfillResponse)
+async def backfill_classify_all_rules(db: AsyncSession = Depends(get_db)):
+    """Admin: classify every Rule that's missing canonical_key/subsystem.
+
+    Idempotent — safe to run multiple times. Should be invoked once
+    after deploying slice 1 against an existing database.
+    """
+    n = await svc.backfill_all_rules(db)
+    return BackfillResponse(rules_classified=n)

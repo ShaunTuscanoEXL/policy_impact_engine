@@ -101,6 +101,58 @@ async def backfill_rule_set(db: AsyncSession, rule_set_id: uuid.UUID) -> int:
     return len(rules)
 
 
+async def backfill_all_rules(db: AsyncSession) -> int:
+    """Classify every Rule in the database that doesn't yet have a
+    canonical_key. Idempotent. Returns count touched.
+
+    Run at startup or via an admin endpoint after this slice rolls out
+    so that historical rules pick up subsystem + canonical_key.
+    """
+    result = await db.execute(select(Rule).where(Rule.canonical_key.is_(None)))
+    rules = list(result.scalars())
+    for r in rules:
+        await ensure_rule_classified(db, r)
+    if rules:
+        await db.commit()
+    return len(rules)
+
+
+# ── Default repository helpers (Slice 1) ─────────────────────────────────
+
+async def find_default_repository(
+    db: AsyncSession, *, product: str, jurisdiction: str
+) -> LiveRuleRepository | None:
+    """Return the live repo for a (product, jurisdiction) pair if one exists."""
+    result = await db.execute(
+        select(LiveRuleRepository)
+        .options(selectinload(LiveRuleRepository.versions))
+        .where(
+            LiveRuleRepository.product == product,
+            LiveRuleRepository.jurisdiction == jurisdiction,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_or_create_default_repository(
+    db: AsyncSession,
+    *,
+    product: str = "PERSONAL",
+    jurisdiction: str = "US",
+    name_hint: str | None = None,
+) -> LiveRuleRepository:
+    existing = await find_default_repository(db, product=product, jurisdiction=jurisdiction)
+    if existing is not None:
+        return existing
+    return await create_repository(
+        db,
+        name=name_hint or f"{product} ({jurisdiction})",
+        product=product,
+        jurisdiction=jurisdiction,
+        description="Auto-created default repository (Slice 1)",
+    )
+
+
 # ── Repository CRUD ──────────────────────────────────────────────────────
 
 async def create_repository(
@@ -137,7 +189,12 @@ async def list_repositories(db: AsyncSession) -> list[LiveRuleRepository]:
     return list(result.scalars())
 
 
-async def get_repository(db: AsyncSession, repo_id: uuid.UUID) -> LiveRuleRepository | None:
+async def get_repository(db: AsyncSession, repo_id) -> LiveRuleRepository | None:
+    if isinstance(repo_id, str):
+        try:
+            repo_id = uuid.UUID(repo_id)
+        except ValueError:
+            return None
     result = await db.execute(
         select(LiveRuleRepository)
         .options(selectinload(LiveRuleRepository.versions))
@@ -187,14 +244,90 @@ async def export_python(
 
 # ── Merge proposals ──────────────────────────────────────────────────────
 
+async def latest_rule_set_for_brd(
+    db: AsyncSession, brd_id: uuid.UUID
+) -> RuleSet | None:
+    """Return the most-recently-created rule_set for a BRD."""
+    result = await db.execute(
+        select(RuleSet)
+        .options(selectinload(RuleSet.rules))
+        .where(RuleSet.brd_document_id == brd_id)
+        .order_by(RuleSet.created_at.desc(), RuleSet.version.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+async def propose_from_brd(
+    db: AsyncSession,
+    *,
+    brd_id: uuid.UUID,
+    repository_id: uuid.UUID | None = None,
+    product: str = "PERSONAL",
+    jurisdiction: str = "US",
+    auto_apply_when_empty: bool = True,
+    decided_by: str | None = None,
+    retirement_signals: list[dict] | None = None,
+) -> tuple[MergeProposal | None, LiveRuleVersion | None]:
+    """One-shot helper for the slice 1 "BRD upload -> merge proposal" flow.
+
+    Resolves (or creates) the default repository for the (product,
+    jurisdiction) pair, finds the latest rule_set produced for the BRD,
+    and builds a merge proposal.
+
+    If ``auto_apply_when_empty`` is True and the repo currently has no
+    rules (current_version == 0 and snapshot empty), the proposal is
+    immediately applied to baseline the repo as v1. Returns
+    ``(proposal, applied_version_or_none)``.
+    """
+    rule_set = await latest_rule_set_for_brd(db, brd_id)
+    if rule_set is None:
+        raise ValueError(f"No rule_set found for BRD {brd_id}")
+
+    if repository_id is None:
+        repo = await get_or_create_default_repository(
+            db, product=product, jurisdiction=jurisdiction,
+        )
+    else:
+        repo = await db.get(LiveRuleRepository, repository_id)
+        if repo is None:
+            raise ValueError(f"Repository {repository_id} not found")
+
+    proposal = await build_merge_proposal(
+        db,
+        repository_id=repo.id,
+        source_rule_set_id=rule_set.id,
+        retirement_signals=retirement_signals,
+    )
+
+    # Auto-apply when the repo is empty (baselining). All items will be
+    # NEW_RULE / INFO so apply is guaranteed to succeed.
+    head = await get_head_version(db, repo.id)
+    head_is_empty = head is None or not (head.rule_snapshot or [])
+    if auto_apply_when_empty and head_is_empty:
+        new_version, _blockers = await apply_merge_proposal(
+            db, proposal_id=proposal.id, decided_by=decided_by or "auto-baseline",
+        )
+        return proposal, new_version
+
+    return proposal, None
+
+
 async def build_merge_proposal(
     db: AsyncSession,
     *,
     repository_id: uuid.UUID,
     source_rule_set_id: uuid.UUID,
+    retirement_signals: list[dict] | None = None,
 ) -> MergeProposal:
     """Create a MergeProposal by diffing a candidate rule_set against the
-    HEAD of a live repository."""
+    HEAD of a live repository.
+
+    ``retirement_signals`` is the LLM's explicit list of rules the BRD
+    is retiring (matched by canonical_key). Empty/None means no Layer-1
+    retirements; the merge engine still runs Layer-2 inference at the
+    pairing level.
+    """
     repo = await db.get(LiveRuleRepository, repository_id)
     if repo is None:
         raise ValueError(f"Live repository {repository_id} not found")
@@ -216,7 +349,10 @@ async def build_merge_proposal(
     live_rules: list[dict] = list(head.rule_snapshot or []) if head else []
     incoming_rules = [serialize_rule(r) for r in rule_set.rules]
 
-    item_specs = diff_rule_sets(incoming_rules, live_rules)
+    item_specs = diff_rule_sets(
+        incoming_rules, live_rules,
+        retirement_signals=retirement_signals,
+    )
 
     proposal = MergeProposal(
         repository_id=repository_id,
@@ -244,8 +380,15 @@ async def build_merge_proposal(
         ))
 
     await db.commit()
-    await db.refresh(proposal)
-    return proposal
+
+    # Re-fetch with items eagerly loaded so the API layer can serialize
+    # without tripping async lazy loading.
+    refreshed = await db.execute(
+        select(MergeProposal)
+        .options(selectinload(MergeProposal.items))
+        .where(MergeProposal.id == proposal.id)
+    )
+    return refreshed.scalar_one()
 
 
 async def get_merge_proposal(

@@ -11,10 +11,13 @@ model rationale.
 import uuid
 from datetime import datetime
 from sqlalchemy import (
-    String, Text, Integer, Boolean, DateTime, JSON, ForeignKey, UniqueConstraint
+    String, Text, Integer, Boolean, DateTime, JSON, ForeignKey, UniqueConstraint, Uuid,
 )
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+
+def UUID(as_uuid: bool = True):  # noqa: N802 — dialect-agnostic alias
+    return Uuid(as_uuid=as_uuid)
 from app.database import Base
 
 

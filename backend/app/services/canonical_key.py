@@ -122,10 +122,12 @@ def make_canonical_key(
     conditions: list[dict] | None,
     actions: list[dict] | None,
 ) -> str:
-    """Build the canonical key for a rule.
+    """Build the canonical key for a rule (full identity).
 
     Stable across BRDs as long as the rule operates on the same primary
     field, with the same operator family and the same action family.
+    Includes action_class so that two rules with different action types
+    (e.g. REJECT vs FLAG on the same condition) carry different identity.
     """
     sub = subsystem.value if isinstance(subsystem, Subsystem) else (
         str(subsystem) if subsystem else Subsystem.UNCLASSIFIED.value
@@ -136,6 +138,81 @@ def make_canonical_key(
         primary_operator(conditions),
         primary_action(actions),
     ])
+
+
+# ── Target-class normalization ───────────────────────────────────────────
+# Used by the pairing_key so that two rules whose action targets the same
+# *thing* can be paired up by the merge engine even if they differ in
+# action_type (REJECT vs FLAG vs MANUAL_REVIEW). This is what makes
+# ACTION_DRIFT detectable.
+_TARGET_CLASS = {
+    "decision_status": "DECISION",
+    "decision":        "DECISION",
+    "status":          "DECISION",
+    "outcome":         "DECISION",
+    "verdict":         "DECISION",
+    "interest_rate":   "RATE",
+    "apr":             "RATE",
+    "rate":            "RATE",
+    "eligible_amount": "AMOUNT",
+    "loan_amount":     "AMOUNT",
+    "max_eligible_amount": "AMOUNT",
+    "desired_amount":  "AMOUNT",
+    "manual_review":   "REVIEW",
+    "review_queue":    "REVIEW",
+}
+
+
+def target_class(target: str | None) -> str:
+    if not target:
+        return "DECISION"  # default — most actions are decision-affecting
+    norm = normalize_field(target)
+    return _TARGET_CLASS.get(norm, norm.upper())
+
+
+def primary_target_class(actions: list[dict] | None) -> str:
+    if not actions:
+        return "DECISION"
+    first = actions[0] if isinstance(actions[0], dict) else {}
+    return target_class(first.get("target_field"))
+
+
+def make_pairing_key(
+    subsystem: Subsystem | str | None,
+    conditions: list[dict] | None,
+    actions: list[dict] | None,
+) -> str:
+    """Pairing key for cross-BRD collision detection.
+
+    Strips action_class but keeps target_class. Two rules with the same
+    pairing_key but different action_class are paired so the merge engine
+    can flag ACTION_DRIFT instead of treating them as unrelated NEW_RULEs.
+
+    Example:
+        REJECT when dti > 0.43 → DTI_GATE::dti_ratio::GT::DECISION
+        FLAG   when dti > 0.43 → DTI_GATE::dti_ratio::GT::DECISION  (same)
+        ADJUST interest_rate when dti > 0.43
+                              → DTI_GATE::dti_ratio::GT::RATE       (different)
+    """
+    sub = subsystem.value if isinstance(subsystem, Subsystem) else (
+        str(subsystem) if subsystem else Subsystem.UNCLASSIFIED.value
+    )
+    return "::".join([
+        sub,
+        primary_field(conditions),
+        primary_operator(conditions),
+        primary_target_class(actions),
+    ])
+
+
+def pairing_key_from_dict(rule_dict: dict) -> str:
+    """Compute the pairing_key from a serialized rule dict — used by the
+    merge engine when grouping rules across the candidate vs live sets."""
+    return make_pairing_key(
+        rule_dict.get("subsystem"),
+        rule_dict.get("conditions") or [],
+        rule_dict.get("actions") or [],
+    )
 
 
 def make_semantic_signature(

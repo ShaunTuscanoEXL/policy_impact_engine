@@ -42,3 +42,35 @@ class VersionDetail(VersionSummary):
 
 class RepositoryDetail(RepositorySummary):
     versions: list[VersionSummary] = []
+
+
+# ── Slice 1 ──────────────────────────────────────────────────────────────
+
+class ProposeFromBrdRequest(BaseModel):
+    brd_id: str
+    repository_id: str | None = Field(
+        default=None,
+        description="If omitted, the default repo for (product, jurisdiction) is used or created.",
+    )
+    product: str = "PERSONAL"
+    jurisdiction: str = "US"
+    auto_apply_when_empty: bool = Field(
+        default=True,
+        description="If the live repo is empty, apply the proposal immediately as v1 (baseline).",
+    )
+    decided_by: str | None = Field(
+        default=None,
+        description="Required when auto_apply_when_empty fires; falls back to 'auto-baseline'.",
+    )
+
+
+class ProposeFromBrdResponse(BaseModel):
+    proposal_id: str
+    repository_id: str
+    auto_applied: bool
+    new_version_number: int | None = None
+    summary: str | None = None
+
+
+class BackfillResponse(BaseModel):
+    rules_classified: int

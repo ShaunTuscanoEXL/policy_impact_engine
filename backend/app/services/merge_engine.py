@@ -21,6 +21,7 @@ from app.models.merge import (
 )
 from app.services.canonical_key import (
     operator_class,
+    pairing_key_from_dict,
     primary_action,
     primary_field,
     primary_operator,
@@ -118,6 +119,8 @@ def classify_pair(
 def diff_rule_sets(
     incoming_rules: Iterable[dict],
     live_rules: Iterable[dict],
+    *,
+    retirement_signals: Iterable[dict] | None = None,
 ) -> list[ProposalItemSpec]:
     """Produce one MergeProposalItem spec per incoming or retired rule.
 
@@ -126,14 +129,17 @@ def diff_rule_sets(
     each is treated independently in this slice — slice 1 introduces
     SUPERSEDE_GROUP detection.
     """
+    # Pair by pairing_key (NOT canonical_key) — pairing_key strips
+    # action_class but keeps target_class so REJECT vs FLAG on the same
+    # condition pairs up and surfaces as ACTION_DRIFT instead of NEW_RULE.
     incoming_by_key: dict[str, list[dict]] = {}
     for r in incoming_rules:
-        key = r.get("canonical_key") or "UNCLASSIFIED"
+        key = pairing_key_from_dict(r)
         incoming_by_key.setdefault(key, []).append(r)
 
     live_by_key: dict[str, list[dict]] = {}
     for r in live_rules:
-        key = r.get("canonical_key") or "UNCLASSIFIED"
+        key = pairing_key_from_dict(r)
         live_by_key.setdefault(key, []).append(r)
 
     seen_keys: set[str] = set()
@@ -160,11 +166,34 @@ def diff_rule_sets(
         # (no item) — slice 1 will treat these as RETIRE candidates if the
         # BRD's retirement signals say so.
 
-    # 2) Live rules with no incoming pairing at all → no item in slice 0
-    # (REMOVED_RULE detection requires retirement signals which arrive in
-    # phase 4). We'll list the live keys that vanished as informational
-    # items in slice 1.
-    _ = seen_keys  # placeholder for future use
+    # 2) Retirement signals from the LLM (Layer 1 of the retirement
+    # strategy in §7 of the architecture doc): explicit "this rule is
+    # retired" hints emitted by the BRD extractor.
+    #
+    # Each signal is a dict shaped like:
+    #     {"canonical_key": "DTI_GATE::dti_ratio::GT::REJECT",
+    #      "basis": "explicit_replacement",
+    #      "evidence_section": "Section 4.1"}
+    #
+    # We match signals to live rules by canonical_key and produce
+    # REMOVED_RULE items (Layer 1 confidence = high). Any signals that
+    # don't match a live rule are dropped silently (they refer to rules
+    # that were never in this repo).
+    if retirement_signals:
+        live_by_canonical = {r.get("canonical_key"): r for r in live_rules if r.get("canonical_key")}
+        for sig in retirement_signals:
+            ck = sig.get("canonical_key") if isinstance(sig, dict) else None
+            if not ck or ck not in live_by_canonical:
+                continue
+            live_rule = live_by_canonical[ck]
+            spec = _spec_removed(live_rule)
+            spec.confidence = 0.95   # explicit signal — high confidence
+            spec.rationale = (
+                f"Explicit retirement signal from BRD extractor "
+                f"(basis: {sig.get('basis', 'explicit')}; "
+                f"evidence: {sig.get('evidence_section', 'n/a')})."
+            )
+            specs.append(spec)
 
     return specs
 

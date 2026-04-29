@@ -1,9 +1,13 @@
 import uuid
 import enum
 from datetime import datetime
-from sqlalchemy import String, Text, Integer, Float, Boolean, DateTime, Enum as SAEnum, JSON, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import String, Text, Integer, Float, Boolean, DateTime, Enum as SAEnum, JSON, ForeignKey, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+
+# Dialect-agnostic UUID alias: native UUID on Postgres, CHAR(32) on SQLite.
+def UUID(as_uuid: bool = True):  # noqa: N802 — keeps existing call-site shape
+    return Uuid(as_uuid=as_uuid)
 from app.database import Base
 
 

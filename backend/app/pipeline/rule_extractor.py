@@ -118,6 +118,24 @@ CONFIDENCE:
 - 0.70-0.84: Implied or partially ambiguous
 - Below 0.70: Inferred from context
 
+RULE RETIREMENTS (optional but valuable when present):
+If the BRD explicitly retires/replaces an existing rule, ALSO emit a
+"retires_pattern" object on the rule that supersedes it. Signals to look for:
+  - "previously enforced", "currently set to", "is replaced by"
+  - "Current State" tables that show old rules being modified
+  - "no longer enforced", "deprecated", "removed in this revision"
+  - A tier table (e.g. 3-tier) being replaced wholesale by another (e.g. 5-tier)
+Shape:
+  "retires_pattern": {
+    "subsystem": "DTI_GATE | BUREAU_GATE | PRICING_TIER | ...",
+    "field": "dti_ratio",
+    "operator_class": "GT | LT | EQ | RANGE | IN",
+    "basis": "explicit_replacement | supersedes_full_table | deprecated",
+    "evidence_section": "Section 4.1"
+  }
+The retirement is about the OLD rule being removed; the rule object itself
+describes the NEW rule that takes its place.
+
 Return ONLY a JSON array. No markdown fences. No explanations. Just [...].
 """
 
