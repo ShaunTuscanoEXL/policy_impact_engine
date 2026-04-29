@@ -74,3 +74,21 @@ class ProposeFromBrdResponse(BaseModel):
 
 class BackfillResponse(BaseModel):
     rules_classified: int
+
+
+# ── Slice 3: Python import ──────────────────────────────────────────────
+
+class ImportPythonRequest(BaseModel):
+    source: str = Field(description="Full Python source matching the codegen format.")
+    summary: str | None = Field(
+        default=None, description="Override the auto-generated version summary."
+    )
+    decided_by: str | None = None
+
+
+class ImportPythonResponse(BaseModel):
+    new_version_number: int
+    new_version_id: str
+    rules_imported: int
+    warnings: list[str] = []
+    summary: str

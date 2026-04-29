@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.codegen import render_python
+from app.codegen import parse_python, render_python
 from app.models.brd import BrdDocument
 from app.models.live_repo import (
     LiveRuleEntry,
@@ -225,6 +225,95 @@ async def get_head_version(
 
 
 # ── Codegen ──────────────────────────────────────────────────────────────
+
+async def import_python_as_version(
+    db: AsyncSession,
+    *,
+    repository_id: uuid.UUID,
+    source: str,
+    decided_by: str | None = None,
+    summary_override: str | None = None,
+) -> tuple[LiveRuleVersion, list[str], int]:
+    """Slice 3: parse a Python rules module and persist its rules as a
+    new LiveRuleVersion of the repository.
+
+    The parsed rules are NOT routed through the merge engine — Python
+    upload is a trusted-source flow per the architecture decision. The
+    incoming module is treated as the new HEAD verbatim (after
+    normalizing canonical_key + subsystem on each rule).
+
+    Returns ``(new_version, warnings, rules_imported_count)``.
+    Raises :class:`ValueError` on parse failure or unknown repository.
+    """
+    repo = await db.get(LiveRuleRepository, repository_id)
+    if repo is None:
+        raise ValueError(f"Repository {repository_id} not found")
+
+    try:
+        parse_result = parse_python(source)
+    except SyntaxError as e:
+        raise ValueError(f"Python source has syntax error: {e}") from e
+
+    if not parse_result.rules:
+        raise ValueError(
+            "No @rule-decorated functions found. Make sure the source matches "
+            "the codegen format."
+        )
+
+    head = await get_head_version(db, repo.id)
+    new_version_number = repo.current_version + 1
+
+    # Materialize each parsed rule into a snapshot dict, computing
+    # canonical_key + semantic_signature so the next merge can pair
+    # it correctly.
+    snapshot: list[dict] = []
+    for pr in parse_result.rules:
+        from app.services.canonical_key import (
+            make_canonical_key,
+            make_semantic_signature,
+        )
+        ck = make_canonical_key(pr.subsystem, pr.conditions, pr.actions)
+        sig = make_semantic_signature(pr.conditions, pr.actions)
+        snapshot.append({
+            "id": pr.rule_id,
+            "rule_id": pr.rule_id,
+            "rule_name": pr.rule_name,
+            "description": pr.description,
+            "subsystem": pr.subsystem,
+            "priority": pr.priority,
+            "source_section": pr.source_section,
+            "canonical_key": ck,
+            "semantic_signature": sig,
+            "conditions": pr.conditions,
+            "actions": pr.actions,
+        })
+
+    summary = summary_override or (
+        f"Python import: {len(snapshot)} rule(s)"
+        + (f", {len(parse_result.warnings)} warning(s)" if parse_result.warnings else "")
+    )
+    new_version = LiveRuleVersion(
+        repository_id=repo.id,
+        version_number=new_version_number,
+        parent_version_id=head.id if head else None,
+        source_brd_id=None,
+        merge_proposal_id=None,
+        summary=summary,
+        rule_snapshot=snapshot,
+        created_by=decided_by or "python-import",
+    )
+    db.add(new_version)
+    await db.flush()
+    new_version.python_export = render_python(repo, new_version)
+
+    repo.current_version = new_version_number
+    repo.updated_at = datetime.utcnow()
+
+    await db.commit()
+    await db.refresh(new_version)
+    warning_messages = [f"{w.rule_name or '?'}: {w.message}" for w in parse_result.warnings]
+    return new_version, warning_messages, len(snapshot)
+
 
 async def export_python(
     db: AsyncSession, repo_id: uuid.UUID, version_number: int | None = None

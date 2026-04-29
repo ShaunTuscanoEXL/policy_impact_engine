@@ -11,6 +11,8 @@ from app.database import get_db
 from app.schemas.live_repo import (
     BackfillResponse,
     CreateRepositoryRequest,
+    ImportPythonRequest,
+    ImportPythonResponse,
     ProposeFromBrdRequest,
     ProposeFromBrdResponse,
     RepositoryDetail,
@@ -166,3 +168,34 @@ async def backfill_classify_all_rules(db: AsyncSession = Depends(get_db)):
     """
     n = await svc.backfill_all_rules(db)
     return BackfillResponse(rules_classified=n)
+
+
+@router.post("/{repo_id}/import", response_model=ImportPythonResponse, status_code=201)
+async def import_python(
+    repo_id: uuid.UUID,
+    payload: ImportPythonRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Slice 3: upload a Python rules module (codegen-format) and
+    install it as a new repository version. Trusted-source flow per
+    the architecture decision — rules are NOT routed through the
+    merge engine and the upload directly becomes the new HEAD.
+    """
+    try:
+        new_version, warnings, count = await svc.import_python_as_version(
+            db,
+            repository_id=repo_id,
+            source=payload.source,
+            decided_by=payload.decided_by,
+            summary_override=payload.summary,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return ImportPythonResponse(
+        new_version_number=new_version.version_number,
+        new_version_id=str(new_version.id),
+        rules_imported=count,
+        warnings=warnings,
+        summary=new_version.summary or "",
+    )
