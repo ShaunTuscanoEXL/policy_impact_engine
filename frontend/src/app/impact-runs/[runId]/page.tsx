@@ -179,23 +179,26 @@ export default function ImpactRunDetailPage() {
                 </div>
 
                 {repo && (
-                  <Link
-                    href={`/live-repo/${repo.id}`}
-                    className="inline-flex items-center gap-1.5 text-sm hover:text-primary hover:underline"
-                    title={repo.id}
-                  >
-                    <GitBranch className="size-4 text-amber-500" />
-                    <span className="font-medium">{repo.name}</span>
-                    {repo.product && repo.jurisdiction && (
-                      <span className="text-xs text-muted-foreground">
-                        · {repo.product} · {repo.jurisdiction}
-                      </span>
-                    )}
-                  </Link>
+                  <div>
+                    <Link
+                      href={`/live-repo/${repo.id}`}
+                      className="inline-flex items-center gap-1.5 text-sm hover:text-primary hover:underline"
+                      title={repo.id}
+                    >
+                      <GitBranch className="size-4 text-amber-500" />
+                      <span className="font-medium">{repo.name}</span>
+                      {repo.product && repo.jurisdiction && (
+                        <span className="text-xs text-muted-foreground">
+                          · {repo.product} · {repo.jurisdiction}
+                        </span>
+                      )}
+                    </Link>
+                  </div>
                 )}
 
-                {/* Version comparison hero */}
-                <div className="inline-flex items-center gap-3 rounded-lg border border-border/40 bg-card/60 p-2 shadow-sm">
+                {/* Version comparison hero — own row so it can't collide
+                    with the repo Link beside it */}
+                <div className="flex w-fit items-center gap-3 rounded-lg border border-border/40 bg-card/60 p-2 shadow-sm">
                   <span className="rounded-md bg-slate-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-700 ring-1 ring-inset ring-slate-500/20 dark:text-slate-300">
                     Base {baseLabel}
                   </span>
