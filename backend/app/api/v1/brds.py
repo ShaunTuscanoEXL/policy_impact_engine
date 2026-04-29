@@ -5,9 +5,11 @@ from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
-from app.services import brd_service
+from app.services import brd_service, live_repo_service
 from app.schemas.brd import BrdUploadResponse, BrdListResponse
 from app.models.brd import BrdDocument
+from app.models.live_repo import LiveRuleVersion
+from app.models.merge import MergeProposal
 from app.models.rule import RuleSet, Rule, RuleSetStatus, RuleType
 from app.models.test_case import TestCaseSuite
 from app.pipeline.document_parser import parse_document
@@ -74,6 +76,8 @@ async def get_brd_workflow(brd_id: str, db: AsyncSession = Depends(get_db)):
 
     rule_set_data = None
     test_case_suite_data = None
+    merge_proposal_data = None
+    live_repo_data = None
 
     if rule_set:
         rules_count = await db.execute(
@@ -100,10 +104,44 @@ async def get_brd_workflow(brd_id: str, db: AsyncSession = Depends(get_db)):
                 "cases_by_category": tc_suite.cases_by_category,
             }
 
+        # Latest merge proposal originating from this rule_set (if any)
+        mp_result = await db.execute(
+            select(MergeProposal)
+            .where(MergeProposal.source_rule_set_id == rule_set.id)
+            .order_by(MergeProposal.created_at.desc())
+            .limit(1)
+        )
+        mp = mp_result.scalar_one_or_none()
+        if mp:
+            merge_proposal_data = {
+                "id": str(mp.id),
+                "status": mp.status.value,
+                "repository_id": str(mp.repository_id),
+                "base_version": mp.base_version,
+                "summary": mp.summary,
+                "decided_by": mp.decided_by,
+            }
+            # If this proposal has been applied, surface the resulting live version
+            applied_v = await db.execute(
+                select(LiveRuleVersion)
+                .where(LiveRuleVersion.merge_proposal_id == mp.id)
+                .limit(1)
+            )
+            v = applied_v.scalar_one_or_none()
+            if v:
+                live_repo_data = {
+                    "repository_id": str(v.repository_id),
+                    "version_number": v.version_number,
+                    "version_id": str(v.id),
+                    "summary": v.summary,
+                }
+
     return {
         "brd_id": brd_id,
         "rule_set": rule_set_data,
         "test_case_suite": test_case_suite_data,
+        "merge_proposal": merge_proposal_data,
+        "live_repo_version": live_repo_data,
     }
 
 
@@ -155,6 +193,7 @@ async def extract_rules_from_brd(brd_id: str, db: AsyncSession = Depends(get_db)
     await db.flush()
 
     # Save individual rules
+    saved_rules: list[Rule] = []
     for rd in rule_definitions:
         rule = Rule(
             rule_set_id=rule_set.id,
@@ -169,6 +208,39 @@ async def extract_rules_from_brd(brd_id: str, db: AsyncSession = Depends(get_db)
             source_section=rd.source_section,
         )
         db.add(rule)
+        saved_rules.append(rule)
+    await db.flush()
+
+    # Slice 1 wire-up: classify every freshly-extracted rule (subsystem +
+    # canonical_key + semantic_signature) so it slots into the live repo's
+    # diff/merge engine without a separate backfill step.
+    for r in saved_rules:
+        await live_repo_service.ensure_rule_classified(db, r)
+
+    # Slice 1 wire-up: auto-create a merge proposal against the default
+    # live repo for (PERSONAL, US). If the repo doesn't exist yet it gets
+    # created; if its HEAD is empty the proposal is auto-applied as v1
+    # (baseline). Any returned proposal is left in PENDING for HITL when
+    # the repo already had rules.
+    proposal_id: str | None = None
+    auto_applied_version: int | None = None
+    repository_id: str | None = None
+    try:
+        proposal, applied_version = await live_repo_service.propose_from_brd(
+            db,
+            brd_id=brd.id,
+            product="PERSONAL",
+            jurisdiction="US",
+            auto_apply_when_empty=True,
+            decided_by="auto-baseline",
+        )
+        if proposal:
+            proposal_id = str(proposal.id)
+            repository_id = str(proposal.repository_id)
+        if applied_version:
+            auto_applied_version = applied_version.version_number
+    except Exception:  # noqa: BLE001 — surfacing as warning, not blocking extraction
+        logger.exception("propose_from_brd failed after extract-rules")
 
     await db.commit()
 
@@ -176,6 +248,9 @@ async def extract_rules_from_brd(brd_id: str, db: AsyncSession = Depends(get_db)
         "rule_set_id": str(rule_set.id),
         "rules_count": len(rule_definitions),
         "status": "DRAFT",
+        "merge_proposal_id": proposal_id,
+        "live_repository_id": repository_id,
+        "auto_applied_version": auto_applied_version,
     }
 
 

@@ -15,7 +15,12 @@ from app.schemas.test_case import (
     MatchedCustomer,
     SuggestCountsRequest,
     SuggestedCountsResponse,
+    GenerateFromVersionRequest,
+    ExecuteSuiteRequest,
+    SuiteExecutionResponse,
 )
+from app.services.test_suite_executor import execute_suite_against_version
+import uuid as _uuid
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/test-cases", tags=["Test Cases"])
@@ -168,6 +173,65 @@ async def delete_test_suite(suite_id: str, db: AsyncSession = Depends(get_db)):
     if not deleted:
         raise HTTPException(404, "Test case suite not found")
     return {"status": "deleted"}
+
+
+# ── Slice 4 wire-ups ────────────────────────────────────────────────────
+
+
+@router.post("/generate-from-version", response_model=TestCaseSuiteResponse)
+async def generate_from_version(
+    body: GenerateFromVersionRequest, db: AsyncSession = Depends(get_db)
+):
+    """Generate a test case suite directly from a LiveRuleVersion's
+    snapshot — the authoritative live rule set at that version.
+
+    Every loan match comes from real loan_records (no mocks). Counts
+    are honoured per category; passing None auto-suggests via the
+    same heuristic the rule_set generator uses.
+    """
+    counts = {
+        "positive_count": body.positive_count,
+        "negative_count": body.negative_count,
+        "boundary_count": body.boundary_count,
+        "edge_count": body.edge_count,
+        "interaction_count": body.interaction_count,
+    }
+    suite = await test_case_service.generate_from_version(
+        version_id=body.version_id,
+        counts=counts,
+        max_matches=body.max_matches,
+        db=db,
+    )
+    if suite is None:
+        raise HTTPException(404, "Live rule version not found or no rule set to bind to")
+    suite = await test_case_service.get_suite(str(suite.id), db)
+    rule_set = await rule_service.get_rule_set(str(suite.rule_set_id), db)
+    return await _build_suite_response(suite, rule_set.name if rule_set else None, db)
+
+
+@router.post("/{suite_id}/execute", response_model=SuiteExecutionResponse)
+async def execute_test_suite(
+    suite_id: str,
+    body: ExecuteSuiteRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Run every test case in this suite against a LiveRuleVersion's
+    rules using each test case's pre-resolved matched_loan_ids.
+
+    Returns a report comparing each test case's expected_decision to
+    the actual decisions the rules produce when applied to the
+    matched loans. Useful for "did my BRD's intent actually land
+    once it merged into the live repo?"
+    """
+    try:
+        report = await execute_suite_against_version(
+            db,
+            suite_id=_uuid.UUID(suite_id),
+            version_id=_uuid.UUID(body.version_id),
+        )
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+    return SuiteExecutionResponse(**report)
 
 
 async def _build_suite_response(suite, rule_set_name: str | None, db: AsyncSession) -> TestCaseSuiteResponse:

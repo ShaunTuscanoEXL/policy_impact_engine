@@ -10,6 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.models.test_case import TestCaseSuite, TestCase, TestCaseCategory
 from app.models.rule import RuleSet, Rule
 from app.models.brd import BrdDocument
+from app.models.live_repo import LiveRuleVersion
 from app.schemas.rule import RuleDefinition, Condition, Action
 from app.pipeline.test_case_generator import generate_test_cases, suggest_counts
 from app.services.customer_matcher import match_customers
@@ -58,6 +59,29 @@ async def suggest_test_counts(rule_set_id: str, db: AsyncSession) -> dict | None
 
     rule_defs = _rules_to_defs(rule_set.rules)
     return suggest_counts(rule_defs)
+
+
+def _snapshot_rules_to_defs(snapshot: list[dict]) -> list[RuleDefinition]:
+    """Convert the rule_snapshot list (dicts) on a LiveRuleVersion to
+    RuleDefinition objects so the existing generator can operate on them
+    just like it does on RuleSet.rules."""
+    rule_defs: list[RuleDefinition] = []
+    for r in snapshot or []:
+        if not isinstance(r, dict):
+            continue
+        conditions = r.get("conditions") or []
+        actions = r.get("actions") or []
+        rt_raw = r.get("rule_type") or "ELIGIBILITY"
+        rule_defs.append(RuleDefinition(
+            rule_id=str(r.get("rule_id") or r.get("id") or "RULE"),
+            rule_name=str(r.get("rule_name") or r.get("rule_id") or "Rule"),
+            description=str(r.get("description") or ""),
+            rule_type=rt_raw if hasattr(rt_raw, "value") else rt_raw,
+            conditions=[Condition(**c) if isinstance(c, dict) else c for c in conditions],
+            actions=[Action(**a) if isinstance(a, dict) else a for a in actions],
+            priority=int(r.get("priority", 0)),
+        ))
+    return rule_defs
 
 
 async def generate_and_save(
@@ -119,21 +143,124 @@ async def generate_and_save(
     return suite
 
 
+async def generate_from_version(
+    version_id: str,
+    counts: dict,
+    db: AsyncSession,
+    max_matches: int = 10,
+) -> TestCaseSuite | None:
+    """Generate a test case suite from a LiveRuleVersion's snapshot.
+
+    The version's snapshot is the authoritative live rule set at that
+    version, so this produces tests that exercise exactly what the
+    repository says is "current" — independent of any specific BRD's
+    rule_set.
+
+    The TestCaseSuite still requires a rule_set_id (existing schema).
+    We bind the suite to whichever rule_set the version originated from
+    (its source_brd_id's latest rule_set), or to the most recent
+    rule_set if no source_brd is recorded.
+    """
+    import uuid as _uuid
+    try:
+        version_uuid = _uuid.UUID(str(version_id))
+    except (TypeError, ValueError):
+        return None
+    version = await db.get(LiveRuleVersion, version_uuid)
+    if version is None:
+        return None
+
+    # Find a rule_set to bind the suite to (existing schema requires it)
+    rs_q = await db.execute(
+        select(RuleSet).order_by(RuleSet.created_at.desc()).limit(1)
+    )
+    if version.source_brd_id is not None:
+        bound_q = await db.execute(
+            select(RuleSet)
+            .where(RuleSet.brd_document_id == version.source_brd_id)
+            .order_by(RuleSet.created_at.desc())
+            .limit(1)
+        )
+        bound = bound_q.scalar_one_or_none() or rs_q.scalar_one_or_none()
+    else:
+        bound = rs_q.scalar_one_or_none()
+    if bound is None:
+        return None
+
+    rule_defs = _snapshot_rules_to_defs(list(version.rule_snapshot or []))
+    output = generate_test_cases(
+        rules=rule_defs,
+        rule_set_id=str(bound.id),
+        **counts,
+    )
+
+    suite = TestCaseSuite(
+        rule_set_id=bound.id,
+        total_cases=output.total_cases,
+        cases_by_category=output.cases_by_category,
+        coverage_stats={
+            **(output.coverage_stats or {}),
+            "source_live_version_id": str(version.id),
+            "source_live_version_number": version.version_number,
+        },
+        suggested_counts=output.suggested_counts,
+    )
+    db.add(suite)
+    await db.flush()
+
+    for tc in output.test_cases:
+        matched_ids: list[str] = []
+        try:
+            async with db.begin_nested():
+                matched = await match_customers(tc.filter_logic, db, limit=max_matches)
+                matched_ids = [m["loan_application_id"] for m in matched]
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Customer matching failed for %s: %s", tc.test_case_id, e)
+
+        db.add(TestCase(
+            suite_id=suite.id,
+            test_case_id=tc.test_case_id,
+            description=tc.description,
+            source_rule_ids=tc.source_rule_ids,
+            category=TestCaseCategory(tc.category.value),
+            input_values=tc.input_values,
+            filter_logic=tc.filter_logic,
+            expected_outcome=tc.expected_outcome,
+            rationale=tc.rationale,
+            matched_loan_ids=matched_ids,
+            match_count=len(matched_ids),
+        ))
+
+    await db.commit()
+    await db.refresh(suite)
+    return suite
+
+
 async def get_suite(suite_id: str, db: AsyncSession):
     """Get a test case suite with all test cases."""
+    import uuid as _uuid
+    try:
+        suite_uuid = _uuid.UUID(str(suite_id))
+    except (TypeError, ValueError):
+        return None
     result = await db.execute(
         select(TestCaseSuite)
         .options(selectinload(TestCaseSuite.test_cases))
-        .where(TestCaseSuite.id == suite_id)
+        .where(TestCaseSuite.id == suite_uuid)
     )
     return result.scalar_one_or_none()
 
 
 async def get_suites_by_rule_set(rule_set_id: str, db: AsyncSession):
     """Get all test suites for a rule set."""
+    import uuid as _uuid
+    try:
+        rs_uuid = _uuid.UUID(str(rule_set_id))
+    except (TypeError, ValueError):
+        return []
     result = await db.execute(
         select(TestCaseSuite)
-        .where(TestCaseSuite.rule_set_id == rule_set_id)
+        .where(TestCaseSuite.rule_set_id == rs_uuid)
         .order_by(TestCaseSuite.created_at.desc())
     )
     return result.scalars().all()
@@ -167,10 +294,15 @@ async def list_suites(db: AsyncSession):
 
 async def delete_suite(suite_id: str, db: AsyncSession) -> bool:
     """Delete a test case suite."""
+    import uuid as _uuid
+    try:
+        suite_uuid = _uuid.UUID(str(suite_id))
+    except (TypeError, ValueError):
+        return False
     result = await db.execute(
         select(TestCaseSuite)
         .options(selectinload(TestCaseSuite.test_cases))
-        .where(TestCaseSuite.id == suite_id)
+        .where(TestCaseSuite.id == suite_uuid)
     )
     suite = result.scalar_one_or_none()
     if not suite:

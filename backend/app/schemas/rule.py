@@ -43,6 +43,8 @@ class RuleResponse(BaseModel):
     rule_name: str
     description: str | None
     rule_type: str
+    subsystem: str | None = None
+    canonical_key: str | None = None
     conditions: list[dict]
     actions: list[dict]
     priority: int

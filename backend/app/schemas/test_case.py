@@ -95,3 +95,42 @@ class TestCaseSuiteListResponse(BaseModel):
     created_at: str
 
     model_config = {"from_attributes": True}
+
+
+# ── Slice 4 (wire-ups) — generate from a LiveRuleVersion ────────────────
+
+class GenerateFromVersionRequest(BaseModel):
+    version_id: str
+    positive_count: int | None = None
+    negative_count: int | None = None
+    boundary_count: int | None = None
+    edge_count: int | None = None
+    interaction_count: int | None = None
+    max_matches: int = 10
+
+
+# ── Slice 4 — execute a suite vs a live version, return a report ────────
+
+class ExecuteSuiteRequest(BaseModel):
+    version_id: str
+
+
+class TestCaseExecutionReport(BaseModel):
+    test_case_id: str
+    category: str
+    expected_decision: str
+    matched_loan_count: int
+    actual_distribution: dict[str, int]
+    matches_expected: int
+    deviates_from_expected: int
+    first_deviation_reason: str | None
+
+
+class SuiteExecutionResponse(BaseModel):
+    suite_id: str
+    version_id: str
+    version_number: int
+    total_cases: int
+    cases_evaluated: int
+    results: list[TestCaseExecutionReport]
+    summary: dict[str, Any]
