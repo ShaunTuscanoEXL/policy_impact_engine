@@ -245,11 +245,24 @@ async def test_execute_suite_against_version_reports_real_decisions(client, db_s
     # we seeded matching ones on both sides of the DTI cap.
     total_evaluated = sum(item["matched_loan_count"] for item in report["results"])
     assert total_evaluated > 0
-    # And every decision token in actual_distribution is a real engine
-    # decision (REJECTED / APPROVED / FLAGGED), not a placeholder.
+    # And every outcome token in actual_distribution is one of the
+    # vocabularies the executor projects into:
+    # - engine decisions (APPROVED / REJECTED / FLAGGED) for tests that
+    #   assert a final decision and don't name a source rule
+    # - RULE_FIRED / RULE_NOT_FIRED for POSITIVE tests (assertion is
+    #   "did the source rule fire" — robust to other terminal rules
+    #   in the snapshot stamping a different final decision)
+    # - NOT_TRIGGERED / TRIGGERED for NEG/BND tests
+    # - ALL_TRIGGERED / PARTIAL_TRIGGERED for INTERACTION tests
+    valid = {
+        "APPROVED", "REJECTED", "FLAGGED",
+        "RULE_FIRED", "RULE_NOT_FIRED",
+        "NOT_TRIGGERED", "TRIGGERED",
+        "ALL_TRIGGERED", "PARTIAL_TRIGGERED",
+    }
     for item in report["results"]:
         for decision_token in item["actual_distribution"].keys():
-            assert decision_token in {"APPROVED", "REJECTED", "FLAGGED"}
+            assert decision_token in valid, f"Unexpected outcome: {decision_token}"
 
 
 # ── 5. End-to-end multi-stage flow (the "linked up" headline) ──────────

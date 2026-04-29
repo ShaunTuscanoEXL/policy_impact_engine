@@ -122,8 +122,20 @@ class TestCaseExecutionReport(BaseModel):
     test_case_id: str
     category: str
     expected_decision: str
+    # The token actually compared against per-loan. For NEG / BND-at-threshold
+    # it's NOT_TRIGGERED; for POSITIVE / BND-above-threshold / EDGE-fires
+    # it's RULE_FIRED; for INTERACTION it's ALL_TRIGGERED; otherwise the
+    # engine decision verbatim.
+    target_outcome: str | None = None
     matched_loan_count: int
+    # Distribution in the assertion vocabulary
+    # (RULE_FIRED / NOT_TRIGGERED / engine decision token).
     actual_distribution: dict[str, int]
+    # Distribution of the engine's actual final decision per loan — useful
+    # when the assertion vocabulary hides what really happened (e.g. POSITIVE
+    # passes because the source rule fired, but the engine still REJECTED
+    # because another terminal rule overrode it).
+    engine_decision_distribution: dict[str, int] | None = None
     matches_expected: int
     deviates_from_expected: int
     first_deviation_reason: str | None

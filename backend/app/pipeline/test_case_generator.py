@@ -481,6 +481,49 @@ def _build_input_values(rule: RuleDefinition, overrides: dict | None = None) -> 
     return inputs
 
 
+_INVERTED_OP = {
+    ">":  "<=",  "gt":  "<=",
+    ">=": "<",   "gte": "<",
+    "<":  ">=",  "lt":  ">=",
+    "<=": ">",   "lte": ">",
+    "==": "!=",  "eq":  "!=",
+    "=":  "!=",
+    "!=": "==",  "ne":  "==",
+}
+
+
+def _input_satisfies_cond(cond: Condition, input_val) -> bool:
+    """Return True if `input_val` makes `cond` evaluate truthfully."""
+    if input_val is None:
+        return False
+    op = (cond.operator or "").lower().strip()
+    target = cond.value
+    if op in (">", "gt"):
+        return _is_numeric(input_val) and _is_numeric(target) and input_val > target
+    if op in (">=", "gte"):
+        return _is_numeric(input_val) and _is_numeric(target) and input_val >= target
+    if op in ("<", "lt"):
+        return _is_numeric(input_val) and _is_numeric(target) and input_val < target
+    if op in ("<=", "lte"):
+        return _is_numeric(input_val) and _is_numeric(target) and input_val <= target
+    if op in ("==", "=", "eq"):
+        if _is_numeric(input_val) and _is_numeric(target):
+            return float(input_val) == float(target)
+        return str(input_val) == str(target)
+    if op in ("!=", "ne"):
+        if _is_numeric(input_val) and _is_numeric(target):
+            return float(input_val) != float(target)
+        return str(input_val) != str(target)
+    if op == "between" and isinstance(target, (list, tuple)) and len(target) == 2:
+        lo, hi = target
+        return _is_numeric(input_val) and _is_numeric(lo) and _is_numeric(hi) and lo <= input_val <= hi
+    if op == "in" and isinstance(target, (list, tuple)):
+        return input_val in target
+    if op in ("not_in", "not in") and isinstance(target, (list, tuple)):
+        return input_val not in target
+    return False
+
+
 def _build_filters(conditions: list[tuple[Condition, str]], input_values: dict, keep_range_operators: bool = True) -> list[dict]:
     """Build filter conditions from resolved conditions and input values.
 
@@ -489,56 +532,94 @@ def _build_filters(conditions: list[tuple[Condition, str]], input_values: dict, 
         input_values: The concrete input values for this test case.
         keep_range_operators: If True (default for positive tests), keep between/in/not_in
             with their original range values for customer matching.
-            If False (for negative/boundary tests where a value is overridden),
-            check whether the input value is INSIDE or OUTSIDE the original range
-            and adjust the filter accordingly.
+            If False (negative/boundary/edge tests where the input value is
+            chosen to VIOLATE the rule), the operator is INVERTED for scalar
+            comparisons so the filter selects loans where the rule wouldn't
+            fire — instead of selecting loans where the rule fires
+            (which would always make a "RULE_NOT_TRIGGERED" assertion fail).
     """
     filters = []
     for cond, path in conditions:
         input_val = input_values.get(cond.field)
+        input_satisfies = _input_satisfies_cond(cond, input_val)
+        # When `keep_range_operators=False` AND the test input violates
+        # the condition, we want the filter to select loans where the
+        # rule wouldn't fire (so a "RULE_NOT_TRIGGERED" assertion has
+        # something to assert against). That means using the INVERTED
+        # operator at the rule's threshold.
+        invert_for_negative = (not keep_range_operators) and (not input_satisfies)
 
+        # ── between ────────────────────────────────────────────────
         if cond.operator == "between" and isinstance(cond.value, (list, tuple)) and len(cond.value) == 2:
             lo, hi = cond.value
-            # Check if the test input is inside or outside the range
-            if keep_range_operators and _is_numeric(input_val) and _is_numeric(lo) and lo <= input_val <= hi:
-                # Input is within range — use original between for customer matching
-                filter_val = cond.value
-                desc = f"{cond.field} between {lo} and {hi}"
+            if not invert_for_negative and _is_numeric(input_val) and _is_numeric(lo) and lo <= input_val <= hi:
+                # Positive (input inside range) — keep `between` for matching
+                filters.append(FilterCondition(
+                    field_name=cond.field, json_path=path,
+                    operator="between", value=cond.value,
+                    description=f"{cond.field} between {lo} and {hi}",
+                ).to_dict())
             elif _is_numeric(input_val):
-                # Input is outside range (negative/boundary test) — use point filter
-                # to find customers matching the violating value
+                # Negative/boundary outside range — point filter on the
+                # violating side at the rule's threshold (more permissive
+                # than filtering on input_val, finds more matching loans).
                 if input_val < lo:
-                    filter_val = input_val
-                    desc = f"{cond.field} <= {input_val}"
                     filters.append(FilterCondition(
                         field_name=cond.field, json_path=path,
-                        operator="<=", value=filter_val, description=desc,
+                        operator="<", value=lo,
+                        description=f"{cond.field} < {lo}",
                     ).to_dict())
-                    continue
                 else:
-                    filter_val = input_val
-                    desc = f"{cond.field} >= {input_val}"
                     filters.append(FilterCondition(
                         field_name=cond.field, json_path=path,
-                        operator=">=", value=filter_val, description=desc,
+                        operator=">", value=hi,
+                        description=f"{cond.field} > {hi}",
                     ).to_dict())
-                    continue
             else:
-                filter_val = cond.value
-                desc = f"{cond.field} between {lo} and {hi}"
-        elif cond.operator in ("in", "not_in") and isinstance(cond.value, (list, tuple)):
-            filter_val = cond.value
-            desc = f"{cond.field} {cond.operator} [{', '.join(str(v) for v in cond.value)}]"
-        else:
-            filter_val = input_val if input_val is not None else cond.value
-            desc = f"{cond.field} {cond.operator} {filter_val}"
+                # Non-numeric input (shouldn't happen for between) — fallback
+                filters.append(FilterCondition(
+                    field_name=cond.field, json_path=path,
+                    operator="between", value=cond.value,
+                    description=f"{cond.field} between {lo} and {hi}",
+                ).to_dict())
+            continue
 
+        # ── in / not_in ────────────────────────────────────────────
+        if cond.operator in ("in", "not_in") and isinstance(cond.value, (list, tuple)):
+            if invert_for_negative:
+                # Flip in ↔ not_in
+                flipped = "not_in" if cond.operator == "in" else "in"
+                filters.append(FilterCondition(
+                    field_name=cond.field, json_path=path,
+                    operator=flipped, value=cond.value,
+                    description=f"{cond.field} {flipped} [{', '.join(str(v) for v in cond.value)}]",
+                ).to_dict())
+            else:
+                filters.append(FilterCondition(
+                    field_name=cond.field, json_path=path,
+                    operator=cond.operator, value=cond.value,
+                    description=f"{cond.field} {cond.operator} [{', '.join(str(v) for v in cond.value)}]",
+                ).to_dict())
+            continue
+
+        # ── scalar comparison (>, >=, <, <=, ==, !=) ───────────────
+        if invert_for_negative:
+            # Use the INVERTED operator at the rule's threshold so the
+            # filter selects loans where the rule wouldn't fire. This
+            # is the headline fix — previously the filter used the
+            # rule's operator, which selected loans where the rule WOULD
+            # fire and made every "RULE_NOT_TRIGGERED" assertion deviate.
+            filter_op = _INVERTED_OP.get(cond.operator, cond.operator)
+            filter_val = cond.value
+        else:
+            filter_op = cond.operator
+            filter_val = input_val if input_val is not None else cond.value
         filters.append(FilterCondition(
             field_name=cond.field,
             json_path=path,
-            operator=cond.operator,
+            operator=filter_op,
             value=filter_val,
-            description=desc,
+            description=f"{cond.field} {filter_op} {filter_val}",
         ).to_dict())
     return filters
 

@@ -263,7 +263,13 @@ export function SuiteExecutionPanel({ report, executedAt }: SuiteExecutionPanelP
                       {r.matched_loan_count.toLocaleString()}
                     </TableCell>
                     <TableCell className="font-mono text-[11px] text-muted-foreground">
-                      {formatDistribution(r.actual_distribution)}
+                      <div>{formatDistribution(r.actual_distribution)}</div>
+                      {r.engine_decision_distribution &&
+                        Object.keys(r.engine_decision_distribution).length > 0 && (
+                          <div className="mt-0.5 text-[10px] opacity-60">
+                            engine: {formatDistribution(r.engine_decision_distribution)}
+                          </div>
+                        )}
                     </TableCell>
                     <TableCell className="text-xs">
                       {r.deviates_from_expected > 0 ? (

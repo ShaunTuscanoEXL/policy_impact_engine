@@ -294,8 +294,19 @@ export interface TestCaseExecutionReport {
   test_case_id: string;
   category: string;
   expected_decision: string;
+  /** The token actually compared against per-loan. For NEG/BND it's
+   *  NOT_TRIGGERED, for POSITIVE it's RULE_FIRED, for INTERACTION it's
+   *  ALL_TRIGGERED, otherwise it's the engine decision verbatim. */
+  target_outcome?: string;
   matched_loan_count: number;
+  /** Distribution in the assertion vocabulary
+   *  (RULE_FIRED / NOT_TRIGGERED / engine decision). */
   actual_distribution: Record<string, number>;
+  /** Distribution of the engine's actual final decision per loan —
+   *  useful when the assertion vocabulary hides what really happened
+   *  (e.g. POSITIVE test passes because the source rule fired, but the
+   *  engine still REJECTED because another terminal rule overrode it). */
+  engine_decision_distribution?: Record<string, number>;
   matches_expected: number;
   deviates_from_expected: number;
   first_deviation_reason: string | null;
