@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import api from "@/lib/api";
 import type {
   ImpactRun,
@@ -66,6 +67,11 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 const NO_BASE_VALUE = "__NONE__";
+// Sentinel "nothing picked yet" values so the Selects stay controlled
+// throughout their lifetime. Base UI errors loudly when a Select switches
+// between undefined (uncontrolled) and a string (controlled).
+const UNSET_REPO = "__unset_repo__";
+const UNSET_CANDIDATE = "__unset_candidate__";
 
 function formatDate(s: string): string {
   return new Date(s).toLocaleDateString("en-US", {
@@ -98,9 +104,9 @@ export default function ImpactRunsPage() {
   // Create dialog state
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [selectedRepoId, setSelectedRepoId] = useState<string>("");
+  const [selectedRepoId, setSelectedRepoId] = useState<string>(UNSET_REPO);
   const [baseVersionId, setBaseVersionId] = useState<string>(NO_BASE_VALUE);
-  const [candidateVersionId, setCandidateVersionId] = useState<string>("");
+  const [candidateVersionId, setCandidateVersionId] = useState<string>(UNSET_CANDIDATE);
   const [createdBy, setCreatedBy] = useState("");
   const [versionsLoading, setVersionsLoading] = useState(false);
 
@@ -152,33 +158,36 @@ export default function ImpactRunsPage() {
 
   const handleRepoChange = useCallback(
     (val: string | null) => {
-      const repoId = val || "";
+      const repoId = val && val !== UNSET_REPO ? val : UNSET_REPO;
       setSelectedRepoId(repoId);
       setBaseVersionId(NO_BASE_VALUE);
-      setCandidateVersionId("");
-      if (repoId) loadVersionsFor(repoId);
+      setCandidateVersionId(UNSET_CANDIDATE);
+      if (repoId !== UNSET_REPO) loadVersionsFor(repoId);
     },
     [loadVersionsFor]
   );
 
   const repoVersions = useMemo(
-    () => (selectedRepoId ? versionsByRepo[selectedRepoId] || [] : []),
+    () =>
+      selectedRepoId !== UNSET_REPO
+        ? versionsByRepo[selectedRepoId] || []
+        : [],
     [selectedRepoId, versionsByRepo]
   );
 
   const resetForm = () => {
-    setSelectedRepoId("");
+    setSelectedRepoId(UNSET_REPO);
     setBaseVersionId(NO_BASE_VALUE);
-    setCandidateVersionId("");
+    setCandidateVersionId(UNSET_CANDIDATE);
     setCreatedBy("");
   };
 
   const handleCreate = useCallback(async () => {
-    if (!selectedRepoId) {
+    if (selectedRepoId === UNSET_REPO) {
       toast.error("Select a repository.");
       return;
     }
-    if (!candidateVersionId) {
+    if (candidateVersionId === UNSET_CANDIDATE) {
       toast.error("Select a candidate version.");
       return;
     }
@@ -232,6 +241,16 @@ export default function ImpactRunsPage() {
     [versionsByRepo]
   );
 
+  const repoLabelFor = useCallback(
+    (repoId: string) => {
+      const r = repos.find((x) => x.id === repoId);
+      if (!r) return repoId.slice(0, 8);
+      const tags = [r.product, r.jurisdiction].filter(Boolean).join(" · ");
+      return tags ? `${r.name} (${tags})` : r.name;
+    },
+    [repos]
+  );
+
   // Eagerly load repo versions for all runs, so the table shows version numbers.
   useEffect(() => {
     const uniqueRepos = Array.from(new Set(runs.map((r) => r.repository_id)));
@@ -281,11 +300,24 @@ export default function ImpactRunsPage() {
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium">Repository</label>
                     <Select
-                      value={selectedRepoId || undefined}
+                      value={selectedRepoId}
                       onValueChange={handleRepoChange}
                     >
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select repository…" />
+                        {/* Bypass SelectValue entirely when unset — Base UI
+                            otherwise falls back to rendering the raw sentinel
+                            value as text. */}
+                        <span
+                          className={
+                            selectedRepoId === UNSET_REPO
+                              ? "text-muted-foreground"
+                              : ""
+                          }
+                        >
+                          {selectedRepoId === UNSET_REPO
+                            ? "Select repository…"
+                            : repoLabelFor(selectedRepoId)}
+                        </span>
                       </SelectTrigger>
                       <SelectContent>
                         {repos.length === 0 ? (
@@ -313,10 +345,14 @@ export default function ImpactRunsPage() {
                         onValueChange={(v) =>
                           setBaseVersionId(v || NO_BASE_VALUE)
                         }
-                        disabled={!selectedRepoId || versionsLoading}
+                        disabled={selectedRepoId === UNSET_REPO || versionsLoading}
                       >
                         <SelectTrigger className="w-full">
-                          <SelectValue />
+                          <span>
+                            {baseVersionId === NO_BASE_VALUE
+                              ? "None (empty baseline)"
+                              : versionNumberFor(selectedRepoId, baseVersionId)}
+                          </span>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value={NO_BASE_VALUE}>
@@ -336,12 +372,24 @@ export default function ImpactRunsPage() {
                         Candidate Version
                       </label>
                       <Select
-                        value={candidateVersionId || undefined}
-                        onValueChange={(v) => setCandidateVersionId(v || "")}
-                        disabled={!selectedRepoId || versionsLoading}
+                        value={candidateVersionId}
+                        onValueChange={(v) =>
+                          setCandidateVersionId(v || UNSET_CANDIDATE)
+                        }
+                        disabled={selectedRepoId === UNSET_REPO || versionsLoading}
                       >
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Pick…" />
+                          <span
+                            className={
+                              candidateVersionId === UNSET_CANDIDATE
+                                ? "text-muted-foreground"
+                                : ""
+                            }
+                          >
+                            {candidateVersionId === UNSET_CANDIDATE
+                              ? "Pick…"
+                              : versionNumberFor(selectedRepoId, candidateVersionId)}
+                          </span>
                         </SelectTrigger>
                         <SelectContent>
                           {repoVersions.length === 0 ? (
@@ -448,9 +496,13 @@ export default function ImpactRunsPage() {
                         {formatDate(run.created_at)}
                       </TableCell>
                       <TableCell>
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {run.repository_id.slice(0, 8)}
-                        </span>
+                        <Link
+                          href={`/live-repo/${run.repository_id}`}
+                          className="text-sm hover:text-primary hover:underline"
+                          title={run.repository_id}
+                        >
+                          {repoLabelFor(run.repository_id)}
+                        </Link>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
@@ -524,9 +576,13 @@ export default function ImpactRunsPage() {
                     <div className="text-xs text-muted-foreground">
                       Repository
                     </div>
-                    <div className="font-mono text-xs">
-                      {openRun.repository_id}
-                    </div>
+                    <Link
+                      href={`/live-repo/${openRun.repository_id}`}
+                      className="text-sm font-medium hover:text-primary hover:underline"
+                      title={openRun.repository_id}
+                    >
+                      {repoLabelFor(openRun.repository_id)}
+                    </Link>
                   </div>
                   <div>
                     <div className="text-xs text-muted-foreground">Loans</div>

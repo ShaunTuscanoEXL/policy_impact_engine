@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
-import type { BrdDocument, BrdWorkflow, MergeProposal } from "@/lib/types";
+import type {
+  BrdDocument,
+  BrdWorkflow,
+  LiveRepository,
+  MergeProposal,
+} from "@/lib/types";
 import { toast } from "sonner";
 import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
@@ -31,6 +36,9 @@ interface PendingProposalRow {
   brdId: string;
   brdFilename: string;
   repositoryId: string;
+  repositoryName: string;
+  repositoryProduct: string;
+  repositoryJurisdiction: string;
   baseVersion: number;
   summary: string | null;
   counts_by_severity: Record<string, number>;
@@ -43,7 +51,15 @@ export default function MergeWorkbenchListPage() {
   const fetchPending = useCallback(async () => {
     setLoading(true);
     try {
-      const { data: brds } = await api.get<BrdDocument[]>("/brds");
+      // Fetch BRDs and repos in parallel — repo lookup lets us render
+      // names instead of UUID prefixes in the Repository column.
+      const [{ data: brds }, { data: repos }] = await Promise.all([
+        api.get<BrdDocument[]>("/brds"),
+        api.get<LiveRepository[]>("/live-repo"),
+      ]);
+      const repoById = new Map<string, LiveRepository>(
+        repos.map((r) => [r.id, r])
+      );
 
       const workflows = await Promise.all(
         brds.map(async (brd) => {
@@ -68,27 +84,29 @@ export default function MergeWorkbenchListPage() {
       const detailed = await Promise.all(
         pending.map(async ({ brd, workflow }) => {
           const mp = workflow!.merge_proposal!;
+          const repo = repoById.get(mp.repository_id);
+          const base: Omit<PendingProposalRow, "counts_by_severity"> = {
+            proposalId: mp.id,
+            brdId: brd.id,
+            brdFilename: brd.filename,
+            repositoryId: mp.repository_id,
+            repositoryName: repo?.name ?? "(unknown repository)",
+            repositoryProduct: repo?.product ?? "",
+            repositoryJurisdiction: repo?.jurisdiction ?? "",
+            baseVersion: mp.base_version,
+            summary: mp.summary,
+          };
           try {
             const { data } = await api.get<MergeProposal>(
               `/merge-proposal/${mp.id}`
             );
             return {
-              proposalId: mp.id,
-              brdId: brd.id,
-              brdFilename: brd.filename,
-              repositoryId: mp.repository_id,
-              baseVersion: mp.base_version,
-              summary: mp.summary,
+              ...base,
               counts_by_severity: data.counts_by_severity,
             } as PendingProposalRow;
           } catch {
             return {
-              proposalId: mp.id,
-              brdId: brd.id,
-              brdFilename: brd.filename,
-              repositoryId: mp.repository_id,
-              baseVersion: mp.base_version,
-              summary: mp.summary,
+              ...base,
               counts_by_severity: {},
             } as PendingProposalRow;
           }
@@ -192,9 +210,21 @@ export default function MergeWorkbenchListPage() {
                         <TableCell>
                           <Link
                             href={`/live-repo/${row.repositoryId}`}
-                            className="text-xs font-mono text-primary hover:underline"
+                            className="group/repo inline-flex flex-col gap-0.5 text-sm hover:underline"
+                            title={row.repositoryId}
                           >
-                            {row.repositoryId.slice(0, 8)}
+                            <span className="font-medium text-foreground group-hover/repo:text-primary">
+                              {row.repositoryName}
+                            </span>
+                            {(row.repositoryProduct || row.repositoryJurisdiction) && (
+                              <span className="text-[11px] text-muted-foreground">
+                                {row.repositoryProduct}
+                                {row.repositoryProduct && row.repositoryJurisdiction
+                                  ? " · "
+                                  : ""}
+                                {row.repositoryJurisdiction}
+                              </span>
+                            )}
                           </Link>
                         </TableCell>
                         <TableCell>

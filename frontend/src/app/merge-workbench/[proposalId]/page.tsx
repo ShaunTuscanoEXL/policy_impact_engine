@@ -4,7 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
-import type { MergeAction, MergeProposal, MergeItem, MergeApplyResult } from "@/lib/types";
+import type {
+  BrdDocument,
+  LiveRepository,
+  MergeAction,
+  MergeApplyResult,
+  MergeItem,
+  MergeProposal,
+} from "@/lib/types";
 import { toast } from "sonner";
 import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
@@ -219,6 +226,8 @@ export default function MergeWorkbenchDetailPage() {
   const [applyOpen, setApplyOpen] = useState(false);
   const [decidedBy, setDecidedBy] = useState("");
   const [applying, setApplying] = useState(false);
+  const [repo, setRepo] = useState<LiveRepository | null>(null);
+  const [brd, setBrd] = useState<BrdDocument | null>(null);
 
   const fetchProposal = useCallback(async () => {
     try {
@@ -232,6 +241,15 @@ export default function MergeWorkbenchDetailPage() {
           return acc;
         }, {})
       );
+
+      // Resolve repo + BRD names so the header shows something readable
+      // instead of UUID prefixes.
+      const [repoResp, brdResp] = await Promise.all([
+        api.get<LiveRepository>(`/live-repo/${data.repository_id}`).catch(() => null),
+        api.get<BrdDocument>(`/brds/${data.source_brd_id}`).catch(() => null),
+      ]);
+      if (repoResp) setRepo(repoResp.data);
+      if (brdResp) setBrd(brdResp.data);
     } catch {
       toast.error("Failed to load merge proposal.");
       router.push("/merge-workbench");
@@ -406,16 +424,22 @@ export default function MergeWorkbenchDetailPage() {
                 <Link
                   href={`/brds/${proposal.source_brd_id}`}
                   className="inline-flex items-center gap-1.5 hover:text-primary hover:underline"
+                  title={proposal.source_brd_id}
                 >
                   <FileText className="size-4" />
-                  Source BRD: {proposal.source_brd_id.slice(0, 8)}
+                  {brd?.filename ?? `BRD ${proposal.source_brd_id.slice(0, 8)}`}
                 </Link>
                 <Link
                   href={`/live-repo/${proposal.repository_id}`}
                   className="inline-flex items-center gap-1.5 hover:text-primary hover:underline"
+                  title={proposal.repository_id}
                 >
                   <GitBranch className="size-4" />
-                  Repo: {proposal.repository_id.slice(0, 8)}
+                  {repo
+                    ? `${repo.name}${repo.product ? ` · ${repo.product}` : ""}${
+                        repo.jurisdiction ? ` · ${repo.jurisdiction}` : ""
+                      }`
+                    : `Repo ${proposal.repository_id.slice(0, 8)}`}
                 </Link>
                 <span>Base: v{proposal.base_version}</span>
               </div>
