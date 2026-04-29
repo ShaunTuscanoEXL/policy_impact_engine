@@ -1,9 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { CheckCircle, Circle, Loader2, Play, ArrowRight, Download } from "lucide-react";
+import {
+  CheckCircle,
+  Circle,
+  Loader2,
+  Play,
+  ArrowRight,
+  Download,
+  GitMerge,
+  Activity,
+  AlertTriangle,
+  FlaskConical,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import type { BrdWorkflow } from "@/lib/types";
 
@@ -50,8 +62,15 @@ function deriveSteps(
   onCountChange?: (category: keyof TestCaseCounts, value: number) => void,
   maxMatches?: number,
   onMaxMatchesChange?: (value: number) => void,
+  onRunImpact?: () => void,
+  impactRunning?: boolean,
+  onExecuteSuite?: () => void,
+  suiteExecuting?: boolean,
 ): Step[] {
   const rs = workflow?.rule_set;
+  const mp = workflow?.merge_proposal;
+  const lv = workflow?.live_repo_version;
+  const ir = workflow?.impact_run;
 
   const hasRuleSet = !!rs;
   const rulesApproved = rs?.status === "APPROVED";
@@ -113,7 +132,114 @@ function deriveSteps(
     });
   }
 
-  // Step 4: Generate Test Cases (with configurable counts)
+  // ── Step 4: Reconcile with Live Repo (Merge Workbench) ──────────────
+  // Auto-baselined repo (first BRD): merge_proposal.status === "APPLIED" + live_repo_version exists
+  // Subsequent BRDs land as "PENDING" → user opens workbench to resolve
+  if (lv && mp?.status === "APPLIED") {
+    const isBaseline = lv.parent_version_number === null || lv.parent_version_number === 0;
+    steps.push({
+      label: "Reconcile with Live Repo",
+      description: isBaseline
+        ? `Auto-baselined as v${lv.version_number} (first BRD against this repo)`
+        : `Applied as v${lv.version_number}${
+            mp.decided_by ? ` by ${mp.decided_by}` : ""
+          }`,
+      state: "completed",
+      href: `/live-repo/${lv.repository_id}`,
+      actionLabel: "View Repository",
+      customContent: mp.summary ? (
+        <p className="mt-1.5 text-[11px] text-muted-foreground">
+          <span className="font-medium text-foreground">Outcome:</span>{" "}
+          {mp.summary}
+        </p>
+      ) : null,
+    });
+  } else if (mp?.status === "PENDING") {
+    // PENDING proposal — user needs to review in the workbench
+    steps.push({
+      label: "Reconcile with Live Repo",
+      description:
+        mp.summary ?? `Pending review against base v${mp.base_version}`,
+      state: "active",
+      href: `/merge-workbench/${mp.id}`,
+      actionLabel: "Open Merge Workbench",
+      customContent: (
+        <div className="mt-1.5 inline-flex items-center gap-1.5">
+          <Badge
+            variant="outline"
+            className="bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400 text-[10px]"
+          >
+            <AlertTriangle className="size-3" />
+            Action required
+          </Badge>
+        </div>
+      ),
+    });
+  } else if (rulesApproved || hasRuleSet) {
+    steps.push({
+      label: "Reconcile with Live Repo",
+      description: "Merge proposal will be created automatically after extraction",
+      state: "pending",
+    });
+  } else {
+    steps.push({
+      label: "Reconcile with Live Repo",
+      description:
+        "Diff this BRD against the live US-PERSONAL repo for review and apply",
+      state: "pending",
+    });
+  }
+
+  // ── Step 5: Run Impact Analysis ─────────────────────────────────────
+  if (ir && ir.status === "COMPLETED") {
+    const summary = ir.summary;
+    const totalFlips = summary
+      ? Object.values(summary.decision_flips ?? {}).reduce(
+          (a, n) => a + n,
+          0
+        )
+      : 0;
+    steps.push({
+      label: "Run Impact Analysis",
+      description:
+        totalFlips > 0
+          ? `${totalFlips.toLocaleString()} loan${
+              totalFlips !== 1 ? "s" : ""
+            } changed decision (${(summary?.total_loans ?? 0).toLocaleString()} evaluated)`
+          : `No decisions changed across ${(summary?.total_loans ?? 0).toLocaleString()} loans`,
+      state: "completed",
+      href: `/impact-runs/${ir.id}`,
+      actionLabel: "View Impact",
+    });
+  } else if (ir && (ir.status === "RUNNING" || ir.status === "PENDING")) {
+    steps.push({
+      label: "Run Impact Analysis",
+      description: "Impact run in progress…",
+      state: "active",
+    });
+  } else if (lv && mp?.status === "APPLIED" && onRunImpact) {
+    const baseLabel =
+      lv.parent_version_number !== null && lv.parent_version_number !== undefined
+        ? `v${lv.parent_version_number} → v${lv.version_number}`
+        : `empty baseline → v${lv.version_number}`;
+    steps.push({
+      label: "Run Impact Analysis",
+      description: `Compare ${baseLabel} against the loan-record corpus`,
+      state: "active",
+      onAction: onRunImpact,
+      actionLabel: impactRunning ? "Running…" : "Run Impact",
+      actionLoading: impactRunning,
+    });
+  } else {
+    steps.push({
+      label: "Run Impact Analysis",
+      description:
+        "Available once the BRD is applied to the live repository",
+      state: "pending",
+    });
+  }
+
+  // Step 6: Generate Test Cases (with configurable counts)
   if (testCaseSuiteId) {
     steps.push({
       label: "Generate Test Cases",
@@ -182,7 +308,52 @@ function deriveSteps(
     });
   }
 
-  // Step 5: Export / Download
+  // ── Step 7: Execute Test Suite — scenario testing against the live
+  // version (per-test-case PASS/FAIL). Distinct from impact analysis,
+  // which is corpus-wide decision flips between two versions.
+  const lastExec = workflow?.test_case_suite?.last_execution;
+  if (lastExec && lastExec.cases_evaluated > 0) {
+    const passed = lastExec.matches_expected;
+    const failed = lastExec.deviates_from_expected;
+    steps.push({
+      label: "Execute Test Suite",
+      description: failed === 0
+        ? `All ${passed.toLocaleString()} matched-loan outcome${passed !== 1 ? "s" : ""} matched expectations${
+            lastExec.version_number ? ` (against v${lastExec.version_number})` : ""
+          }`
+        : `${passed.toLocaleString()} matched · ${failed.toLocaleString()} deviated${
+            lastExec.version_number ? ` (against v${lastExec.version_number})` : ""
+          }`,
+      state: "completed",
+      href: testCaseSuiteId ? `/test-suites/${testCaseSuiteId}` : undefined,
+      actionLabel: "View Results",
+    });
+  } else if (testCaseSuiteId && lv && mp?.status === "APPLIED" && onExecuteSuite) {
+    steps.push({
+      label: "Execute Test Suite",
+      description: `Run the ${testCaseCount ?? 0} generated test case${
+        (testCaseCount ?? 0) !== 1 ? "s" : ""
+      } against live v${lv.version_number} loans`,
+      state: "active",
+      onAction: onExecuteSuite,
+      actionLabel: suiteExecuting ? "Executing…" : "Execute Suite",
+      actionLoading: suiteExecuting,
+    });
+  } else if (testCaseSuiteId && (!lv || mp?.status !== "APPLIED")) {
+    steps.push({
+      label: "Execute Test Suite",
+      description: "Available once the BRD is applied to the live repository",
+      state: "pending",
+    });
+  } else {
+    steps.push({
+      label: "Execute Test Suite",
+      description: "Scenario testing — runs each test case against live rules",
+      state: "pending",
+    });
+  }
+
+  // Step 8: Export / Download
   if (testCaseSuiteId) {
     steps.push({
       label: "Export / Download",
@@ -228,6 +399,10 @@ interface WorkflowStepperProps {
   onCountChange?: (category: keyof TestCaseCounts, value: number) => void;
   maxMatches?: number;
   onMaxMatchesChange?: (value: number) => void;
+  onRunImpact?: () => void;
+  impactRunning?: boolean;
+  onExecuteSuite?: () => void;
+  suiteExecuting?: boolean;
 }
 
 export function WorkflowStepper({
@@ -242,6 +417,10 @@ export function WorkflowStepper({
   onCountChange,
   maxMatches,
   onMaxMatchesChange,
+  onRunImpact,
+  impactRunning,
+  onExecuteSuite,
+  suiteExecuting,
 }: WorkflowStepperProps) {
   const steps = deriveSteps(
     workflow,
@@ -254,7 +433,11 @@ export function WorkflowStepper({
     testCaseCounts,
     onCountChange,
     maxMatches,
-    onMaxMatchesChange
+    onMaxMatchesChange,
+    onRunImpact,
+    impactRunning,
+    onExecuteSuite,
+    suiteExecuting,
   );
 
   return (
@@ -307,6 +490,10 @@ export function WorkflowStepper({
                   <Loader2 className="mr-1.5 size-3.5 animate-spin" />
                 ) : step.label.includes("Export") ? (
                   <Download className="mr-1.5 size-3.5" />
+                ) : step.label.includes("Impact") ? (
+                  <Activity className="mr-1.5 size-3.5" />
+                ) : step.label.includes("Execute") ? (
+                  <FlaskConical className="mr-1.5 size-3.5" />
                 ) : (
                   <Play className="mr-1.5 size-3.5" />
                 )}
@@ -322,6 +509,11 @@ export function WorkflowStepper({
                 className="mt-2"
                 render={<Link href={step.href} />}
               >
+                {step.label.includes("Workbench")
+                  ? <GitMerge className="mr-1.5 size-3.5" />
+                  : step.label.includes("Impact")
+                    ? <Activity className="mr-1.5 size-3.5" />
+                    : null}
                 {step.actionLabel}
                 <ArrowRight className="ml-1.5 size-3.5" />
               </Button>

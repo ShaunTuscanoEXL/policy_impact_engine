@@ -1,0 +1,244 @@
+
+> frontend@0.1.0 dev
+> next dev
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://10.5.0.2:3000
+- Environments: .env.local
+
+✓ Starting...
+✓ Ready in 2.3s
+ GET / 200 in 2.0s (compile: 1685ms, render: 315ms)
+ GET / 200 in 71ms (compile: 9ms, render: 62ms)
+ GET /brds 200 in 163ms (compile: 137ms, render: 25ms)
+ GET / 200 in 19ms (compile: 4ms, render: 14ms)
+ GET /brds 200 in 248ms (compile: 86ms, render: 163ms)
+ GET /loan-records 200 in 206ms (compile: 183ms, render: 23ms)
+ GET /test-suites 200 in 89ms (compile: 71ms, render: 18ms)
+ GET /live-repo 200 in 890ms (compile: 864ms, render: 26ms)
+ GET /merge-workbench 200 in 429ms (compile: 401ms, render: 29ms)
+ GET /impact-runs 200 in 566ms (compile: 548ms, render: 19ms)
+ GET /loan-records 200 in 39ms (compile: 10ms, render: 29ms)
+ GET /brds 200 in 20ms (compile: 5ms, render: 16ms)
+ GET /brds/52fe283c-8c84-4755-9ab0-4aa559c6604a 200 in 640ms (compile: 616ms, render: 24ms)
+ GET /brds 200 in 158ms (compile: 36ms, render: 122ms)
+ GET /live-repo 200 in 16ms (compile: 3ms, render: 14ms)
+ GET /brds 200 in 16ms (compile: 3ms, render: 13ms)
+ GET /live-repo 200 in 28ms (compile: 4ms, render: 24ms)
+ GET / 200 in 15ms (compile: 3ms, render: 12ms)
+ GET /brds 200 in 19ms (compile: 4ms, render: 15ms)
+ GET /brds/c4d4318a-f8bd-4365-b287-78cb093d254c 200 in 28ms (compile: 10ms, render: 18ms)
+ GET /live-repo 200 in 17ms (compile: 4ms, render: 14ms)
+ GET /merge-workbench 200 in 16ms (compile: 3ms, render: 13ms)
+ GET /impact-runs 200 in 17ms (compile: 3ms, render: 14ms)
+ GET /merge-workbench 200 in 94ms (compile: 16ms, render: 78ms)
+ GET /live-repo 200 in 15ms (compile: 3ms, render: 13ms)
+ GET /live-repo/7be5ab3c-95bd-489d-a85b-ebc1ce08f960 200 in 1061ms (compile: 1040ms, render: 22ms)
+ GET /live-repo 200 in 17ms (compile: 4ms, render: 13ms)
+ GET /live-repo/24e0f0c3-3a57-4250-8048-c0379d0aa151 200 in 24ms (compile: 8ms, render: 16ms)
+ GET /live-repo 200 in 16ms (compile: 3ms, render: 13ms)
+ GET /merge-workbench 200 in 60ms (compile: 7ms, render: 52ms)
+ GET /merge-workbench/ad4aebd1-675c-47d3-9ff1-17921b967749 200 in 888ms (compile: 870ms, render: 18ms)
+ GET /merge-workbench 200 in 17ms (compile: 3ms, render: 13ms)
+ GET /impact-runs 200 in 17ms (compile: 4ms, render: 14ms)
+ GET /brds 200 in 15ms (compile: 3ms, render: 13ms)
+ GET /brds/c4d4318a-f8bd-4365-b287-78cb093d254c 200 in 117ms (compile: 73ms, render: 44ms)
+ GET /rules/48bccaca-e02d-4a3a-8b7e-a041bf4594b3 200 in 531ms (compile: 514ms, render: 18ms)
+ GET /brds 200 in 17ms (compile: 3ms, render: 14ms)
+ GET /brds/c4d4318a-f8bd-4365-b287-78cb093d254c 200 in 23ms (compile: 8ms, render: 15ms)
+ GET /merge-workbench/ad4aebd1-675c-47d3-9ff1-17921b967749 200 in 24ms (compile: 8ms, render: 16ms)
+ GET /merge-workbench 200 in 167ms (compile: 28ms, render: 139ms)
+ GET /live-repo 200 in 16ms (compile: 3ms, render: 12ms)
+ GET /merge-workbench 200 in 18ms (compile: 3ms, render: 15ms)
+ GET /live-repo 200 in 16ms (compile: 3ms, render: 13ms)
+ GET /live-repo/7be5ab3c-95bd-489d-a85b-ebc1ce08f960 200 in 25ms (compile: 9ms, render: 16ms)
+ GET /live-repo 200 in 91ms (compile: 16ms, render: 75ms)
+ GET /live-repo/24e0f0c3-3a57-4250-8048-c0379d0aa151 200 in 23ms (compile: 8ms, render: 15ms)
+ GET /live-repo 200 in 15ms (compile: 3ms, render: 13ms)
+ GET /merge-workbench 200 in 17ms (compile: 3ms, render: 14ms)
+ GET /live-repo/24e0f0c3-3a57-4250-8048-c0379d0aa151 200 in 23ms (compile: 7ms, render: 16ms)
+ GET /live-repo 200 in 15ms (compile: 3ms, render: 13ms)
+ GET /merge-workbench 200 in 18ms (compile: 3ms, render: 14ms)
+✓ Compiled in 97ms
+✓ Compiled in 72ms
+✓ Compiled in 209ms
+✓ Compiled in 179ms
+✓ Compiled in 78ms
+✓ Compiled in 76ms
+✓ Compiled in 208ms
+ GET /live-repo 200 in 23ms (compile: 4ms, render: 19ms)
+ GET /live-repo/7be5ab3c-95bd-489d-a85b-ebc1ce08f960 200 in 186ms (compile: 48ms, render: 139ms)
+ GET /brds/b2dd1ebd-d81e-47d4-b5f9-87a57d17b2db 200 in 23ms (compile: 8ms, render: 15ms)
+ GET /brds 200 in 21ms (compile: 4ms, render: 17ms)
+ GET /brds/52fe283c-8c84-4755-9ab0-4aa559c6604a 200 in 143ms (compile: 35ms, render: 108ms)
+ GET /brds 200 in 15ms (compile: 3ms, render: 12ms)
+ GET /brds/c4d4318a-f8bd-4365-b287-78cb093d254c 200 in 23ms (compile: 7ms, render: 16ms)
+ GET /brds 200 in 15ms (compile: 3ms, render: 13ms)
+✓ Compiled in 271ms
+✓ Compiled in 68ms
+✓ Compiled in 57ms
+✓ Compiled in 227ms
+ GET /brds 200 in 171ms (compile: 4ms, render: 167ms)
+ GET /brds/0593bbbd-8e23-47b1-b4a8-d4b68e0f084f 200 in 176ms (compile: 44ms, render: 132ms)
+ GET /brds 200 in 59ms (compile: 3ms, render: 56ms)
+ GET /brds/6ca7012f-9f89-44cc-80c5-4c8d40219c36 200 in 24ms (compile: 9ms, render: 16ms)
+ GET /merge-workbench/40e04708-97d3-4263-8bb3-82ebcfebc1b2 200 in 173ms (compile: 133ms, render: 40ms)
+ GET /live-repo/aa3b5fe0-30ad-4084-aaf1-ac4a9cd8a966 200 in 35ms (compile: 14ms, render: 21ms)
+ GET /impact-runs 200 in 184ms (compile: 129ms, render: 55ms)
+✓ Compiled in 81ms
+✓ Compiled in 129ms
+✓ Compiled in 166ms
+✓ Compiled in 84ms
+✓ Compiled in 65ms
+✓ Compiled in 85ms
+✓ Compiled in 219ms
+ GET /impact-runs 200 in 478ms (compile: 146ms, render: 332ms)
+✓ Compiled in 84ms
+✓ Compiled in 72ms
+✓ Compiled in 91ms
+ GET /impact-runs 200 in 390ms (compile: 119ms, render: 271ms)
+ GET /impact-runs 200 in 82ms (compile: 5ms, render: 77ms)
+ GET /impact-runs 200 in 52ms (compile: 4ms, render: 48ms)
+ GET /impact-runs 200 in 63ms (compile: 5ms, render: 58ms)
+ GET /impact-runs 200 in 58ms (compile: 5ms, render: 53ms)
+ GET /impact-runs 200 in 191ms (compile: 5ms, render: 186ms)
+✓ Compiled in 155ms
+✓ Compiled in 148ms
+✓ Compiled in 424ms
+ GET /brds 200 in 357ms (compile: 146ms, render: 211ms)
+ GET /impact-runs 200 in 377ms (compile: 195ms, render: 182ms)
+ GET /brds 200 in 183ms (compile: 7ms, render: 177ms)
+ GET /impact-runs 200 in 183ms (compile: 35ms, render: 148ms)
+ GET /brds 200 in 196ms (compile: 4ms, render: 192ms)
+ GET /impact-runs 200 in 205ms (compile: 6ms, render: 199ms)
+ GET /brds 200 in 204ms (compile: 4ms, render: 200ms)
+ GET /impact-runs 200 in 185ms (compile: 6ms, render: 179ms)
+ GET /brds 200 in 184ms (compile: 4ms, render: 180ms)
+ GET /impact-runs 200 in 193ms (compile: 6ms, render: 188ms)
+ GET /brds 200 in 161ms (compile: 9ms, render: 152ms)
+ GET /impact-runs 200 in 147ms (compile: 6ms, render: 141ms)
+ GET /brds 200 in 141ms (compile: 5ms, render: 136ms)
+ GET /impact-runs 200 in 148ms (compile: 6ms, render: 142ms)
+ GET /brds 200 in 141ms (compile: 4ms, render: 136ms)
+ GET /impact-runs 200 in 142ms (compile: 4ms, render: 137ms)
+ GET /brds 200 in 144ms (compile: 5ms, render: 139ms)
+ GET /impact-runs 200 in 148ms (compile: 6ms, render: 143ms)
+ GET /brds 200 in 162ms (compile: 6ms, render: 156ms)
+ GET /impact-runs 200 in 162ms (compile: 10ms, render: 152ms)
+ GET /brds 200 in 157ms (compile: 5ms, render: 152ms)
+ GET /impact-runs 200 in 156ms (compile: 6ms, render: 150ms)
+ GET /brds 200 in 154ms (compile: 6ms, render: 148ms)
+ GET /impact-runs 200 in 152ms (compile: 7ms, render: 144ms)
+ GET /brds 200 in 135ms (compile: 7ms, render: 128ms)
+ GET /impact-runs 200 in 132ms (compile: 5ms, render: 127ms)
+ GET /brds 200 in 132ms (compile: 4ms, render: 127ms)
+ GET /impact-runs 200 in 153ms (compile: 5ms, render: 148ms)
+ GET /brds 200 in 139ms (compile: 4ms, render: 135ms)
+ GET /impact-runs 200 in 141ms (compile: 8ms, render: 134ms)
+ GET /brds 200 in 140ms (compile: 4ms, render: 136ms)
+ GET /impact-runs 200 in 158ms (compile: 5ms, render: 153ms)
+ GET /brds 200 in 138ms (compile: 4ms, render: 134ms)
+ GET /impact-runs 200 in 140ms (compile: 4ms, render: 136ms)
+ GET /brds 200 in 157ms (compile: 5ms, render: 152ms)
+ GET /impact-runs 200 in 139ms (compile: 5ms, render: 134ms)
+ GET /brds 200 in 154ms (compile: 5ms, render: 149ms)
+ GET /impact-runs 200 in 165ms (compile: 4ms, render: 161ms)
+ GET /brds 200 in 193ms (compile: 4ms, render: 188ms)
+ GET /impact-runs 200 in 178ms (compile: 9ms, render: 169ms)
+ GET /brds 200 in 194ms (compile: 4ms, render: 190ms)
+ GET /impact-runs 200 in 173ms (compile: 10ms, render: 163ms)
+ GET /brds 200 in 187ms (compile: 11ms, render: 177ms)
+ GET /impact-runs 200 in 163ms (compile: 7ms, render: 156ms)
+ GET /brds 200 in 164ms (compile: 9ms, render: 156ms)
+ GET /impact-runs 200 in 160ms (compile: 5ms, render: 155ms)
+ GET /brds 200 in 163ms (compile: 5ms, render: 158ms)
+ GET /impact-runs 200 in 160ms (compile: 5ms, render: 156ms)
+ GET /brds 200 in 162ms (compile: 6ms, render: 156ms)
+ GET /impact-runs 200 in 146ms (compile: 6ms, render: 139ms)
+ GET /brds 200 in 152ms (compile: 5ms, render: 146ms)
+ GET /impact-runs 200 in 163ms (compile: 5ms, render: 158ms)
+ GET /brds 200 in 215ms (compile: 6ms, render: 209ms)
+ GET /impact-runs 200 in 216ms (compile: 4ms, render: 211ms)
+ GET /brds 200 in 216ms (compile: 9ms, render: 207ms)
+ GET /impact-runs 200 in 232ms (compile: 5ms, render: 227ms)
+ GET /brds 200 in 206ms (compile: 9ms, render: 196ms)
+ GET /impact-runs 200 in 190ms (compile: 7ms, render: 183ms)
+ GET /brds 200 in 187ms (compile: 27ms, render: 160ms)
+ GET /impact-runs 200 in 112ms (compile: 5ms, render: 107ms)
+ GET /brds 200 in 112ms (compile: 23ms, render: 88ms)
+ GET /impact-runs 200 in 71ms (compile: 5ms, render: 66ms)
+ GET /brds 200 in 71ms (compile: 23ms, render: 48ms)
+ GET /impact-runs 200 in 29ms (compile: 5ms, render: 23ms)
+✓ Compiled in 140ms
+✓ Compiled in 85ms
+ GET /impact-runs 200 in 1289ms (compile: 260ms, render: 1029ms)
+ GET /impact-runs/a8ae553f-f984-456a-a294-af852bf88ef8 200 in 1933ms (compile: 1900ms, render: 33ms)
+✓ Compiled in 72ms
+✓ Compiled in 66ms
+✓ Compiled in 49ms
+ GET /impact-runs/a8ae553f-f984-456a-a294-af852bf88ef8 200 in 504ms (compile: 96ms, render: 408ms)
+ GET /impact-runs 200 in 20ms (compile: 5ms, render: 15ms)
+ GET /impact-runs/a8ae553f-f984-456a-a294-af852bf88ef8 200 in 25ms (compile: 9ms, render: 16ms)
+ GET /impact-runs 200 in 16ms (compile: 3ms, render: 13ms)
+ GET /impact-runs/f5b89a2e-f6bc-45f0-8bf9-8a9e392b71a0 200 in 29ms (compile: 8ms, render: 20ms)
+ GET /impact-runs 200 in 19ms (compile: 3ms, render: 16ms)
+ GET /impact-runs/a8ae553f-f984-456a-a294-af852bf88ef8 200 in 24ms (compile: 8ms, render: 16ms)
+✓ Compiled in 118ms
+ GET /impact-runs/a8ae553f-f984-456a-a294-af852bf88ef8 200 in 303ms (compile: 86ms, render: 218ms)
+✓ Compiled in 173ms
+✓ Compiled in 142ms
+✓ Compiled in 288ms
+✓ Compiled in 130ms
+✓ Compiled in 126ms
+ GET /live-repo 200 in 31ms (compile: 13ms, render: 18ms)
+ GET /live-repo/aa3b5fe0-30ad-4084-aaf1-ac4a9cd8a966 200 in 35ms (compile: 17ms, render: 18ms)
+✓ Compiled in 191ms
+✓ Compiled in 54ms
+ GET /impact-runs/a8ae553f-f984-456a-a294-af852bf88ef8 200 in 354ms (compile: 85ms, render: 270ms)
+ GET /impact-runs/a8ae553f-f984-456a-a294-af852bf88ef8 200 in 52ms (compile: 8ms, render: 43ms)
+✓ Compiled in 71ms
+ GET /impact-runs/a8ae553f-f984-456a-a294-af852bf88ef8 200 in 313ms (compile: 86ms, render: 227ms)
+ GET /impact-runs 200 in 25ms (compile: 5ms, render: 20ms)
+ GET /merge-workbench 200 in 108ms (compile: 82ms, render: 27ms)
+ GET /live-repo 200 in 16ms (compile: 3ms, render: 13ms)
+ GET /live-repo/aa3b5fe0-30ad-4084-aaf1-ac4a9cd8a966 200 in 25ms (compile: 9ms, render: 16ms)
+ GET /live-repo 200 in 17ms (compile: 3ms, render: 14ms)
+ GET /brds 200 in 245ms (compile: 3ms, render: 241ms)
+ GET /brds/6ca7012f-9f89-44cc-80c5-4c8d40219c36 200 in 44ms (compile: 20ms, render: 24ms)
+ GET /brds 200 in 68ms (compile: 8ms, render: 60ms)
+✓ Compiled in 80ms
+✓ Compiled in 127ms
+✓ Compiled in 205ms
+ GET /brds/6ca7012f-9f89-44cc-80c5-4c8d40219c36 200 in 430ms (compile: 309ms, render: 122ms)
+✓ Compiled in 85ms
+ GET /live-repo/aa3b5fe0-30ad-4084-aaf1-ac4a9cd8a966 200 in 29ms (compile: 12ms, render: 18ms)
+ GET /live-repo 200 in 18ms (compile: 3ms, render: 15ms)
+ GET /brds 200 in 81ms (compile: 15ms, render: 66ms)
+ GET /brds/6ca7012f-9f89-44cc-80c5-4c8d40219c36 200 in 112ms (compile: 83ms, render: 29ms)
+✓ Compiled in 256ms
+ GET /impact-runs/a8ae553f-f984-456a-a294-af852bf88ef8 200 in 37ms (compile: 9ms, render: 28ms)
+✓ Compiled in 92ms
+ GET / 200 in 27ms (compile: 12ms, render: 15ms)
+ GET /brds 200 in 16ms (compile: 3ms, render: 13ms)
+ GET /brds/6ca7012f-9f89-44cc-80c5-4c8d40219c36 200 in 123ms (compile: 92ms, render: 31ms)
+✓ Compiled in 66ms
+ GET /live-repo/aa3b5fe0-30ad-4084-aaf1-ac4a9cd8a966 200 in 28ms (compile: 9ms, render: 19ms)
+ GET /live-repo 200 in 22ms (compile: 6ms, render: 16ms)
+ GET / 200 in 16ms (compile: 3ms, render: 13ms)
+ GET /brds 200 in 18ms (compile: 3ms, render: 15ms)
+✓ Compiled in 76ms
+ GET /brds/6ca7012f-9f89-44cc-80c5-4c8d40219c36 200 in 397ms (compile: 117ms, render: 280ms)
+ GET /brds/0593bbbd-8e23-47b1-b4a8-d4b68e0f084f 200 in 259ms (compile: 21ms, render: 239ms)
+✓ Compiled in 84ms
+✓ Compiled in 79ms
+✓ Compiled in 75ms
+✓ Compiled in 80ms
+✓ Compiled in 72ms
+✓ Compiled in 112ms
+✓ Compiled in 84ms
+✓ Compiled in 81ms
+✓ Compiled in 184ms
+ GET /brds/6ca7012f-9f89-44cc-80c5-4c8d40219c36 200 in 363ms (compile: 118ms, render: 245ms)
+ GET /brds/6ca7012f-9f89-44cc-80c5-4c8d40219c36 200 in 72ms (compile: 9ms, render: 63ms)
+ GET /test-suites/7e249cc5-97c9-4a08-a570-cbf1ee1c893b 200 in 765ms (compile: 720ms, render: 45ms)

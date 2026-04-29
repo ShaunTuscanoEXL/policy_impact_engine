@@ -18,6 +18,7 @@ giving a finer-grained per-rule lens.
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -140,12 +141,13 @@ async def execute_suite_against_version(
             "first_deviation_reason": first_dev_reason,
         })
 
-    return {
+    report = {
         "suite_id": str(suite.id),
         "version_id": str(version.id),
         "version_number": version.version_number,
         "total_cases": len(suite.test_cases or []),
         "cases_evaluated": len(results),
+        "executed_at": datetime.utcnow().isoformat(),
         "results": results,
         "summary": {
             "matches_expected": total_match,
@@ -153,3 +155,13 @@ async def execute_suite_against_version(
             "by_category": by_category,
         },
     }
+
+    # Persist on the suite so the UI can show "X passing / Y failing"
+    # without re-running every page load. Last-write-wins is fine — the
+    # UI always shows the latest execution + the version it ran against.
+    suite.last_execution_report = report
+    suite.last_executed_at = datetime.utcnow()
+    suite.last_executed_against_version_id = version.id
+    await db.commit()
+
+    return report

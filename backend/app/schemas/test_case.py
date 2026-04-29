@@ -80,6 +80,9 @@ class TestCaseSuiteResponse(BaseModel):
     suggested_counts: dict = {}
     test_cases: list[TestCaseResponse] = []
     created_at: str
+    last_execution_report: dict[str, Any] | None = None
+    last_executed_at: str | None = None
+    last_executed_against_version_id: str | None = None
 
     model_config = {"from_attributes": True}
 

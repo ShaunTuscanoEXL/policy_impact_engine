@@ -1,0 +1,1408 @@
+2026-04-30 03:27:26,957 INFO sqlalchemy.engine.Engine select pg_catalog.version()
+2026-04-30 03:27:26,958 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-04-30 03:27:26,964 INFO sqlalchemy.engine.Engine select current_schema()
+2026-04-30 03:27:26,964 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-04-30 03:27:26,969 INFO sqlalchemy.engine.Engine show standard_conforming_strings
+2026-04-30 03:27:26,969 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-04-30 03:27:26,973 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:27:26,976 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-04-30 03:27:26,976 INFO sqlalchemy.engine.Engine [generated in 0.00038s] ('brd_documents', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-04-30 03:27:26,987 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-04-30 03:27:26,988 INFO sqlalchemy.engine.Engine [cached since 0.01165s ago] ('rule_sets', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-04-30 03:27:26,990 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-04-30 03:27:26,990 INFO sqlalchemy.engine.Engine [cached since 0.01442s ago] ('rules', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-04-30 03:27:26,993 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-04-30 03:27:26,993 INFO sqlalchemy.engine.Engine [cached since 0.01703s ago] ('test_case_suites', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-04-30 03:27:26,995 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-04-30 03:27:26,995 INFO sqlalchemy.engine.Engine [cached since 0.01936s ago] ('test_cases', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-04-30 03:27:26,997 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-04-30 03:27:26,997 INFO sqlalchemy.engine.Engine [cached since 0.02121s ago] ('loan_records', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-04-30 03:27:26,999 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-04-30 03:27:26,999 INFO sqlalchemy.engine.Engine [cached since 0.02302s ago] ('live_rule_repositories', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-04-30 03:27:27,001 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-04-30 03:27:27,001 INFO sqlalchemy.engine.Engine [cached since 0.02508s ago] ('live_rule_versions', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-04-30 03:27:27,002 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-04-30 03:27:27,004 INFO sqlalchemy.engine.Engine [cached since 0.02706s ago] ('live_rule_entries', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-04-30 03:27:27,005 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-04-30 03:27:27,005 INFO sqlalchemy.engine.Engine [cached since 0.02887s ago] ('merge_proposals', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-04-30 03:27:27,007 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-04-30 03:27:27,008 INFO sqlalchemy.engine.Engine [cached since 0.03115s ago] ('merge_proposal_items', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-04-30 03:27:27,009 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-04-30 03:27:27,010 INFO sqlalchemy.engine.Engine [cached since 0.03312s ago] ('impact_runs', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-04-30 03:27:27,012 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_type.typname 
+FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace 
+WHERE pg_catalog.pg_type.typname = $1::VARCHAR AND pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AND pg_catalog.pg_namespace.nspname != $2::VARCHAR
+2026-04-30 03:27:27,013 INFO sqlalchemy.engine.Engine [generated in 0.00040s] ('filetype', 'pg_catalog')
+2026-04-30 03:27:27,017 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_type.typname 
+FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace 
+WHERE pg_catalog.pg_type.typname = $1::VARCHAR AND pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AND pg_catalog.pg_namespace.nspname != $2::VARCHAR
+2026-04-30 03:27:27,017 INFO sqlalchemy.engine.Engine [cached since 0.005065s ago] ('rulesetstatus', 'pg_catalog')
+2026-04-30 03:27:27,020 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_type.typname 
+FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace 
+WHERE pg_catalog.pg_type.typname = $1::VARCHAR AND pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AND pg_catalog.pg_namespace.nspname != $2::VARCHAR
+2026-04-30 03:27:27,020 INFO sqlalchemy.engine.Engine [cached since 0.0076s ago] ('ruletype', 'pg_catalog')
+2026-04-30 03:27:27,023 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_type.typname 
+FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace 
+WHERE pg_catalog.pg_type.typname = $1::VARCHAR AND pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AND pg_catalog.pg_namespace.nspname != $2::VARCHAR
+2026-04-30 03:27:27,023 INFO sqlalchemy.engine.Engine [cached since 0.01057s ago] ('subsystem', 'pg_catalog')
+2026-04-30 03:27:27,025 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_type.typname 
+FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace 
+WHERE pg_catalog.pg_type.typname = $1::VARCHAR AND pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AND pg_catalog.pg_namespace.nspname != $2::VARCHAR
+2026-04-30 03:27:27,026 INFO sqlalchemy.engine.Engine [cached since 0.01338s ago] ('testcasecategory', 'pg_catalog')
+2026-04-30 03:27:27,028 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_type.typname 
+FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace 
+WHERE pg_catalog.pg_type.typname = $1::VARCHAR AND pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AND pg_catalog.pg_namespace.nspname != $2::VARCHAR
+2026-04-30 03:27:27,029 INFO sqlalchemy.engine.Engine [cached since 0.01625s ago] ('mergeproposalstatus', 'pg_catalog')
+2026-04-30 03:27:27,031 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_type.typname 
+FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace 
+WHERE pg_catalog.pg_type.typname = $1::VARCHAR AND pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AND pg_catalog.pg_namespace.nspname != $2::VARCHAR
+2026-04-30 03:27:27,031 INFO sqlalchemy.engine.Engine [cached since 0.0191s ago] ('mergeitemcategory', 'pg_catalog')
+2026-04-30 03:27:27,034 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_type.typname 
+FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace 
+WHERE pg_catalog.pg_type.typname = $1::VARCHAR AND pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AND pg_catalog.pg_namespace.nspname != $2::VARCHAR
+2026-04-30 03:27:27,035 INFO sqlalchemy.engine.Engine [cached since 0.02223s ago] ('mergeitemseverity', 'pg_catalog')
+2026-04-30 03:27:27,037 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_type.typname 
+FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace 
+WHERE pg_catalog.pg_type.typname = $1::VARCHAR AND pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AND pg_catalog.pg_namespace.nspname != $2::VARCHAR
+2026-04-30 03:27:27,038 INFO sqlalchemy.engine.Engine [cached since 0.02546s ago] ('mergesuggestedaction', 'pg_catalog')
+2026-04-30 03:27:27,040 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_type.typname 
+FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace 
+WHERE pg_catalog.pg_type.typname = $1::VARCHAR AND pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AND pg_catalog.pg_namespace.nspname != $2::VARCHAR
+2026-04-30 03:27:27,040 INFO sqlalchemy.engine.Engine [cached since 0.02795s ago] ('impactrunstatus', 'pg_catalog')
+2026-04-30 03:27:27,042 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:56144 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53067 - "GET /health HTTP/1.1" 200 OK
+2026-04-30 03:29:20,252 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:29:20,272 INFO sqlalchemy.engine.Engine SELECT brd_documents.id, brd_documents.filename, brd_documents.file_path, brd_documents.file_type, brd_documents.parsed_content, brd_documents.metadata_json, brd_documents.created_at 
+FROM brd_documents 
+WHERE brd_documents.id = $1::UUID
+2026-04-30 03:29:20,272 INFO sqlalchemy.engine.Engine [generated in 0.00039s] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'),)
+2026-04-30 03:29:20,331 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:29:20,332 INFO sqlalchemy.engine.Engine SELECT brd_documents.id, brd_documents.filename, brd_documents.file_path, brd_documents.file_type, brd_documents.parsed_content, brd_documents.metadata_json, brd_documents.created_at 
+FROM brd_documents 
+WHERE brd_documents.id = $1::UUID
+2026-04-30 03:29:20,332 INFO sqlalchemy.engine.Engine [cached since 0.06019s ago] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'),)
+INFO:     127.0.0.1:58753 - "GET /api/v1/brds/0593bbbd-8e23-47b1-b4a8-d4b68e0f084f HTTP/1.1" 200 OK
+2026-04-30 03:29:20,345 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:29:20,369 INFO sqlalchemy.engine.Engine SELECT rule_sets.id, rule_sets.brd_document_id, rule_sets.version, rule_sets.name, rule_sets.description, rule_sets.status, rule_sets.created_at 
+FROM rule_sets 
+WHERE rule_sets.brd_document_id = $1::UUID ORDER BY rule_sets.version DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:29:20,370 INFO sqlalchemy.engine.Engine [generated in 0.00056s] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'), 1)
+2026-04-30 03:29:20,384 INFO sqlalchemy.engine.Engine SELECT count(*) AS count_1 
+FROM rules 
+WHERE rules.rule_set_id = $1::UUID
+2026-04-30 03:29:20,384 INFO sqlalchemy.engine.Engine [generated in 0.00057s] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'),)
+2026-04-30 03:29:20,390 INFO sqlalchemy.engine.Engine SELECT test_case_suites.id, test_case_suites.rule_set_id, test_case_suites.total_cases, test_case_suites.cases_by_category, test_case_suites.coverage_stats, test_case_suites.suggested_counts, test_case_suites.created_at, test_case_suites.last_execution_report, test_case_suites.last_executed_at, test_case_suites.last_executed_against_version_id 
+FROM test_case_suites 
+WHERE test_case_suites.rule_set_id = $1::UUID ORDER BY test_case_suites.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:29:20,391 INFO sqlalchemy.engine.Engine [generated in 0.00046s] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'), 1)
+2026-04-30 03:29:20,398 INFO sqlalchemy.engine.Engine SELECT merge_proposals.id, merge_proposals.repository_id, merge_proposals.base_version, merge_proposals.source_brd_id, merge_proposals.source_rule_set_id, merge_proposals.status, merge_proposals.summary, merge_proposals.decided_by, merge_proposals.decided_at, merge_proposals.created_at 
+FROM merge_proposals 
+WHERE merge_proposals.source_rule_set_id = $1::UUID ORDER BY merge_proposals.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:29:20,399 INFO sqlalchemy.engine.Engine [generated in 0.00045s] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'), 1)
+2026-04-30 03:29:20,415 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id, live_rule_versions.repository_id, live_rule_versions.version_number, live_rule_versions.parent_version_id, live_rule_versions.source_brd_id, live_rule_versions.merge_proposal_id, live_rule_versions.summary, live_rule_versions.rule_snapshot, live_rule_versions.python_export, live_rule_versions.created_at, live_rule_versions.created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.merge_proposal_id = $1::UUID 
+ LIMIT $2::INTEGER
+2026-04-30 03:29:20,415 INFO sqlalchemy.engine.Engine [generated in 0.00057s] (UUID('4a09b9da-14b7-48fb-afb7-d342496bb853'), 1)
+2026-04-30 03:29:20,422 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id AS live_rule_versions_id, live_rule_versions.repository_id AS live_rule_versions_repository_id, live_rule_versions.version_number AS live_rule_versions_version_number, live_rule_versions.parent_version_id AS live_rule_versions_parent_version_id, live_rule_versions.source_brd_id AS live_rule_versions_source_brd_id, live_rule_versions.merge_proposal_id AS live_rule_versions_merge_proposal_id, live_rule_versions.summary AS live_rule_versions_summary, live_rule_versions.rule_snapshot AS live_rule_versions_rule_snapshot, live_rule_versions.python_export AS live_rule_versions_python_export, live_rule_versions.created_at AS live_rule_versions_created_at, live_rule_versions.created_by AS live_rule_versions_created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.id = $1::UUID
+2026-04-30 03:29:20,422 INFO sqlalchemy.engine.Engine [generated in 0.00040s] (UUID('b58375b5-73b9-4a07-b644-4ebfa9158005'),)
+2026-04-30 03:29:20,428 INFO sqlalchemy.engine.Engine SELECT impact_runs.id, impact_runs.repository_id, impact_runs.base_version_id, impact_runs.candidate_version_id, impact_runs.loan_record_filter, impact_runs.status, impact_runs.summary, impact_runs.error, impact_runs.created_at, impact_runs.completed_at, impact_runs.created_by 
+FROM impact_runs 
+WHERE impact_runs.candidate_version_id = $1::UUID ORDER BY impact_runs.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:29:20,428 INFO sqlalchemy.engine.Engine [generated in 0.00043s] (UUID('17ee90de-554d-4bf1-a990-4cd666a63519'), 1)
+INFO:     127.0.0.1:61676 - "GET /api/v1/brds/0593bbbd-8e23-47b1-b4a8-d4b68e0f084f/workflow HTTP/1.1" 200 OK
+2026-04-30 03:29:20,440 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:29:31,663 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:29:31,664 INFO sqlalchemy.engine.Engine SELECT brd_documents.id, brd_documents.filename, brd_documents.file_path, brd_documents.file_type, brd_documents.parsed_content, brd_documents.metadata_json, brd_documents.created_at 
+FROM brd_documents 
+WHERE brd_documents.id = $1::UUID
+2026-04-30 03:29:31,664 INFO sqlalchemy.engine.Engine [cached since 11.39s ago] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'),)
+INFO:     127.0.0.1:52052 - "GET /api/v1/brds/0593bbbd-8e23-47b1-b4a8-d4b68e0f084f HTTP/1.1" 200 OK
+2026-04-30 03:29:31,669 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:29:31,671 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:29:31,671 INFO sqlalchemy.engine.Engine SELECT brd_documents.id, brd_documents.filename, brd_documents.file_path, brd_documents.file_type, brd_documents.parsed_content, brd_documents.metadata_json, brd_documents.created_at 
+FROM brd_documents 
+WHERE brd_documents.id = $1::UUID
+2026-04-30 03:29:31,672 INFO sqlalchemy.engine.Engine [cached since 11.4s ago] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'),)
+2026-04-30 03:29:31,676 INFO sqlalchemy.engine.Engine SELECT rule_sets.id, rule_sets.brd_document_id, rule_sets.version, rule_sets.name, rule_sets.description, rule_sets.status, rule_sets.created_at 
+FROM rule_sets 
+WHERE rule_sets.brd_document_id = $1::UUID ORDER BY rule_sets.version DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:29:31,677 INFO sqlalchemy.engine.Engine [cached since 11.31s ago] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'), 1)
+2026-04-30 03:29:31,679 INFO sqlalchemy.engine.Engine SELECT count(*) AS count_1 
+FROM rules 
+WHERE rules.rule_set_id = $1::UUID
+2026-04-30 03:29:31,679 INFO sqlalchemy.engine.Engine [cached since 11.3s ago] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'),)
+2026-04-30 03:29:31,682 INFO sqlalchemy.engine.Engine SELECT test_case_suites.id, test_case_suites.rule_set_id, test_case_suites.total_cases, test_case_suites.cases_by_category, test_case_suites.coverage_stats, test_case_suites.suggested_counts, test_case_suites.created_at, test_case_suites.last_execution_report, test_case_suites.last_executed_at, test_case_suites.last_executed_against_version_id 
+FROM test_case_suites 
+WHERE test_case_suites.rule_set_id = $1::UUID ORDER BY test_case_suites.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:29:31,683 INFO sqlalchemy.engine.Engine [cached since 11.29s ago] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'), 1)
+2026-04-30 03:29:31,685 INFO sqlalchemy.engine.Engine SELECT merge_proposals.id, merge_proposals.repository_id, merge_proposals.base_version, merge_proposals.source_brd_id, merge_proposals.source_rule_set_id, merge_proposals.status, merge_proposals.summary, merge_proposals.decided_by, merge_proposals.decided_at, merge_proposals.created_at 
+FROM merge_proposals 
+WHERE merge_proposals.source_rule_set_id = $1::UUID ORDER BY merge_proposals.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:29:31,686 INFO sqlalchemy.engine.Engine [cached since 11.29s ago] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'), 1)
+2026-04-30 03:29:31,688 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id, live_rule_versions.repository_id, live_rule_versions.version_number, live_rule_versions.parent_version_id, live_rule_versions.source_brd_id, live_rule_versions.merge_proposal_id, live_rule_versions.summary, live_rule_versions.rule_snapshot, live_rule_versions.python_export, live_rule_versions.created_at, live_rule_versions.created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.merge_proposal_id = $1::UUID 
+ LIMIT $2::INTEGER
+2026-04-30 03:29:31,689 INFO sqlalchemy.engine.Engine [cached since 11.27s ago] (UUID('4a09b9da-14b7-48fb-afb7-d342496bb853'), 1)
+2026-04-30 03:29:31,692 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id AS live_rule_versions_id, live_rule_versions.repository_id AS live_rule_versions_repository_id, live_rule_versions.version_number AS live_rule_versions_version_number, live_rule_versions.parent_version_id AS live_rule_versions_parent_version_id, live_rule_versions.source_brd_id AS live_rule_versions_source_brd_id, live_rule_versions.merge_proposal_id AS live_rule_versions_merge_proposal_id, live_rule_versions.summary AS live_rule_versions_summary, live_rule_versions.rule_snapshot AS live_rule_versions_rule_snapshot, live_rule_versions.python_export AS live_rule_versions_python_export, live_rule_versions.created_at AS live_rule_versions_created_at, live_rule_versions.created_by AS live_rule_versions_created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.id = $1::UUID
+2026-04-30 03:29:31,692 INFO sqlalchemy.engine.Engine [cached since 11.27s ago] (UUID('b58375b5-73b9-4a07-b644-4ebfa9158005'),)
+2026-04-30 03:29:31,696 INFO sqlalchemy.engine.Engine SELECT impact_runs.id, impact_runs.repository_id, impact_runs.base_version_id, impact_runs.candidate_version_id, impact_runs.loan_record_filter, impact_runs.status, impact_runs.summary, impact_runs.error, impact_runs.created_at, impact_runs.completed_at, impact_runs.created_by 
+FROM impact_runs 
+WHERE impact_runs.candidate_version_id = $1::UUID ORDER BY impact_runs.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:29:31,696 INFO sqlalchemy.engine.Engine [cached since 11.27s ago] (UUID('17ee90de-554d-4bf1-a990-4cd666a63519'), 1)
+INFO:     127.0.0.1:52052 - "GET /api/v1/brds/0593bbbd-8e23-47b1-b4a8-d4b68e0f084f/workflow HTTP/1.1" 200 OK
+2026-04-30 03:29:31,701 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:29:59,765 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:29:59,766 INFO sqlalchemy.engine.Engine SELECT brd_documents.id, brd_documents.filename, brd_documents.file_path, brd_documents.file_type, brd_documents.parsed_content, brd_documents.metadata_json, brd_documents.created_at 
+FROM brd_documents 
+WHERE brd_documents.id = $1::UUID
+2026-04-30 03:29:59,767 INFO sqlalchemy.engine.Engine [cached since 39.49s ago] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'),)
+INFO:     127.0.0.1:49302 - "GET /api/v1/brds/0593bbbd-8e23-47b1-b4a8-d4b68e0f084f HTTP/1.1" 200 OK
+2026-04-30 03:29:59,772 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:29:59,773 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:29:59,774 INFO sqlalchemy.engine.Engine SELECT brd_documents.id, brd_documents.filename, brd_documents.file_path, brd_documents.file_type, brd_documents.parsed_content, brd_documents.metadata_json, brd_documents.created_at 
+FROM brd_documents 
+WHERE brd_documents.id = $1::UUID
+2026-04-30 03:29:59,774 INFO sqlalchemy.engine.Engine [cached since 39.5s ago] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'),)
+2026-04-30 03:29:59,778 INFO sqlalchemy.engine.Engine SELECT rule_sets.id, rule_sets.brd_document_id, rule_sets.version, rule_sets.name, rule_sets.description, rule_sets.status, rule_sets.created_at 
+FROM rule_sets 
+WHERE rule_sets.brd_document_id = $1::UUID ORDER BY rule_sets.version DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:29:59,779 INFO sqlalchemy.engine.Engine [cached since 39.41s ago] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'), 1)
+2026-04-30 03:29:59,781 INFO sqlalchemy.engine.Engine SELECT count(*) AS count_1 
+FROM rules 
+WHERE rules.rule_set_id = $1::UUID
+2026-04-30 03:29:59,781 INFO sqlalchemy.engine.Engine [cached since 39.4s ago] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'),)
+2026-04-30 03:29:59,783 INFO sqlalchemy.engine.Engine SELECT test_case_suites.id, test_case_suites.rule_set_id, test_case_suites.total_cases, test_case_suites.cases_by_category, test_case_suites.coverage_stats, test_case_suites.suggested_counts, test_case_suites.created_at, test_case_suites.last_execution_report, test_case_suites.last_executed_at, test_case_suites.last_executed_against_version_id 
+FROM test_case_suites 
+WHERE test_case_suites.rule_set_id = $1::UUID ORDER BY test_case_suites.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:29:59,783 INFO sqlalchemy.engine.Engine [cached since 39.39s ago] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'), 1)
+2026-04-30 03:29:59,786 INFO sqlalchemy.engine.Engine SELECT merge_proposals.id, merge_proposals.repository_id, merge_proposals.base_version, merge_proposals.source_brd_id, merge_proposals.source_rule_set_id, merge_proposals.status, merge_proposals.summary, merge_proposals.decided_by, merge_proposals.decided_at, merge_proposals.created_at 
+FROM merge_proposals 
+WHERE merge_proposals.source_rule_set_id = $1::UUID ORDER BY merge_proposals.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:29:59,786 INFO sqlalchemy.engine.Engine [cached since 39.39s ago] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'), 1)
+2026-04-30 03:29:59,788 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id, live_rule_versions.repository_id, live_rule_versions.version_number, live_rule_versions.parent_version_id, live_rule_versions.source_brd_id, live_rule_versions.merge_proposal_id, live_rule_versions.summary, live_rule_versions.rule_snapshot, live_rule_versions.python_export, live_rule_versions.created_at, live_rule_versions.created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.merge_proposal_id = $1::UUID 
+ LIMIT $2::INTEGER
+2026-04-30 03:29:59,788 INFO sqlalchemy.engine.Engine [cached since 39.37s ago] (UUID('4a09b9da-14b7-48fb-afb7-d342496bb853'), 1)
+2026-04-30 03:29:59,791 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id AS live_rule_versions_id, live_rule_versions.repository_id AS live_rule_versions_repository_id, live_rule_versions.version_number AS live_rule_versions_version_number, live_rule_versions.parent_version_id AS live_rule_versions_parent_version_id, live_rule_versions.source_brd_id AS live_rule_versions_source_brd_id, live_rule_versions.merge_proposal_id AS live_rule_versions_merge_proposal_id, live_rule_versions.summary AS live_rule_versions_summary, live_rule_versions.rule_snapshot AS live_rule_versions_rule_snapshot, live_rule_versions.python_export AS live_rule_versions_python_export, live_rule_versions.created_at AS live_rule_versions_created_at, live_rule_versions.created_by AS live_rule_versions_created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.id = $1::UUID
+2026-04-30 03:29:59,791 INFO sqlalchemy.engine.Engine [cached since 39.37s ago] (UUID('b58375b5-73b9-4a07-b644-4ebfa9158005'),)
+2026-04-30 03:29:59,793 INFO sqlalchemy.engine.Engine SELECT impact_runs.id, impact_runs.repository_id, impact_runs.base_version_id, impact_runs.candidate_version_id, impact_runs.loan_record_filter, impact_runs.status, impact_runs.summary, impact_runs.error, impact_runs.created_at, impact_runs.completed_at, impact_runs.created_by 
+FROM impact_runs 
+WHERE impact_runs.candidate_version_id = $1::UUID ORDER BY impact_runs.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:29:59,793 INFO sqlalchemy.engine.Engine [cached since 39.37s ago] (UUID('17ee90de-554d-4bf1-a990-4cd666a63519'), 1)
+INFO:     127.0.0.1:49302 - "GET /api/v1/brds/0593bbbd-8e23-47b1-b4a8-d4b68e0f084f/workflow HTTP/1.1" 200 OK
+2026-04-30 03:29:59,795 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:30:10,330 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:30:10,331 INFO sqlalchemy.engine.Engine SELECT brd_documents.id, brd_documents.filename, brd_documents.file_path, brd_documents.file_type, brd_documents.parsed_content, brd_documents.metadata_json, brd_documents.created_at 
+FROM brd_documents 
+WHERE brd_documents.id = $1::UUID
+2026-04-30 03:30:10,331 INFO sqlalchemy.engine.Engine [cached since 50.06s ago] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'),)
+INFO:     127.0.0.1:60875 - "GET /api/v1/brds/0593bbbd-8e23-47b1-b4a8-d4b68e0f084f HTTP/1.1" 200 OK
+2026-04-30 03:30:10,336 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:30:10,338 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:30:10,339 INFO sqlalchemy.engine.Engine SELECT brd_documents.id, brd_documents.filename, brd_documents.file_path, brd_documents.file_type, brd_documents.parsed_content, brd_documents.metadata_json, brd_documents.created_at 
+FROM brd_documents 
+WHERE brd_documents.id = $1::UUID
+2026-04-30 03:30:10,339 INFO sqlalchemy.engine.Engine [cached since 50.07s ago] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'),)
+2026-04-30 03:30:10,344 INFO sqlalchemy.engine.Engine SELECT rule_sets.id, rule_sets.brd_document_id, rule_sets.version, rule_sets.name, rule_sets.description, rule_sets.status, rule_sets.created_at 
+FROM rule_sets 
+WHERE rule_sets.brd_document_id = $1::UUID ORDER BY rule_sets.version DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:30:10,344 INFO sqlalchemy.engine.Engine [cached since 49.97s ago] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'), 1)
+2026-04-30 03:30:10,348 INFO sqlalchemy.engine.Engine SELECT count(*) AS count_1 
+FROM rules 
+WHERE rules.rule_set_id = $1::UUID
+2026-04-30 03:30:10,349 INFO sqlalchemy.engine.Engine [cached since 49.96s ago] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'),)
+2026-04-30 03:30:10,352 INFO sqlalchemy.engine.Engine SELECT test_case_suites.id, test_case_suites.rule_set_id, test_case_suites.total_cases, test_case_suites.cases_by_category, test_case_suites.coverage_stats, test_case_suites.suggested_counts, test_case_suites.created_at, test_case_suites.last_execution_report, test_case_suites.last_executed_at, test_case_suites.last_executed_against_version_id 
+FROM test_case_suites 
+WHERE test_case_suites.rule_set_id = $1::UUID ORDER BY test_case_suites.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:30:10,352 INFO sqlalchemy.engine.Engine [cached since 49.96s ago] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'), 1)
+2026-04-30 03:30:10,356 INFO sqlalchemy.engine.Engine SELECT merge_proposals.id, merge_proposals.repository_id, merge_proposals.base_version, merge_proposals.source_brd_id, merge_proposals.source_rule_set_id, merge_proposals.status, merge_proposals.summary, merge_proposals.decided_by, merge_proposals.decided_at, merge_proposals.created_at 
+FROM merge_proposals 
+WHERE merge_proposals.source_rule_set_id = $1::UUID ORDER BY merge_proposals.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:30:10,356 INFO sqlalchemy.engine.Engine [cached since 49.96s ago] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'), 1)
+2026-04-30 03:30:10,359 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id, live_rule_versions.repository_id, live_rule_versions.version_number, live_rule_versions.parent_version_id, live_rule_versions.source_brd_id, live_rule_versions.merge_proposal_id, live_rule_versions.summary, live_rule_versions.rule_snapshot, live_rule_versions.python_export, live_rule_versions.created_at, live_rule_versions.created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.merge_proposal_id = $1::UUID 
+ LIMIT $2::INTEGER
+2026-04-30 03:30:10,359 INFO sqlalchemy.engine.Engine [cached since 49.94s ago] (UUID('4a09b9da-14b7-48fb-afb7-d342496bb853'), 1)
+2026-04-30 03:30:10,363 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id AS live_rule_versions_id, live_rule_versions.repository_id AS live_rule_versions_repository_id, live_rule_versions.version_number AS live_rule_versions_version_number, live_rule_versions.parent_version_id AS live_rule_versions_parent_version_id, live_rule_versions.source_brd_id AS live_rule_versions_source_brd_id, live_rule_versions.merge_proposal_id AS live_rule_versions_merge_proposal_id, live_rule_versions.summary AS live_rule_versions_summary, live_rule_versions.rule_snapshot AS live_rule_versions_rule_snapshot, live_rule_versions.python_export AS live_rule_versions_python_export, live_rule_versions.created_at AS live_rule_versions_created_at, live_rule_versions.created_by AS live_rule_versions_created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.id = $1::UUID
+2026-04-30 03:30:10,363 INFO sqlalchemy.engine.Engine [cached since 49.94s ago] (UUID('b58375b5-73b9-4a07-b644-4ebfa9158005'),)
+2026-04-30 03:30:10,365 INFO sqlalchemy.engine.Engine SELECT impact_runs.id, impact_runs.repository_id, impact_runs.base_version_id, impact_runs.candidate_version_id, impact_runs.loan_record_filter, impact_runs.status, impact_runs.summary, impact_runs.error, impact_runs.created_at, impact_runs.completed_at, impact_runs.created_by 
+FROM impact_runs 
+WHERE impact_runs.candidate_version_id = $1::UUID ORDER BY impact_runs.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:30:10,366 INFO sqlalchemy.engine.Engine [cached since 49.94s ago] (UUID('17ee90de-554d-4bf1-a990-4cd666a63519'), 1)
+INFO:     127.0.0.1:60875 - "GET /api/v1/brds/0593bbbd-8e23-47b1-b4a8-d4b68e0f084f/workflow HTTP/1.1" 200 OK
+2026-04-30 03:30:10,369 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:30:20,246 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:30:20,247 INFO sqlalchemy.engine.Engine SELECT brd_documents.id, brd_documents.filename, brd_documents.file_path, brd_documents.file_type, brd_documents.parsed_content, brd_documents.metadata_json, brd_documents.created_at 
+FROM brd_documents 
+WHERE brd_documents.id = $1::UUID
+2026-04-30 03:30:20,248 INFO sqlalchemy.engine.Engine [cached since 59.98s ago] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'),)
+INFO:     127.0.0.1:62398 - "GET /api/v1/brds/0593bbbd-8e23-47b1-b4a8-d4b68e0f084f HTTP/1.1" 200 OK
+2026-04-30 03:30:20,252 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:30:20,253 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:30:20,254 INFO sqlalchemy.engine.Engine SELECT brd_documents.id, brd_documents.filename, brd_documents.file_path, brd_documents.file_type, brd_documents.parsed_content, brd_documents.metadata_json, brd_documents.created_at 
+FROM brd_documents 
+WHERE brd_documents.id = $1::UUID
+2026-04-30 03:30:20,254 INFO sqlalchemy.engine.Engine [cached since 59.98s ago] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'),)
+2026-04-30 03:30:20,258 INFO sqlalchemy.engine.Engine SELECT rule_sets.id, rule_sets.brd_document_id, rule_sets.version, rule_sets.name, rule_sets.description, rule_sets.status, rule_sets.created_at 
+FROM rule_sets 
+WHERE rule_sets.brd_document_id = $1::UUID ORDER BY rule_sets.version DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:30:20,258 INFO sqlalchemy.engine.Engine [cached since 59.89s ago] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'), 1)
+2026-04-30 03:30:20,261 INFO sqlalchemy.engine.Engine SELECT count(*) AS count_1 
+FROM rules 
+WHERE rules.rule_set_id = $1::UUID
+2026-04-30 03:30:20,261 INFO sqlalchemy.engine.Engine [cached since 59.88s ago] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'),)
+2026-04-30 03:30:20,264 INFO sqlalchemy.engine.Engine SELECT test_case_suites.id, test_case_suites.rule_set_id, test_case_suites.total_cases, test_case_suites.cases_by_category, test_case_suites.coverage_stats, test_case_suites.suggested_counts, test_case_suites.created_at, test_case_suites.last_execution_report, test_case_suites.last_executed_at, test_case_suites.last_executed_against_version_id 
+FROM test_case_suites 
+WHERE test_case_suites.rule_set_id = $1::UUID ORDER BY test_case_suites.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:30:20,264 INFO sqlalchemy.engine.Engine [cached since 59.87s ago] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'), 1)
+2026-04-30 03:30:20,266 INFO sqlalchemy.engine.Engine SELECT merge_proposals.id, merge_proposals.repository_id, merge_proposals.base_version, merge_proposals.source_brd_id, merge_proposals.source_rule_set_id, merge_proposals.status, merge_proposals.summary, merge_proposals.decided_by, merge_proposals.decided_at, merge_proposals.created_at 
+FROM merge_proposals 
+WHERE merge_proposals.source_rule_set_id = $1::UUID ORDER BY merge_proposals.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:30:20,267 INFO sqlalchemy.engine.Engine [cached since 59.87s ago] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'), 1)
+2026-04-30 03:30:20,269 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id, live_rule_versions.repository_id, live_rule_versions.version_number, live_rule_versions.parent_version_id, live_rule_versions.source_brd_id, live_rule_versions.merge_proposal_id, live_rule_versions.summary, live_rule_versions.rule_snapshot, live_rule_versions.python_export, live_rule_versions.created_at, live_rule_versions.created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.merge_proposal_id = $1::UUID 
+ LIMIT $2::INTEGER
+2026-04-30 03:30:20,269 INFO sqlalchemy.engine.Engine [cached since 59.85s ago] (UUID('4a09b9da-14b7-48fb-afb7-d342496bb853'), 1)
+2026-04-30 03:30:20,272 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id AS live_rule_versions_id, live_rule_versions.repository_id AS live_rule_versions_repository_id, live_rule_versions.version_number AS live_rule_versions_version_number, live_rule_versions.parent_version_id AS live_rule_versions_parent_version_id, live_rule_versions.source_brd_id AS live_rule_versions_source_brd_id, live_rule_versions.merge_proposal_id AS live_rule_versions_merge_proposal_id, live_rule_versions.summary AS live_rule_versions_summary, live_rule_versions.rule_snapshot AS live_rule_versions_rule_snapshot, live_rule_versions.python_export AS live_rule_versions_python_export, live_rule_versions.created_at AS live_rule_versions_created_at, live_rule_versions.created_by AS live_rule_versions_created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.id = $1::UUID
+2026-04-30 03:30:20,273 INFO sqlalchemy.engine.Engine [cached since 59.85s ago] (UUID('b58375b5-73b9-4a07-b644-4ebfa9158005'),)
+2026-04-30 03:30:20,275 INFO sqlalchemy.engine.Engine SELECT impact_runs.id, impact_runs.repository_id, impact_runs.base_version_id, impact_runs.candidate_version_id, impact_runs.loan_record_filter, impact_runs.status, impact_runs.summary, impact_runs.error, impact_runs.created_at, impact_runs.completed_at, impact_runs.created_by 
+FROM impact_runs 
+WHERE impact_runs.candidate_version_id = $1::UUID ORDER BY impact_runs.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:30:20,276 INFO sqlalchemy.engine.Engine [cached since 59.85s ago] (UUID('17ee90de-554d-4bf1-a990-4cd666a63519'), 1)
+INFO:     127.0.0.1:62398 - "GET /api/v1/brds/0593bbbd-8e23-47b1-b4a8-d4b68e0f084f/workflow HTTP/1.1" 200 OK
+2026-04-30 03:30:20,279 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:30:30,556 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:30:30,557 INFO sqlalchemy.engine.Engine SELECT brd_documents.id, brd_documents.filename, brd_documents.file_path, brd_documents.file_type, brd_documents.parsed_content, brd_documents.metadata_json, brd_documents.created_at 
+FROM brd_documents 
+WHERE brd_documents.id = $1::UUID
+2026-04-30 03:30:30,557 INFO sqlalchemy.engine.Engine [cached since 70.28s ago] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'),)
+INFO:     127.0.0.1:49724 - "GET /api/v1/brds/0593bbbd-8e23-47b1-b4a8-d4b68e0f084f HTTP/1.1" 200 OK
+2026-04-30 03:30:30,562 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:30:30,565 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:30:30,565 INFO sqlalchemy.engine.Engine SELECT brd_documents.id, brd_documents.filename, brd_documents.file_path, brd_documents.file_type, brd_documents.parsed_content, brd_documents.metadata_json, brd_documents.created_at 
+FROM brd_documents 
+WHERE brd_documents.id = $1::UUID
+2026-04-30 03:30:30,565 INFO sqlalchemy.engine.Engine [cached since 70.29s ago] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'),)
+2026-04-30 03:30:30,570 INFO sqlalchemy.engine.Engine SELECT rule_sets.id, rule_sets.brd_document_id, rule_sets.version, rule_sets.name, rule_sets.description, rule_sets.status, rule_sets.created_at 
+FROM rule_sets 
+WHERE rule_sets.brd_document_id = $1::UUID ORDER BY rule_sets.version DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:30:30,571 INFO sqlalchemy.engine.Engine [cached since 70.2s ago] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'), 1)
+2026-04-30 03:30:30,574 INFO sqlalchemy.engine.Engine SELECT count(*) AS count_1 
+FROM rules 
+WHERE rules.rule_set_id = $1::UUID
+2026-04-30 03:30:30,574 INFO sqlalchemy.engine.Engine [cached since 70.19s ago] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'),)
+2026-04-30 03:30:30,577 INFO sqlalchemy.engine.Engine SELECT test_case_suites.id, test_case_suites.rule_set_id, test_case_suites.total_cases, test_case_suites.cases_by_category, test_case_suites.coverage_stats, test_case_suites.suggested_counts, test_case_suites.created_at, test_case_suites.last_execution_report, test_case_suites.last_executed_at, test_case_suites.last_executed_against_version_id 
+FROM test_case_suites 
+WHERE test_case_suites.rule_set_id = $1::UUID ORDER BY test_case_suites.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:30:30,577 INFO sqlalchemy.engine.Engine [cached since 70.19s ago] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'), 1)
+2026-04-30 03:30:30,580 INFO sqlalchemy.engine.Engine SELECT merge_proposals.id, merge_proposals.repository_id, merge_proposals.base_version, merge_proposals.source_brd_id, merge_proposals.source_rule_set_id, merge_proposals.status, merge_proposals.summary, merge_proposals.decided_by, merge_proposals.decided_at, merge_proposals.created_at 
+FROM merge_proposals 
+WHERE merge_proposals.source_rule_set_id = $1::UUID ORDER BY merge_proposals.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:30:30,581 INFO sqlalchemy.engine.Engine [cached since 70.18s ago] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'), 1)
+2026-04-30 03:30:30,584 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id, live_rule_versions.repository_id, live_rule_versions.version_number, live_rule_versions.parent_version_id, live_rule_versions.source_brd_id, live_rule_versions.merge_proposal_id, live_rule_versions.summary, live_rule_versions.rule_snapshot, live_rule_versions.python_export, live_rule_versions.created_at, live_rule_versions.created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.merge_proposal_id = $1::UUID 
+ LIMIT $2::INTEGER
+2026-04-30 03:30:30,584 INFO sqlalchemy.engine.Engine [cached since 70.17s ago] (UUID('4a09b9da-14b7-48fb-afb7-d342496bb853'), 1)
+2026-04-30 03:30:30,588 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id AS live_rule_versions_id, live_rule_versions.repository_id AS live_rule_versions_repository_id, live_rule_versions.version_number AS live_rule_versions_version_number, live_rule_versions.parent_version_id AS live_rule_versions_parent_version_id, live_rule_versions.source_brd_id AS live_rule_versions_source_brd_id, live_rule_versions.merge_proposal_id AS live_rule_versions_merge_proposal_id, live_rule_versions.summary AS live_rule_versions_summary, live_rule_versions.rule_snapshot AS live_rule_versions_rule_snapshot, live_rule_versions.python_export AS live_rule_versions_python_export, live_rule_versions.created_at AS live_rule_versions_created_at, live_rule_versions.created_by AS live_rule_versions_created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.id = $1::UUID
+2026-04-30 03:30:30,588 INFO sqlalchemy.engine.Engine [cached since 70.17s ago] (UUID('b58375b5-73b9-4a07-b644-4ebfa9158005'),)
+2026-04-30 03:30:30,592 INFO sqlalchemy.engine.Engine SELECT impact_runs.id, impact_runs.repository_id, impact_runs.base_version_id, impact_runs.candidate_version_id, impact_runs.loan_record_filter, impact_runs.status, impact_runs.summary, impact_runs.error, impact_runs.created_at, impact_runs.completed_at, impact_runs.created_by 
+FROM impact_runs 
+WHERE impact_runs.candidate_version_id = $1::UUID ORDER BY impact_runs.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:30:30,592 INFO sqlalchemy.engine.Engine [cached since 70.16s ago] (UUID('17ee90de-554d-4bf1-a990-4cd666a63519'), 1)
+INFO:     127.0.0.1:49724 - "GET /api/v1/brds/0593bbbd-8e23-47b1-b4a8-d4b68e0f084f/workflow HTTP/1.1" 200 OK
+2026-04-30 03:30:30,597 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:30:54,256 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:30:54,257 INFO sqlalchemy.engine.Engine SELECT brd_documents.id, brd_documents.filename, brd_documents.file_path, brd_documents.file_type, brd_documents.parsed_content, brd_documents.metadata_json, brd_documents.created_at 
+FROM brd_documents 
+WHERE brd_documents.id = $1::UUID
+2026-04-30 03:30:54,257 INFO sqlalchemy.engine.Engine [cached since 93.99s ago] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'),)
+INFO:     127.0.0.1:54762 - "GET /api/v1/brds/0593bbbd-8e23-47b1-b4a8-d4b68e0f084f HTTP/1.1" 200 OK
+2026-04-30 03:30:54,263 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:30:54,265 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:30:54,266 INFO sqlalchemy.engine.Engine SELECT brd_documents.id, brd_documents.filename, brd_documents.file_path, brd_documents.file_type, brd_documents.parsed_content, brd_documents.metadata_json, brd_documents.created_at 
+FROM brd_documents 
+WHERE brd_documents.id = $1::UUID
+2026-04-30 03:30:54,267 INFO sqlalchemy.engine.Engine [cached since 93.99s ago] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'),)
+2026-04-30 03:30:54,271 INFO sqlalchemy.engine.Engine SELECT rule_sets.id, rule_sets.brd_document_id, rule_sets.version, rule_sets.name, rule_sets.description, rule_sets.status, rule_sets.created_at 
+FROM rule_sets 
+WHERE rule_sets.brd_document_id = $1::UUID ORDER BY rule_sets.version DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:30:54,271 INFO sqlalchemy.engine.Engine [cached since 93.9s ago] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'), 1)
+2026-04-30 03:30:54,274 INFO sqlalchemy.engine.Engine SELECT count(*) AS count_1 
+FROM rules 
+WHERE rules.rule_set_id = $1::UUID
+2026-04-30 03:30:54,275 INFO sqlalchemy.engine.Engine [cached since 93.89s ago] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'),)
+2026-04-30 03:30:54,278 INFO sqlalchemy.engine.Engine SELECT test_case_suites.id, test_case_suites.rule_set_id, test_case_suites.total_cases, test_case_suites.cases_by_category, test_case_suites.coverage_stats, test_case_suites.suggested_counts, test_case_suites.created_at, test_case_suites.last_execution_report, test_case_suites.last_executed_at, test_case_suites.last_executed_against_version_id 
+FROM test_case_suites 
+WHERE test_case_suites.rule_set_id = $1::UUID ORDER BY test_case_suites.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:30:54,278 INFO sqlalchemy.engine.Engine [cached since 93.89s ago] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'), 1)
+2026-04-30 03:30:54,281 INFO sqlalchemy.engine.Engine SELECT merge_proposals.id, merge_proposals.repository_id, merge_proposals.base_version, merge_proposals.source_brd_id, merge_proposals.source_rule_set_id, merge_proposals.status, merge_proposals.summary, merge_proposals.decided_by, merge_proposals.decided_at, merge_proposals.created_at 
+FROM merge_proposals 
+WHERE merge_proposals.source_rule_set_id = $1::UUID ORDER BY merge_proposals.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:30:54,281 INFO sqlalchemy.engine.Engine [cached since 93.88s ago] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'), 1)
+2026-04-30 03:30:54,284 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id, live_rule_versions.repository_id, live_rule_versions.version_number, live_rule_versions.parent_version_id, live_rule_versions.source_brd_id, live_rule_versions.merge_proposal_id, live_rule_versions.summary, live_rule_versions.rule_snapshot, live_rule_versions.python_export, live_rule_versions.created_at, live_rule_versions.created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.merge_proposal_id = $1::UUID 
+ LIMIT $2::INTEGER
+2026-04-30 03:30:54,285 INFO sqlalchemy.engine.Engine [cached since 93.87s ago] (UUID('4a09b9da-14b7-48fb-afb7-d342496bb853'), 1)
+2026-04-30 03:30:54,289 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id AS live_rule_versions_id, live_rule_versions.repository_id AS live_rule_versions_repository_id, live_rule_versions.version_number AS live_rule_versions_version_number, live_rule_versions.parent_version_id AS live_rule_versions_parent_version_id, live_rule_versions.source_brd_id AS live_rule_versions_source_brd_id, live_rule_versions.merge_proposal_id AS live_rule_versions_merge_proposal_id, live_rule_versions.summary AS live_rule_versions_summary, live_rule_versions.rule_snapshot AS live_rule_versions_rule_snapshot, live_rule_versions.python_export AS live_rule_versions_python_export, live_rule_versions.created_at AS live_rule_versions_created_at, live_rule_versions.created_by AS live_rule_versions_created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.id = $1::UUID
+2026-04-30 03:30:54,289 INFO sqlalchemy.engine.Engine [cached since 93.87s ago] (UUID('b58375b5-73b9-4a07-b644-4ebfa9158005'),)
+2026-04-30 03:30:54,292 INFO sqlalchemy.engine.Engine SELECT impact_runs.id, impact_runs.repository_id, impact_runs.base_version_id, impact_runs.candidate_version_id, impact_runs.loan_record_filter, impact_runs.status, impact_runs.summary, impact_runs.error, impact_runs.created_at, impact_runs.completed_at, impact_runs.created_by 
+FROM impact_runs 
+WHERE impact_runs.candidate_version_id = $1::UUID ORDER BY impact_runs.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:30:54,293 INFO sqlalchemy.engine.Engine [cached since 93.86s ago] (UUID('17ee90de-554d-4bf1-a990-4cd666a63519'), 1)
+INFO:     127.0.0.1:54762 - "GET /api/v1/brds/0593bbbd-8e23-47b1-b4a8-d4b68e0f084f/workflow HTTP/1.1" 200 OK
+2026-04-30 03:30:54,297 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:31:06,614 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:31:06,615 INFO sqlalchemy.engine.Engine SELECT brd_documents.id, brd_documents.filename, brd_documents.file_path, brd_documents.file_type, brd_documents.parsed_content, brd_documents.metadata_json, brd_documents.created_at 
+FROM brd_documents 
+WHERE brd_documents.id = $1::UUID
+2026-04-30 03:31:06,616 INFO sqlalchemy.engine.Engine [cached since 106.3s ago] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'),)
+INFO:     127.0.0.1:49791 - "GET /api/v1/brds/0593bbbd-8e23-47b1-b4a8-d4b68e0f084f HTTP/1.1" 200 OK
+2026-04-30 03:31:06,620 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:31:06,622 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:31:06,622 INFO sqlalchemy.engine.Engine SELECT brd_documents.id, brd_documents.filename, brd_documents.file_path, brd_documents.file_type, brd_documents.parsed_content, brd_documents.metadata_json, brd_documents.created_at 
+FROM brd_documents 
+WHERE brd_documents.id = $1::UUID
+2026-04-30 03:31:06,623 INFO sqlalchemy.engine.Engine [cached since 106.4s ago] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'),)
+2026-04-30 03:31:06,626 INFO sqlalchemy.engine.Engine SELECT rule_sets.id, rule_sets.brd_document_id, rule_sets.version, rule_sets.name, rule_sets.description, rule_sets.status, rule_sets.created_at 
+FROM rule_sets 
+WHERE rule_sets.brd_document_id = $1::UUID ORDER BY rule_sets.version DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:31:06,627 INFO sqlalchemy.engine.Engine [cached since 106.3s ago] (UUID('0593bbbd-8e23-47b1-b4a8-d4b68e0f084f'), 1)
+2026-04-30 03:31:06,629 INFO sqlalchemy.engine.Engine SELECT count(*) AS count_1 
+FROM rules 
+WHERE rules.rule_set_id = $1::UUID
+2026-04-30 03:31:06,630 INFO sqlalchemy.engine.Engine [cached since 106.2s ago] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'),)
+2026-04-30 03:31:06,633 INFO sqlalchemy.engine.Engine SELECT test_case_suites.id, test_case_suites.rule_set_id, test_case_suites.total_cases, test_case_suites.cases_by_category, test_case_suites.coverage_stats, test_case_suites.suggested_counts, test_case_suites.created_at, test_case_suites.last_execution_report, test_case_suites.last_executed_at, test_case_suites.last_executed_against_version_id 
+FROM test_case_suites 
+WHERE test_case_suites.rule_set_id = $1::UUID ORDER BY test_case_suites.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:31:06,633 INFO sqlalchemy.engine.Engine [cached since 106.2s ago] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'), 1)
+2026-04-30 03:31:06,636 INFO sqlalchemy.engine.Engine SELECT merge_proposals.id, merge_proposals.repository_id, merge_proposals.base_version, merge_proposals.source_brd_id, merge_proposals.source_rule_set_id, merge_proposals.status, merge_proposals.summary, merge_proposals.decided_by, merge_proposals.decided_at, merge_proposals.created_at 
+FROM merge_proposals 
+WHERE merge_proposals.source_rule_set_id = $1::UUID ORDER BY merge_proposals.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:31:06,636 INFO sqlalchemy.engine.Engine [cached since 106.2s ago] (UUID('7060e558-28ff-4f79-acfc-a07003f5f1a5'), 1)
+2026-04-30 03:31:06,639 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id, live_rule_versions.repository_id, live_rule_versions.version_number, live_rule_versions.parent_version_id, live_rule_versions.source_brd_id, live_rule_versions.merge_proposal_id, live_rule_versions.summary, live_rule_versions.rule_snapshot, live_rule_versions.python_export, live_rule_versions.created_at, live_rule_versions.created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.merge_proposal_id = $1::UUID 
+ LIMIT $2::INTEGER
+2026-04-30 03:31:06,639 INFO sqlalchemy.engine.Engine [cached since 106.2s ago] (UUID('4a09b9da-14b7-48fb-afb7-d342496bb853'), 1)
+2026-04-30 03:31:06,642 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id AS live_rule_versions_id, live_rule_versions.repository_id AS live_rule_versions_repository_id, live_rule_versions.version_number AS live_rule_versions_version_number, live_rule_versions.parent_version_id AS live_rule_versions_parent_version_id, live_rule_versions.source_brd_id AS live_rule_versions_source_brd_id, live_rule_versions.merge_proposal_id AS live_rule_versions_merge_proposal_id, live_rule_versions.summary AS live_rule_versions_summary, live_rule_versions.rule_snapshot AS live_rule_versions_rule_snapshot, live_rule_versions.python_export AS live_rule_versions_python_export, live_rule_versions.created_at AS live_rule_versions_created_at, live_rule_versions.created_by AS live_rule_versions_created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.id = $1::UUID
+2026-04-30 03:31:06,642 INFO sqlalchemy.engine.Engine [cached since 106.2s ago] (UUID('b58375b5-73b9-4a07-b644-4ebfa9158005'),)
+2026-04-30 03:31:06,645 INFO sqlalchemy.engine.Engine SELECT impact_runs.id, impact_runs.repository_id, impact_runs.base_version_id, impact_runs.candidate_version_id, impact_runs.loan_record_filter, impact_runs.status, impact_runs.summary, impact_runs.error, impact_runs.created_at, impact_runs.completed_at, impact_runs.created_by 
+FROM impact_runs 
+WHERE impact_runs.candidate_version_id = $1::UUID ORDER BY impact_runs.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:31:06,645 INFO sqlalchemy.engine.Engine [cached since 106.2s ago] (UUID('17ee90de-554d-4bf1-a990-4cd666a63519'), 1)
+INFO:     127.0.0.1:49791 - "GET /api/v1/brds/0593bbbd-8e23-47b1-b4a8-d4b68e0f084f/workflow HTTP/1.1" 200 OK
+2026-04-30 03:31:06,648 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:33:09,491 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:33:09,491 INFO sqlalchemy.engine.Engine SELECT brd_documents.id, brd_documents.filename, brd_documents.file_path, brd_documents.file_type, brd_documents.parsed_content, brd_documents.metadata_json, brd_documents.created_at 
+FROM brd_documents 
+WHERE brd_documents.id = $1::UUID
+2026-04-30 03:33:09,492 INFO sqlalchemy.engine.Engine [cached since 229.2s ago] (UUID('6ca7012f-9f89-44cc-80c5-4c8d40219c36'),)
+2026-04-30 03:33:09,493 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:33:09,493 INFO sqlalchemy.engine.Engine SELECT brd_documents.id, brd_documents.filename, brd_documents.file_path, brd_documents.file_type, brd_documents.parsed_content, brd_documents.metadata_json, brd_documents.created_at 
+FROM brd_documents 
+WHERE brd_documents.id = $1::UUID
+2026-04-30 03:33:09,493 INFO sqlalchemy.engine.Engine [cached since 229.2s ago] (UUID('6ca7012f-9f89-44cc-80c5-4c8d40219c36'),)
+INFO:     127.0.0.1:62150 - "GET /api/v1/brds/6ca7012f-9f89-44cc-80c5-4c8d40219c36 HTTP/1.1" 200 OK
+2026-04-30 03:33:09,496 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:33:09,497 INFO sqlalchemy.engine.Engine SELECT rule_sets.id, rule_sets.brd_document_id, rule_sets.version, rule_sets.name, rule_sets.description, rule_sets.status, rule_sets.created_at 
+FROM rule_sets 
+WHERE rule_sets.brd_document_id = $1::UUID ORDER BY rule_sets.version DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:33:09,498 INFO sqlalchemy.engine.Engine [cached since 229.1s ago] (UUID('6ca7012f-9f89-44cc-80c5-4c8d40219c36'), 1)
+2026-04-30 03:33:09,500 INFO sqlalchemy.engine.Engine SELECT count(*) AS count_1 
+FROM rules 
+WHERE rules.rule_set_id = $1::UUID
+2026-04-30 03:33:09,500 INFO sqlalchemy.engine.Engine [cached since 229.1s ago] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'),)
+2026-04-30 03:33:09,502 INFO sqlalchemy.engine.Engine SELECT test_case_suites.id, test_case_suites.rule_set_id, test_case_suites.total_cases, test_case_suites.cases_by_category, test_case_suites.coverage_stats, test_case_suites.suggested_counts, test_case_suites.created_at, test_case_suites.last_execution_report, test_case_suites.last_executed_at, test_case_suites.last_executed_against_version_id 
+FROM test_case_suites 
+WHERE test_case_suites.rule_set_id = $1::UUID ORDER BY test_case_suites.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:33:09,502 INFO sqlalchemy.engine.Engine [cached since 229.1s ago] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'), 1)
+2026-04-30 03:33:09,504 INFO sqlalchemy.engine.Engine SELECT merge_proposals.id, merge_proposals.repository_id, merge_proposals.base_version, merge_proposals.source_brd_id, merge_proposals.source_rule_set_id, merge_proposals.status, merge_proposals.summary, merge_proposals.decided_by, merge_proposals.decided_at, merge_proposals.created_at 
+FROM merge_proposals 
+WHERE merge_proposals.source_rule_set_id = $1::UUID ORDER BY merge_proposals.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:33:09,504 INFO sqlalchemy.engine.Engine [cached since 229.1s ago] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'), 1)
+2026-04-30 03:33:09,507 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id, live_rule_versions.repository_id, live_rule_versions.version_number, live_rule_versions.parent_version_id, live_rule_versions.source_brd_id, live_rule_versions.merge_proposal_id, live_rule_versions.summary, live_rule_versions.rule_snapshot, live_rule_versions.python_export, live_rule_versions.created_at, live_rule_versions.created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.merge_proposal_id = $1::UUID 
+ LIMIT $2::INTEGER
+2026-04-30 03:33:09,507 INFO sqlalchemy.engine.Engine [cached since 229.1s ago] (UUID('40e04708-97d3-4263-8bb3-82ebcfebc1b2'), 1)
+2026-04-30 03:33:09,510 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id AS live_rule_versions_id, live_rule_versions.repository_id AS live_rule_versions_repository_id, live_rule_versions.version_number AS live_rule_versions_version_number, live_rule_versions.parent_version_id AS live_rule_versions_parent_version_id, live_rule_versions.source_brd_id AS live_rule_versions_source_brd_id, live_rule_versions.merge_proposal_id AS live_rule_versions_merge_proposal_id, live_rule_versions.summary AS live_rule_versions_summary, live_rule_versions.rule_snapshot AS live_rule_versions_rule_snapshot, live_rule_versions.python_export AS live_rule_versions_python_export, live_rule_versions.created_at AS live_rule_versions_created_at, live_rule_versions.created_by AS live_rule_versions_created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.id = $1::UUID
+2026-04-30 03:33:09,511 INFO sqlalchemy.engine.Engine [cached since 229.1s ago] (UUID('17ee90de-554d-4bf1-a990-4cd666a63519'),)
+2026-04-30 03:33:09,513 INFO sqlalchemy.engine.Engine SELECT impact_runs.id, impact_runs.repository_id, impact_runs.base_version_id, impact_runs.candidate_version_id, impact_runs.loan_record_filter, impact_runs.status, impact_runs.summary, impact_runs.error, impact_runs.created_at, impact_runs.completed_at, impact_runs.created_by 
+FROM impact_runs 
+WHERE impact_runs.candidate_version_id = $1::UUID ORDER BY impact_runs.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:33:09,513 INFO sqlalchemy.engine.Engine [cached since 229.1s ago] (UUID('a676bdeb-1866-4453-9fe3-039b38113ec8'), 1)
+INFO:     127.0.0.1:56564 - "GET /api/v1/brds/6ca7012f-9f89-44cc-80c5-4c8d40219c36/workflow HTTP/1.1" 200 OK
+2026-04-30 03:33:09,516 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:33:59,088 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:33:59,090 INFO sqlalchemy.engine.Engine SELECT rule_sets.id, rule_sets.brd_document_id, rule_sets.version, rule_sets.name, rule_sets.description, rule_sets.status, rule_sets.created_at 
+FROM rule_sets 
+WHERE rule_sets.id = $1::UUID
+2026-04-30 03:33:59,090 INFO sqlalchemy.engine.Engine [generated in 0.00036s] (UUID('fd632221-d23d-4f49-bd63-3bf3da5addc8'),)
+2026-04-30 03:33:59,101 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:51105 - "PATCH /api/v1/rule-sets/fd632221-d23d-4f49-bd63-3bf3da5addc8/approve HTTP/1.1" 404 Not Found
+2026-04-30 03:33:59,383 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:33:59,384 INFO sqlalchemy.engine.Engine SELECT rule_sets.id, rule_sets.brd_document_id, rule_sets.version, rule_sets.name, rule_sets.description, rule_sets.status, rule_sets.created_at 
+FROM rule_sets 
+WHERE rule_sets.id = $1::UUID
+2026-04-30 03:33:59,384 INFO sqlalchemy.engine.Engine [cached since 0.2946s ago] (UUID('fd632221-d23d-4f49-bd63-3bf3da5addc8'),)
+2026-04-30 03:33:59,389 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:51107 - "POST /api/v1/test-cases/generate HTTP/1.1" 404 Not Found
+2026-04-30 03:34:08,796 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:34:08,797 INFO sqlalchemy.engine.Engine SELECT brd_documents.id, brd_documents.filename, brd_documents.file_path, brd_documents.file_type, brd_documents.parsed_content, brd_documents.metadata_json, brd_documents.created_at 
+FROM brd_documents 
+WHERE brd_documents.id = $1::UUID
+2026-04-30 03:34:08,797 INFO sqlalchemy.engine.Engine [cached since 288.5s ago] (UUID('6ca7012f-9f89-44cc-80c5-4c8d40219c36'),)
+2026-04-30 03:34:08,801 INFO sqlalchemy.engine.Engine SELECT rule_sets.id, rule_sets.brd_document_id, rule_sets.version, rule_sets.name, rule_sets.description, rule_sets.status, rule_sets.created_at 
+FROM rule_sets 
+WHERE rule_sets.brd_document_id = $1::UUID ORDER BY rule_sets.version DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:34:08,801 INFO sqlalchemy.engine.Engine [cached since 288.4s ago] (UUID('6ca7012f-9f89-44cc-80c5-4c8d40219c36'), 1)
+2026-04-30 03:34:08,805 INFO sqlalchemy.engine.Engine SELECT count(*) AS count_1 
+FROM rules 
+WHERE rules.rule_set_id = $1::UUID
+2026-04-30 03:34:08,805 INFO sqlalchemy.engine.Engine [cached since 288.4s ago] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'),)
+2026-04-30 03:34:08,810 INFO sqlalchemy.engine.Engine SELECT test_case_suites.id, test_case_suites.rule_set_id, test_case_suites.total_cases, test_case_suites.cases_by_category, test_case_suites.coverage_stats, test_case_suites.suggested_counts, test_case_suites.created_at, test_case_suites.last_execution_report, test_case_suites.last_executed_at, test_case_suites.last_executed_against_version_id 
+FROM test_case_suites 
+WHERE test_case_suites.rule_set_id = $1::UUID ORDER BY test_case_suites.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:34:08,810 INFO sqlalchemy.engine.Engine [cached since 288.4s ago] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'), 1)
+2026-04-30 03:34:08,815 INFO sqlalchemy.engine.Engine SELECT merge_proposals.id, merge_proposals.repository_id, merge_proposals.base_version, merge_proposals.source_brd_id, merge_proposals.source_rule_set_id, merge_proposals.status, merge_proposals.summary, merge_proposals.decided_by, merge_proposals.decided_at, merge_proposals.created_at 
+FROM merge_proposals 
+WHERE merge_proposals.source_rule_set_id = $1::UUID ORDER BY merge_proposals.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:34:08,816 INFO sqlalchemy.engine.Engine [cached since 288.4s ago] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'), 1)
+2026-04-30 03:34:08,827 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id, live_rule_versions.repository_id, live_rule_versions.version_number, live_rule_versions.parent_version_id, live_rule_versions.source_brd_id, live_rule_versions.merge_proposal_id, live_rule_versions.summary, live_rule_versions.rule_snapshot, live_rule_versions.python_export, live_rule_versions.created_at, live_rule_versions.created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.merge_proposal_id = $1::UUID 
+ LIMIT $2::INTEGER
+2026-04-30 03:34:08,828 INFO sqlalchemy.engine.Engine [cached since 288.4s ago] (UUID('40e04708-97d3-4263-8bb3-82ebcfebc1b2'), 1)
+2026-04-30 03:34:08,832 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id AS live_rule_versions_id, live_rule_versions.repository_id AS live_rule_versions_repository_id, live_rule_versions.version_number AS live_rule_versions_version_number, live_rule_versions.parent_version_id AS live_rule_versions_parent_version_id, live_rule_versions.source_brd_id AS live_rule_versions_source_brd_id, live_rule_versions.merge_proposal_id AS live_rule_versions_merge_proposal_id, live_rule_versions.summary AS live_rule_versions_summary, live_rule_versions.rule_snapshot AS live_rule_versions_rule_snapshot, live_rule_versions.python_export AS live_rule_versions_python_export, live_rule_versions.created_at AS live_rule_versions_created_at, live_rule_versions.created_by AS live_rule_versions_created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.id = $1::UUID
+2026-04-30 03:34:08,832 INFO sqlalchemy.engine.Engine [cached since 288.4s ago] (UUID('17ee90de-554d-4bf1-a990-4cd666a63519'),)
+2026-04-30 03:34:08,835 INFO sqlalchemy.engine.Engine SELECT impact_runs.id, impact_runs.repository_id, impact_runs.base_version_id, impact_runs.candidate_version_id, impact_runs.loan_record_filter, impact_runs.status, impact_runs.summary, impact_runs.error, impact_runs.created_at, impact_runs.completed_at, impact_runs.created_by 
+FROM impact_runs 
+WHERE impact_runs.candidate_version_id = $1::UUID ORDER BY impact_runs.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:34:08,836 INFO sqlalchemy.engine.Engine [cached since 288.4s ago] (UUID('a676bdeb-1866-4453-9fe3-039b38113ec8'), 1)
+INFO:     127.0.0.1:51112 - "GET /api/v1/brds/6ca7012f-9f89-44cc-80c5-4c8d40219c36/workflow HTTP/1.1" 200 OK
+2026-04-30 03:34:08,848 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:34:18,980 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:34:18,981 INFO sqlalchemy.engine.Engine SELECT rule_sets.id, rule_sets.brd_document_id, rule_sets.version, rule_sets.name, rule_sets.description, rule_sets.status, rule_sets.created_at 
+FROM rule_sets 
+WHERE rule_sets.id = $1::UUID
+2026-04-30 03:34:18,981 INFO sqlalchemy.engine.Engine [cached since 19.89s ago] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'),)
+2026-04-30 03:34:18,987 INFO sqlalchemy.engine.Engine SELECT rules.rule_set_id AS rules_rule_set_id, rules.id AS rules_id, rules.rule_id AS rules_rule_id, rules.rule_name AS rules_rule_name, rules.description AS rules_description, rules.rule_type AS rules_rule_type, rules.conditions AS rules_conditions, rules.actions AS rules_actions, rules.priority AS rules_priority, rules.confidence AS rules_confidence, rules.compiled_expression AS rules_compiled_expression, rules.source_section AS rules_source_section, rules.has_conflicts AS rules_has_conflicts, rules.conflict_details AS rules_conflict_details, rules.canonical_key AS rules_canonical_key, rules.subsystem AS rules_subsystem, rules.semantic_signature AS rules_semantic_signature, rules.supersedes_rule_id AS rules_supersedes_rule_id, rules.created_at AS rules_created_at 
+FROM rules 
+WHERE rules.rule_set_id IN ($1::UUID)
+2026-04-30 03:34:18,988 INFO sqlalchemy.engine.Engine [generated in 0.00046s] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'),)
+2026-04-30 03:34:19,006 INFO sqlalchemy.engine.Engine UPDATE rule_sets SET status=$1::rulesetstatus WHERE rule_sets.id = $2::UUID
+2026-04-30 03:34:19,006 INFO sqlalchemy.engine.Engine [generated in 0.00060s] ('APPROVED', UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'))
+2026-04-30 03:34:19,011 INFO sqlalchemy.engine.Engine COMMIT
+2026-04-30 03:34:19,017 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:34:19,019 INFO sqlalchemy.engine.Engine SELECT rule_sets.id, rule_sets.brd_document_id, rule_sets.version, rule_sets.name, rule_sets.description, rule_sets.status, rule_sets.created_at 
+FROM rule_sets 
+WHERE rule_sets.id = $1::UUID
+2026-04-30 03:34:19,019 INFO sqlalchemy.engine.Engine [generated in 0.00041s] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'),)
+2026-04-30 03:34:19,024 INFO sqlalchemy.engine.Engine SELECT rules.id AS rules_id, rules.rule_set_id AS rules_rule_set_id, rules.rule_id AS rules_rule_id, rules.rule_name AS rules_rule_name, rules.description AS rules_description, rules.rule_type AS rules_rule_type, rules.conditions AS rules_conditions, rules.actions AS rules_actions, rules.priority AS rules_priority, rules.confidence AS rules_confidence, rules.compiled_expression AS rules_compiled_expression, rules.source_section AS rules_source_section, rules.has_conflicts AS rules_has_conflicts, rules.conflict_details AS rules_conflict_details, rules.canonical_key AS rules_canonical_key, rules.subsystem AS rules_subsystem, rules.semantic_signature AS rules_semantic_signature, rules.supersedes_rule_id AS rules_supersedes_rule_id, rules.created_at AS rules_created_at 
+FROM rules 
+WHERE $1::UUID = rules.rule_set_id
+2026-04-30 03:34:19,025 INFO sqlalchemy.engine.Engine [generated in 0.00039s] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'),)
+INFO:     127.0.0.1:51115 - "PATCH /api/v1/rule-sets/1289e6e1-093c-4417-9be9-b09e0a879eb8/approve HTTP/1.1" 200 OK
+2026-04-30 03:34:19,041 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:34:19,310 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:34:19,311 INFO sqlalchemy.engine.Engine SELECT rule_sets.id, rule_sets.brd_document_id, rule_sets.version, rule_sets.name, rule_sets.description, rule_sets.status, rule_sets.created_at 
+FROM rule_sets 
+WHERE rule_sets.id = $1::UUID
+2026-04-30 03:34:19,312 INFO sqlalchemy.engine.Engine [cached since 20.22s ago] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'),)
+2026-04-30 03:34:19,316 INFO sqlalchemy.engine.Engine SELECT rules.rule_set_id AS rules_rule_set_id, rules.id AS rules_id, rules.rule_id AS rules_rule_id, rules.rule_name AS rules_rule_name, rules.description AS rules_description, rules.rule_type AS rules_rule_type, rules.conditions AS rules_conditions, rules.actions AS rules_actions, rules.priority AS rules_priority, rules.confidence AS rules_confidence, rules.compiled_expression AS rules_compiled_expression, rules.source_section AS rules_source_section, rules.has_conflicts AS rules_has_conflicts, rules.conflict_details AS rules_conflict_details, rules.canonical_key AS rules_canonical_key, rules.subsystem AS rules_subsystem, rules.semantic_signature AS rules_semantic_signature, rules.supersedes_rule_id AS rules_supersedes_rule_id, rules.created_at AS rules_created_at 
+FROM rules 
+WHERE rules.rule_set_id IN ($1::UUID)
+2026-04-30 03:34:19,316 INFO sqlalchemy.engine.Engine [cached since 0.3292s ago] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'),)
+2026-04-30 03:34:19,319 INFO sqlalchemy.engine.Engine SELECT test_case_suites.id, test_case_suites.rule_set_id, test_case_suites.total_cases, test_case_suites.cases_by_category, test_case_suites.coverage_stats, test_case_suites.suggested_counts, test_case_suites.created_at, test_case_suites.last_execution_report, test_case_suites.last_executed_at, test_case_suites.last_executed_against_version_id 
+FROM test_case_suites 
+WHERE test_case_suites.rule_set_id = $1::UUID ORDER BY test_case_suites.created_at DESC
+2026-04-30 03:34:19,319 INFO sqlalchemy.engine.Engine [generated in 0.00036s] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'),)
+2026-04-30 03:34:19,324 INFO sqlalchemy.engine.Engine INSERT INTO test_case_suites (id, rule_set_id, total_cases, cases_by_category, coverage_stats, suggested_counts, created_at, last_executed_at, last_executed_against_version_id) VALUES ($1::UUID, $2::UUID, $3::INTEGER, $4::JSON, $5::JSON, $6::JSON, $7::TIMESTAMP WITHOUT TIME ZONE, $8::TIMESTAMP WITHOUT TIME ZONE, $9::UUID)
+2026-04-30 03:34:19,325 INFO sqlalchemy.engine.Engine [generated in 0.00052s] (UUID('7e249cc5-97c9-4a08-a570-cbf1ee1c893b'), '1289e6e1-093c-4417-9be9-b09e0a879eb8', 10, '{"POSITIVE": 3, "NEGATIVE": 3, "BOUNDARY": 2, "EDGE": 1, "INTERACTION": 1}', '{"total_rules": 3, "rules_with_test_cases": 3, "rules_skipped": 0, "rule_coverage_pct": 100.0, "total_conditions": 6, "resolved_conditions": 6, "conditions_tested_negative": 3, "field_resolution_rate": 100.0, "unresolved_fields": [], "unresolved_field_count": 0}', '{"positive": 3, "negative": 6, "boundary": 18, "edge": 12, "interaction": 3, "total": 42, "rationale": {"rules": 3, "total_conditions": 6, "numeric_c ... (148 characters truncated) ... ules with 6 conditions (6 numeric incl. 0 between, 3 enum). 3 rule pairs share fields. Recommended 42 total test cases for comprehensive coverage."}}', datetime.datetime(2026, 4, 29, 22, 4, 19, 324490), None, None)
+2026-04-30 03:34:19,329 INFO sqlalchemy.engine.Engine SAVEPOINT sa_savepoint_1
+2026-04-30 03:34:19,329 INFO sqlalchemy.engine.Engine [no key 0.00032s] ()
+2026-04-30 03:34:19,331 INFO sqlalchemy.engine.Engine 
+        SELECT id, loan_application_id, request_payload, response_payload
+        FROM loan_records
+        WHERE request_payload->>'credit_policy' = $1 AND (request_payload->'calculated_attributes'->>'debt_to_income_ratio')::numeric > $2
+        ORDER BY ABS((request_payload->'calculated_attributes'->>'debt_to_income_ratio')::numeric - $3) ASC
+        LIMIT $4
+    
+2026-04-30 03:34:19,331 INFO sqlalchemy.engine.Engine [generated in 0.00030s] ('PERSONAL', 0.36, 0.36, 10)
+2026-04-30 03:34:19,898 INFO sqlalchemy.engine.Engine RELEASE SAVEPOINT sa_savepoint_1
+2026-04-30 03:34:19,898 INFO sqlalchemy.engine.Engine [no key 0.00075s] ()
+2026-04-30 03:34:19,902 INFO sqlalchemy.engine.Engine INSERT INTO test_cases (id, suite_id, test_case_id, description, source_rule_ids, category, input_values, filter_logic, matched_loan_ids, match_count, expected_outcome, rationale, created_at) VALUES ($1::UUID, $2::UUID, $3::VARCHAR, $4::VARCHAR, $5::JSON, $6::testcasecategory, $7::JSON, $8::JSON, $9::JSON, $10::INTEGER, $11::JSON, $12::VARCHAR, $13::TIMESTAMP WITHOUT TIME ZONE)
+2026-04-30 03:34:19,902 INFO sqlalchemy.engine.Engine [generated in 0.00042s] (UUID('c3fa1ee9-5692-40b8-8c4a-03d54a30387f'), UUID('7e249cc5-97c9-4a08-a570-cbf1ee1c893b'), 'TC-RULE-001-POS-001', 'All conditions satisfied → DTI Cap for Personal Loans', '["RULE-001"]', 'POSITIVE', '{"loan_type": "PERSONAL", "dti_ratio": 0.36}', '[{"field_name": "loan_type", "json_path": "credit_policy", "operator": "==", "value": "PERSONAL", "description": "loan_type == PERSONAL"}, {"field_name": "dti_ratio", "json_path": "calculated_attributes.debt_to_income_ratio", "operator": ">", "value": 0.36, "description": "dti_ratio > 0.36"}]', '[]', 0, '{"decision": "REJECTED", "applied_rules": ["RULE-001"], "flags": [], "reject_reason": "Automatically reject the application if DTI exceeds 0.35.", "rule_name": "DTI Cap for Personal Loans", "rule_type": "THRESHOLD"}', 'Verify rule fires when all 2 conditions are met', datetime.datetime(2026, 4, 29, 22, 4, 19, 902711))
+2026-04-30 03:34:19,917 INFO sqlalchemy.engine.Engine SAVEPOINT sa_savepoint_2
+2026-04-30 03:34:19,919 INFO sqlalchemy.engine.Engine [no key 0.00143s] ()
+2026-04-30 03:34:19,921 INFO sqlalchemy.engine.Engine 
+        SELECT id, loan_application_id, request_payload, response_payload
+        FROM loan_records
+        WHERE request_payload->>'credit_policy' = $1 AND (request_payload->'borrower_credit_model'->'bureau_credits'->>'bureau_score')::numeric < $2
+        ORDER BY ABS((request_payload->'borrower_credit_model'->'bureau_credits'->>'bureau_score')::numeric - $3) ASC
+        LIMIT $4
+    
+2026-04-30 03:34:19,921 INFO sqlalchemy.engine.Engine [generated in 0.00029s] ('PERSONAL', 719, 719.0, 10)
+2026-04-30 03:34:20,725 INFO sqlalchemy.engine.Engine RELEASE SAVEPOINT sa_savepoint_2
+2026-04-30 03:34:20,726 INFO sqlalchemy.engine.Engine [no key 0.00094s] ()
+2026-04-30 03:34:20,732 INFO sqlalchemy.engine.Engine INSERT INTO test_cases (id, suite_id, test_case_id, description, source_rule_ids, category, input_values, filter_logic, matched_loan_ids, match_count, expected_outcome, rationale, created_at) VALUES ($1::UUID, $2::UUID, $3::VARCHAR, $4::VARCHAR, $5::JSON, $6::testcasecategory, $7::JSON, $8::JSON, $9::JSON, $10::INTEGER, $11::JSON, $12::VARCHAR, $13::TIMESTAMP WITHOUT TIME ZONE)
+2026-04-30 03:34:20,732 INFO sqlalchemy.engine.Engine [cached since 0.8305s ago] (UUID('2dfe9a25-4533-48ef-afcc-18e6557d9a7a'), UUID('7e249cc5-97c9-4a08-a570-cbf1ee1c893b'), 'TC-RULE-002-POS-003', 'All conditions satisfied → Minimum Bureau Score for Personal Loans', '["RULE-002"]', 'POSITIVE', '{"loan_type": "PERSONAL", "bureau_score": 719}', '[{"field_name": "loan_type", "json_path": "credit_policy", "operator": "==", "value": "PERSONAL", "description": "loan_type == PERSONAL"}, {"field_na ... (6 characters truncated) ... bureau_score", "json_path": "borrower_credit_model.bureau_credits.bureau_score", "operator": "<", "value": 719, "description": "bureau_score < 719"}]', '["LA-00002805", "LA-00003502", "LA-00000970", "LA-00002756", "LA-00003022", "LA-00000652", "LA-00000472", "LA-00000042", "LA-00001707", "LA-00003561"]', 10, '{"decision": "REJECTED", "applied_rules": ["RULE-002"], "flags": ["REQUIRED"], "reject_reason": "Automatically reject the application if bureau score is below 720.", "rule_name": "Minimum Bureau Score for Personal Loans", "rule_type": "THRESHOLD"}', 'Verify rule fires when all 2 conditions are met', datetime.datetime(2026, 4, 29, 22, 4, 20, 732681))
+2026-04-30 03:34:20,734 INFO sqlalchemy.engine.Engine SAVEPOINT sa_savepoint_3
+2026-04-30 03:34:20,734 INFO sqlalchemy.engine.Engine [no key 0.00026s] ()
+2026-04-30 03:34:20,737 INFO sqlalchemy.engine.Engine 
+        SELECT id, loan_application_id, request_payload, response_payload
+        FROM loan_records
+        WHERE request_payload->>'credit_policy' = $1 AND (request_payload->'borrower_credit_model'->'bureau_credits'->>'inquiries_last_3m')::numeric > $2
+        ORDER BY ABS((request_payload->'borrower_credit_model'->'bureau_credits'->>'inquiries_last_3m')::numeric - $3) ASC
+        LIMIT $4
+    
+2026-04-30 03:34:20,737 INFO sqlalchemy.engine.Engine [generated in 0.00034s] ('PERSONAL', 4, 4.0, 10)
+2026-04-30 03:34:21,395 INFO sqlalchemy.engine.Engine RELEASE SAVEPOINT sa_savepoint_3
+2026-04-30 03:34:21,396 INFO sqlalchemy.engine.Engine [no key 0.00095s] ()
+2026-04-30 03:34:21,399 INFO sqlalchemy.engine.Engine INSERT INTO test_cases (id, suite_id, test_case_id, description, source_rule_ids, category, input_values, filter_logic, matched_loan_ids, match_count, expected_outcome, rationale, created_at) VALUES ($1::UUID, $2::UUID, $3::VARCHAR, $4::VARCHAR, $5::JSON, $6::testcasecategory, $7::JSON, $8::JSON, $9::JSON, $10::INTEGER, $11::JSON, $12::VARCHAR, $13::TIMESTAMP WITHOUT TIME ZONE)
+2026-04-30 03:34:21,399 INFO sqlalchemy.engine.Engine [cached since 1.497s ago] (UUID('eb9fb3ce-37a0-4947-a4a6-983796e585ff'), UUID('7e249cc5-97c9-4a08-a570-cbf1ee1c893b'), 'TC-RULE-003-POS-002', 'All conditions satisfied → Credit Inquiry Frequency Cap', '["RULE-003"]', 'POSITIVE', '{"loan_type": "PERSONAL", "inquiries_last_3m": 4}', '[{"field_name": "loan_type", "json_path": "credit_policy", "operator": "==", "value": "PERSONAL", "description": "loan_type == PERSONAL"}, {"field_na ... (17 characters truncated) ... ast_3m", "json_path": "borrower_credit_model.bureau_credits.inquiries_last_3m", "operator": ">", "value": 4, "description": "inquiries_last_3m > 4"}]', '["LA-00000010", "LA-00000018", "LA-00000021", "LA-00000023", "LA-00000024", "LA-00000035", "LA-00000036", "LA-00000044", "LA-00000057", "LA-00000007"]', 10, '{"decision": "REJECTED", "applied_rules": ["RULE-003"], "flags": [], "reject_reason": "Automatically reject the application if inquiries in the last 3 months exceed 3.", "rule_name": "Credit Inquiry Frequency Cap", "rule_type": "THRESHOLD"}', 'Verify rule fires when all 2 conditions are met', datetime.datetime(2026, 4, 29, 22, 4, 21, 399347))
+2026-04-30 03:34:21,401 INFO sqlalchemy.engine.Engine SAVEPOINT sa_savepoint_4
+2026-04-30 03:34:21,401 INFO sqlalchemy.engine.Engine [no key 0.00028s] ()
+2026-04-30 03:34:21,403 INFO sqlalchemy.engine.Engine 
+        SELECT id, loan_application_id, request_payload, response_payload
+        FROM loan_records
+        WHERE request_payload->>'credit_policy' = $1 AND (request_payload->'calculated_attributes'->>'debt_to_income_ratio')::numeric > $2
+        ORDER BY ABS((request_payload->'calculated_attributes'->>'debt_to_income_ratio')::numeric - $3) ASC
+        LIMIT $4
+    
+2026-04-30 03:34:21,403 INFO sqlalchemy.engine.Engine [cached since 2.072s ago] ('INVALID_VALUE', 0.36, 0.36, 10)
+2026-04-30 03:34:21,689 INFO sqlalchemy.engine.Engine RELEASE SAVEPOINT sa_savepoint_4
+2026-04-30 03:34:21,690 INFO sqlalchemy.engine.Engine [no key 0.00070s] ()
+2026-04-30 03:34:21,693 INFO sqlalchemy.engine.Engine INSERT INTO test_cases (id, suite_id, test_case_id, description, source_rule_ids, category, input_values, filter_logic, matched_loan_ids, match_count, expected_outcome, rationale, created_at) VALUES ($1::UUID, $2::UUID, $3::VARCHAR, $4::VARCHAR, $5::JSON, $6::testcasecategory, $7::JSON, $8::JSON, $9::JSON, $10::INTEGER, $11::JSON, $12::VARCHAR, $13::TIMESTAMP WITHOUT TIME ZONE)
+2026-04-30 03:34:21,694 INFO sqlalchemy.engine.Engine [cached since 1.792s ago] (UUID('66d2137f-da05-415c-aaf9-0518f578a9af'), UUID('7e249cc5-97c9-4a08-a570-cbf1ee1c893b'), 'TC-RULE-001-NEG-001', "Violates 'loan_type == PERSONAL' (set to INVALID_VALUE) → DTI Cap for Personal Loans should NOT fire", '["RULE-001"]', 'NEGATIVE', '{"loan_type": "INVALID_VALUE", "dti_ratio": 0.36}', '[{"field_name": "loan_type", "json_path": "credit_policy", "operator": "==", "value": "INVALID_VALUE", "description": "loan_type == INVALID_VALUE"},  ... (5 characters truncated) ... ld_name": "dti_ratio", "json_path": "calculated_attributes.debt_to_income_ratio", "operator": ">", "value": 0.36, "description": "dti_ratio > 0.36"}]', '[]', 0, '{"decision": "RULE_NOT_TRIGGERED", "applied_rules": [], "flags": [], "reason": "Rule RULE-001 (DTI Cap for Personal Loans) should NOT fire", "violated_condition": "loan_type == PERSONAL"}', "Isolate condition 1/2: verify rule doesn't fire when loan_type violates threshold", datetime.datetime(2026, 4, 29, 22, 4, 21, 693499))
+2026-04-30 03:34:21,696 INFO sqlalchemy.engine.Engine SAVEPOINT sa_savepoint_5
+2026-04-30 03:34:21,696 INFO sqlalchemy.engine.Engine [no key 0.00040s] ()
+2026-04-30 03:34:21,700 INFO sqlalchemy.engine.Engine 
+        SELECT id, loan_application_id, request_payload, response_payload
+        FROM loan_records
+        WHERE request_payload->>'credit_policy' = $1 AND (request_payload->'calculated_attributes'->>'debt_to_income_ratio')::numeric > $2
+        ORDER BY ABS((request_payload->'calculated_attributes'->>'debt_to_income_ratio')::numeric - $3) ASC
+        LIMIT $4
+    
+2026-04-30 03:34:21,700 INFO sqlalchemy.engine.Engine [cached since 2.369s ago] ('PERSONAL', 0.35, 0.35, 10)
+2026-04-30 03:34:22,380 INFO sqlalchemy.engine.Engine RELEASE SAVEPOINT sa_savepoint_5
+2026-04-30 03:34:22,380 INFO sqlalchemy.engine.Engine [no key 0.00043s] ()
+2026-04-30 03:34:22,383 INFO sqlalchemy.engine.Engine INSERT INTO test_cases (id, suite_id, test_case_id, description, source_rule_ids, category, input_values, filter_logic, matched_loan_ids, match_count, expected_outcome, rationale, created_at) VALUES ($1::UUID, $2::UUID, $3::VARCHAR, $4::VARCHAR, $5::JSON, $6::testcasecategory, $7::JSON, $8::JSON, $9::JSON, $10::INTEGER, $11::JSON, $12::VARCHAR, $13::TIMESTAMP WITHOUT TIME ZONE)
+2026-04-30 03:34:22,384 INFO sqlalchemy.engine.Engine [cached since 2.481s ago] (UUID('0a6a1ab9-f7ad-4f48-b217-d7ed425de1cd'), UUID('7e249cc5-97c9-4a08-a570-cbf1ee1c893b'), 'TC-RULE-001-NEG-002', "Violates 'dti_ratio > 0.35' (set to 0.35) → DTI Cap for Personal Loans should NOT fire", '["RULE-001"]', 'NEGATIVE', '{"loan_type": "PERSONAL", "dti_ratio": 0.35}', '[{"field_name": "loan_type", "json_path": "credit_policy", "operator": "==", "value": "PERSONAL", "description": "loan_type == PERSONAL"}, {"field_name": "dti_ratio", "json_path": "calculated_attributes.debt_to_income_ratio", "operator": ">", "value": 0.35, "description": "dti_ratio > 0.35"}]', '["LA-00000350", "LA-00000456", "LA-00000474", "LA-00000557", "LA-00000763", "LA-00000770", "LA-00000976", "LA-00001189", "LA-00001345", "LA-00000067"]', 10, '{"decision": "RULE_NOT_TRIGGERED", "applied_rules": [], "flags": [], "reason": "Rule RULE-001 (DTI Cap for Personal Loans) should NOT fire", "violated_condition": "dti_ratio > 0.35"}', "Isolate condition 2/2: verify rule doesn't fire when dti_ratio violates threshold", datetime.datetime(2026, 4, 29, 22, 4, 22, 383068))
+2026-04-30 03:34:22,385 INFO sqlalchemy.engine.Engine SAVEPOINT sa_savepoint_6
+2026-04-30 03:34:22,385 INFO sqlalchemy.engine.Engine [no key 0.00030s] ()
+2026-04-30 03:34:22,388 INFO sqlalchemy.engine.Engine 
+        SELECT id, loan_application_id, request_payload, response_payload
+        FROM loan_records
+        WHERE request_payload->>'credit_policy' = $1 AND (request_payload->'borrower_credit_model'->'bureau_credits'->>'inquiries_last_3m')::numeric > $2
+        ORDER BY ABS((request_payload->'borrower_credit_model'->'bureau_credits'->>'inquiries_last_3m')::numeric - $3) ASC
+        LIMIT $4
+    
+2026-04-30 03:34:22,388 INFO sqlalchemy.engine.Engine [cached since 1.651s ago] ('INVALID_VALUE', 4, 4.0, 10)
+2026-04-30 03:34:22,678 INFO sqlalchemy.engine.Engine RELEASE SAVEPOINT sa_savepoint_6
+2026-04-30 03:34:22,679 INFO sqlalchemy.engine.Engine [no key 0.00046s] ()
+2026-04-30 03:34:22,682 INFO sqlalchemy.engine.Engine INSERT INTO test_cases (id, suite_id, test_case_id, description, source_rule_ids, category, input_values, filter_logic, matched_loan_ids, match_count, expected_outcome, rationale, created_at) VALUES ($1::UUID, $2::UUID, $3::VARCHAR, $4::VARCHAR, $5::JSON, $6::testcasecategory, $7::JSON, $8::JSON, $9::JSON, $10::INTEGER, $11::JSON, $12::VARCHAR, $13::TIMESTAMP WITHOUT TIME ZONE)
+2026-04-30 03:34:22,682 INFO sqlalchemy.engine.Engine [cached since 2.78s ago] (UUID('62d2040a-c16c-4d90-b92d-7986bea2f3cc'), UUID('7e249cc5-97c9-4a08-a570-cbf1ee1c893b'), 'TC-RULE-003-NEG-003', "Violates 'loan_type == PERSONAL' (set to INVALID_VALUE) → Credit Inquiry Frequency Cap should NOT fire", '["RULE-003"]', 'NEGATIVE', '{"loan_type": "INVALID_VALUE", "inquiries_last_3m": 4}', '[{"field_name": "loan_type", "json_path": "credit_policy", "operator": "==", "value": "INVALID_VALUE", "description": "loan_type == INVALID_VALUE"},  ... (27 characters truncated) ... ast_3m", "json_path": "borrower_credit_model.bureau_credits.inquiries_last_3m", "operator": ">", "value": 4, "description": "inquiries_last_3m > 4"}]', '[]', 0, '{"decision": "RULE_NOT_TRIGGERED", "applied_rules": [], "flags": [], "reason": "Rule RULE-003 (Credit Inquiry Frequency Cap) should NOT fire", "violated_condition": "loan_type == PERSONAL"}', "Isolate condition 1/2: verify rule doesn't fire when loan_type violates threshold", datetime.datetime(2026, 4, 29, 22, 4, 22, 682492))
+2026-04-30 03:34:22,684 INFO sqlalchemy.engine.Engine SAVEPOINT sa_savepoint_7
+2026-04-30 03:34:22,684 INFO sqlalchemy.engine.Engine [no key 0.00022s] ()
+2026-04-30 03:34:22,686 INFO sqlalchemy.engine.Engine 
+        SELECT id, loan_application_id, request_payload, response_payload
+        FROM loan_records
+        WHERE request_payload->>'credit_policy' = $1 AND (request_payload->'calculated_attributes'->>'debt_to_income_ratio')::numeric > $2
+        ORDER BY ABS((request_payload->'calculated_attributes'->>'debt_to_income_ratio')::numeric - $3) ASC
+        LIMIT $4
+    
+2026-04-30 03:34:22,686 INFO sqlalchemy.engine.Engine [cached since 3.355s ago] ('PERSONAL', 0.35, 0.35, 10)
+2026-04-30 03:34:23,253 INFO sqlalchemy.engine.Engine RELEASE SAVEPOINT sa_savepoint_7
+2026-04-30 03:34:23,254 INFO sqlalchemy.engine.Engine [no key 0.00079s] ()
+2026-04-30 03:34:23,258 INFO sqlalchemy.engine.Engine INSERT INTO test_cases (id, suite_id, test_case_id, description, source_rule_ids, category, input_values, filter_logic, matched_loan_ids, match_count, expected_outcome, rationale, created_at) VALUES ($1::UUID, $2::UUID, $3::VARCHAR, $4::VARCHAR, $5::JSON, $6::testcasecategory, $7::JSON, $8::JSON, $9::JSON, $10::INTEGER, $11::JSON, $12::VARCHAR, $13::TIMESTAMP WITHOUT TIME ZONE)
+2026-04-30 03:34:23,258 INFO sqlalchemy.engine.Engine [cached since 3.356s ago] (UUID('abd27764-25e7-4e71-a44c-72619c66e61b'), UUID('7e249cc5-97c9-4a08-a570-cbf1ee1c893b'), 'TC-RULE-001-BND-001', 'Boundary: dti_ratio exactly at 0.35 → FAIL', '["RULE-001"]', 'BOUNDARY', '{"loan_type": "PERSONAL", "dti_ratio": 0.35}', '[{"field_name": "loan_type", "json_path": "credit_policy", "operator": "==", "value": "PERSONAL", "description": "loan_type == PERSONAL"}, {"field_name": "dti_ratio", "json_path": "calculated_attributes.debt_to_income_ratio", "operator": ">", "value": 0.35, "description": "dti_ratio > 0.35"}]', '["LA-00000350", "LA-00000456", "LA-00000474", "LA-00000557", "LA-00000763", "LA-00000770", "LA-00000976", "LA-00001189", "LA-00001345", "LA-00000067"]', 10, '{"decision": "RULE_NOT_TRIGGERED", "applied_rules": [], "flags": [], "reason": "Rule RULE-001 (DTI Cap for Personal Loans) should NOT fire", "violated_condition": "dti_ratio > 0.35"}', 'Boundary test: dti_ratio=0.35 vs threshold > 0.35', datetime.datetime(2026, 4, 29, 22, 4, 23, 258060))
+2026-04-30 03:34:23,261 INFO sqlalchemy.engine.Engine SAVEPOINT sa_savepoint_8
+2026-04-30 03:34:23,261 INFO sqlalchemy.engine.Engine [no key 0.00056s] ()
+2026-04-30 03:34:23,264 INFO sqlalchemy.engine.Engine 
+        SELECT id, loan_application_id, request_payload, response_payload
+        FROM loan_records
+        WHERE request_payload->>'credit_policy' = $1 AND (request_payload->'calculated_attributes'->>'debt_to_income_ratio')::numeric > $2
+        ORDER BY ABS((request_payload->'calculated_attributes'->>'debt_to_income_ratio')::numeric - $3) ASC
+        LIMIT $4
+    
+2026-04-30 03:34:23,264 INFO sqlalchemy.engine.Engine [cached since 3.933s ago] ('PERSONAL', 0.36, 0.36, 10)
+2026-04-30 03:34:23,879 INFO sqlalchemy.engine.Engine RELEASE SAVEPOINT sa_savepoint_8
+2026-04-30 03:34:23,879 INFO sqlalchemy.engine.Engine [no key 0.00031s] ()
+2026-04-30 03:34:23,882 INFO sqlalchemy.engine.Engine INSERT INTO test_cases (id, suite_id, test_case_id, description, source_rule_ids, category, input_values, filter_logic, matched_loan_ids, match_count, expected_outcome, rationale, created_at) VALUES ($1::UUID, $2::UUID, $3::VARCHAR, $4::VARCHAR, $5::JSON, $6::testcasecategory, $7::JSON, $8::JSON, $9::JSON, $10::INTEGER, $11::JSON, $12::VARCHAR, $13::TIMESTAMP WITHOUT TIME ZONE)
+2026-04-30 03:34:23,882 INFO sqlalchemy.engine.Engine [cached since 3.981s ago] (UUID('b0557a51-36d7-4cd8-a5ce-b370d8be33fb'), UUID('7e249cc5-97c9-4a08-a570-cbf1ee1c893b'), 'TC-RULE-001-BND-002', 'Boundary: dti_ratio just above 0.35 → PASS', '["RULE-001"]', 'BOUNDARY', '{"loan_type": "PERSONAL", "dti_ratio": 0.36}', '[{"field_name": "loan_type", "json_path": "credit_policy", "operator": "==", "value": "PERSONAL", "description": "loan_type == PERSONAL"}, {"field_name": "dti_ratio", "json_path": "calculated_attributes.debt_to_income_ratio", "operator": ">", "value": 0.36, "description": "dti_ratio > 0.36"}]', '[]', 0, '{"decision": "REJECTED", "applied_rules": ["RULE-001"], "flags": [], "reject_reason": "Automatically reject the application if DTI exceeds 0.35.", "rule_name": "DTI Cap for Personal Loans", "rule_type": "THRESHOLD"}', 'Boundary test: dti_ratio=0.36 vs threshold > 0.35', datetime.datetime(2026, 4, 29, 22, 4, 23, 882639))
+2026-04-30 03:34:23,884 INFO sqlalchemy.engine.Engine SAVEPOINT sa_savepoint_9
+2026-04-30 03:34:23,884 INFO sqlalchemy.engine.Engine [no key 0.00025s] ()
+2026-04-30 03:34:23,886 INFO sqlalchemy.engine.Engine 
+        SELECT id, loan_application_id, request_payload, response_payload
+        FROM loan_records
+        WHERE request_payload->>'credit_policy' = $1 AND (request_payload->'calculated_attributes'->>'debt_to_income_ratio')::numeric > $2
+        ORDER BY ABS((request_payload->'calculated_attributes'->>'debt_to_income_ratio')::numeric - $3) ASC
+        LIMIT $4
+    
+2026-04-30 03:34:23,887 INFO sqlalchemy.engine.Engine [cached since 4.556s ago] ('', 0.36, 0.36, 10)
+2026-04-30 03:34:24,167 INFO sqlalchemy.engine.Engine RELEASE SAVEPOINT sa_savepoint_9
+2026-04-30 03:34:24,168 INFO sqlalchemy.engine.Engine [no key 0.00075s] ()
+2026-04-30 03:34:24,171 INFO sqlalchemy.engine.Engine INSERT INTO test_cases (id, suite_id, test_case_id, description, source_rule_ids, category, input_values, filter_logic, matched_loan_ids, match_count, expected_outcome, rationale, created_at) VALUES ($1::UUID, $2::UUID, $3::VARCHAR, $4::VARCHAR, $5::JSON, $6::testcasecategory, $7::JSON, $8::JSON, $9::JSON, $10::INTEGER, $11::JSON, $12::VARCHAR, $13::TIMESTAMP WITHOUT TIME ZONE)
+2026-04-30 03:34:24,171 INFO sqlalchemy.engine.Engine [cached since 4.269s ago] (UUID('056932e2-84e7-4b5e-8d27-182285a40259'), UUID('7e249cc5-97c9-4a08-a570-cbf1ee1c893b'), 'TC-RULE-001-EDGE-001', 'Edge: loan_type at empty string', '["RULE-001"]', 'EDGE', '{"loan_type": "", "dti_ratio": 0.36}', '[{"field_name": "loan_type", "json_path": "credit_policy", "operator": "==", "value": "", "description": "loan_type == "}, {"field_name": "dti_ratio", "json_path": "calculated_attributes.debt_to_income_ratio", "operator": ">", "value": 0.36, "description": "dti_ratio > 0.36"}]', '[]', 0, '{"decision": "RULE_NOT_TRIGGERED", "applied_rules": [], "flags": [], "reason": "Rule RULE-001 (DTI Cap for Personal Loans) should NOT fire", "violated_condition": "loan_type == PERSONAL", "edge_type": "empty string"}', 'Extreme value test: loan_type= to verify handling of empty string', datetime.datetime(2026, 4, 29, 22, 4, 24, 170611))
+2026-04-30 03:34:24,173 INFO sqlalchemy.engine.Engine SAVEPOINT sa_savepoint_10
+2026-04-30 03:34:24,173 INFO sqlalchemy.engine.Engine [no key 0.00029s] ()
+2026-04-30 03:34:24,176 INFO sqlalchemy.engine.Engine 
+        SELECT id, loan_application_id, request_payload, response_payload
+        FROM loan_records
+        WHERE request_payload->>'credit_policy' = $1 AND (request_payload->'calculated_attributes'->>'debt_to_income_ratio')::numeric > $2 AND (request_payload->'borrower_credit_model'->'bureau_credits'->>'bureau_score')::numeric < $3
+        ORDER BY ABS((request_payload->'calculated_attributes'->>'debt_to_income_ratio')::numeric - $4) ASC
+        LIMIT $5
+    
+2026-04-30 03:34:24,176 INFO sqlalchemy.engine.Engine [generated in 0.00039s] ('PERSONAL', 0.36, 719, 0.36, 10)
+2026-04-30 03:34:24,724 INFO sqlalchemy.engine.Engine RELEASE SAVEPOINT sa_savepoint_10
+2026-04-30 03:34:24,725 INFO sqlalchemy.engine.Engine [no key 0.00069s] ()
+2026-04-30 03:34:24,728 INFO sqlalchemy.engine.Engine INSERT INTO test_cases (id, suite_id, test_case_id, description, source_rule_ids, category, input_values, filter_logic, matched_loan_ids, match_count, expected_outcome, rationale, created_at) VALUES ($1::UUID, $2::UUID, $3::VARCHAR, $4::VARCHAR, $5::JSON, $6::testcasecategory, $7::JSON, $8::JSON, $9::JSON, $10::INTEGER, $11::JSON, $12::VARCHAR, $13::TIMESTAMP WITHOUT TIME ZONE)
+2026-04-30 03:34:24,728 INFO sqlalchemy.engine.Engine [cached since 4.826s ago] (UUID('0e386213-19f2-473b-9833-04d1aa58d801'), UUID('7e249cc5-97c9-4a08-a570-cbf1ee1c893b'), 'TC-INT-001', 'Interaction (co-triggered): DTI Cap for Personal Loans + Minimum Bureau Score for Personal Loans (shared: loan_type)', '["RULE-001", "RULE-002"]', 'INTERACTION', '{"loan_type": "PERSONAL", "dti_ratio": 0.36, "bureau_score": 719}', '[{"field_name": "loan_type", "json_path": "credit_policy", "operator": "==", "value": "PERSONAL", "description": "loan_type == PERSONAL"}, {"field_na ... (161 characters truncated) ... bureau_score", "json_path": "borrower_credit_model.bureau_credits.bureau_score", "operator": "<", "value": 719, "description": "bureau_score < 719"}]', '[]', 0, '{"decision": "BOTH_TRIGGERED", "rule_a": "RULE-001 (DTI Cap for Personal Loans) \\u2192 REJECTED", "rule_b": "RULE-002 (Minimum Bureau Score for Personal Loans) \\u2192 REJECTED", "rule_a_fires": true, "rule_b_fires": true, "shared_fields": ["loan_type"], "applied_rules": ["RULE-001", "RULE-002"]}', 'Co-trigger: both rules fire simultaneously. Rule A → REJECTED, Rule B → REJECTED. Shared: loan_type', datetime.datetime(2026, 4, 29, 22, 4, 24, 728610))
+2026-04-30 03:34:24,729 INFO sqlalchemy.engine.Engine COMMIT
+2026-04-30 03:34:24,734 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:34:24,734 INFO sqlalchemy.engine.Engine SELECT test_case_suites.id, test_case_suites.rule_set_id, test_case_suites.total_cases, test_case_suites.cases_by_category, test_case_suites.coverage_stats, test_case_suites.suggested_counts, test_case_suites.created_at, test_case_suites.last_execution_report, test_case_suites.last_executed_at, test_case_suites.last_executed_against_version_id 
+FROM test_case_suites 
+WHERE test_case_suites.id = $1::UUID
+2026-04-30 03:34:24,734 INFO sqlalchemy.engine.Engine [generated in 0.00024s] (UUID('7e249cc5-97c9-4a08-a570-cbf1ee1c893b'),)
+2026-04-30 03:34:24,741 INFO sqlalchemy.engine.Engine SELECT test_case_suites.id, test_case_suites.rule_set_id, test_case_suites.total_cases, test_case_suites.cases_by_category, test_case_suites.coverage_stats, test_case_suites.suggested_counts, test_case_suites.created_at, test_case_suites.last_execution_report, test_case_suites.last_executed_at, test_case_suites.last_executed_against_version_id 
+FROM test_case_suites 
+WHERE test_case_suites.id = $1::UUID
+2026-04-30 03:34:24,741 INFO sqlalchemy.engine.Engine [generated in 0.00033s] (UUID('7e249cc5-97c9-4a08-a570-cbf1ee1c893b'),)
+2026-04-30 03:34:24,744 INFO sqlalchemy.engine.Engine SELECT test_cases.suite_id AS test_cases_suite_id, test_cases.id AS test_cases_id, test_cases.test_case_id AS test_cases_test_case_id, test_cases.description AS test_cases_description, test_cases.source_rule_ids AS test_cases_source_rule_ids, test_cases.category AS test_cases_category, test_cases.input_values AS test_cases_input_values, test_cases.filter_logic AS test_cases_filter_logic, test_cases.matched_loan_ids AS test_cases_matched_loan_ids, test_cases.match_count AS test_cases_match_count, test_cases.expected_outcome AS test_cases_expected_outcome, test_cases.rationale AS test_cases_rationale, test_cases.created_at AS test_cases_created_at 
+FROM test_cases 
+WHERE test_cases.suite_id IN ($1::UUID)
+2026-04-30 03:34:24,744 INFO sqlalchemy.engine.Engine [generated in 0.00027s] (UUID('7e249cc5-97c9-4a08-a570-cbf1ee1c893b'),)
+2026-04-30 03:34:24,758 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,759 INFO sqlalchemy.engine.Engine [generated in 0.00036s] ('LA-00002805',)
+2026-04-30 03:34:24,763 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,764 INFO sqlalchemy.engine.Engine [cached since 0.005288s ago] ('LA-00003502',)
+2026-04-30 03:34:24,766 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,766 INFO sqlalchemy.engine.Engine [cached since 0.007373s ago] ('LA-00000970',)
+2026-04-30 03:34:24,768 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,768 INFO sqlalchemy.engine.Engine [cached since 0.009742s ago] ('LA-00002756',)
+2026-04-30 03:34:24,770 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,770 INFO sqlalchemy.engine.Engine [cached since 0.01172s ago] ('LA-00003022',)
+2026-04-30 03:34:24,772 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,772 INFO sqlalchemy.engine.Engine [cached since 0.01344s ago] ('LA-00000652',)
+2026-04-30 03:34:24,774 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,774 INFO sqlalchemy.engine.Engine [cached since 0.0156s ago] ('LA-00000472',)
+2026-04-30 03:34:24,776 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,776 INFO sqlalchemy.engine.Engine [cached since 0.01781s ago] ('LA-00000042',)
+2026-04-30 03:34:24,778 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,778 INFO sqlalchemy.engine.Engine [cached since 0.01968s ago] ('LA-00001707',)
+2026-04-30 03:34:24,781 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,781 INFO sqlalchemy.engine.Engine [cached since 0.02271s ago] ('LA-00003561',)
+2026-04-30 03:34:24,783 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,783 INFO sqlalchemy.engine.Engine [cached since 0.02503s ago] ('LA-00000010',)
+2026-04-30 03:34:24,785 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,785 INFO sqlalchemy.engine.Engine [cached since 0.02676s ago] ('LA-00000018',)
+2026-04-30 03:34:24,787 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,787 INFO sqlalchemy.engine.Engine [cached since 0.02834s ago] ('LA-00000021',)
+2026-04-30 03:34:24,789 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,789 INFO sqlalchemy.engine.Engine [cached since 0.03055s ago] ('LA-00000023',)
+2026-04-30 03:34:24,791 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,791 INFO sqlalchemy.engine.Engine [cached since 0.03253s ago] ('LA-00000024',)
+2026-04-30 03:34:24,792 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,793 INFO sqlalchemy.engine.Engine [cached since 0.03418s ago] ('LA-00000035',)
+2026-04-30 03:34:24,794 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,794 INFO sqlalchemy.engine.Engine [cached since 0.03591s ago] ('LA-00000036',)
+2026-04-30 03:34:24,796 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,797 INFO sqlalchemy.engine.Engine [cached since 0.03816s ago] ('LA-00000044',)
+2026-04-30 03:34:24,798 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,798 INFO sqlalchemy.engine.Engine [cached since 0.03992s ago] ('LA-00000057',)
+2026-04-30 03:34:24,800 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,800 INFO sqlalchemy.engine.Engine [cached since 0.04152s ago] ('LA-00000007',)
+2026-04-30 03:34:24,802 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,802 INFO sqlalchemy.engine.Engine [cached since 0.04351s ago] ('LA-00000350',)
+2026-04-30 03:34:24,804 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,804 INFO sqlalchemy.engine.Engine [cached since 0.04565s ago] ('LA-00000456',)
+2026-04-30 03:34:24,806 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,806 INFO sqlalchemy.engine.Engine [cached since 0.0473s ago] ('LA-00000474',)
+2026-04-30 03:34:24,807 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,807 INFO sqlalchemy.engine.Engine [cached since 0.04892s ago] ('LA-00000557',)
+2026-04-30 03:34:24,809 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,810 INFO sqlalchemy.engine.Engine [cached since 0.05117s ago] ('LA-00000763',)
+2026-04-30 03:34:24,811 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,812 INFO sqlalchemy.engine.Engine [cached since 0.0532s ago] ('LA-00000770',)
+2026-04-30 03:34:24,813 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,813 INFO sqlalchemy.engine.Engine [cached since 0.05483s ago] ('LA-00000976',)
+2026-04-30 03:34:24,815 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,815 INFO sqlalchemy.engine.Engine [cached since 0.05686s ago] ('LA-00001189',)
+2026-04-30 03:34:24,817 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,818 INFO sqlalchemy.engine.Engine [cached since 0.05934s ago] ('LA-00001345',)
+2026-04-30 03:34:24,819 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,820 INFO sqlalchemy.engine.Engine [cached since 0.06118s ago] ('LA-00000067',)
+2026-04-30 03:34:24,821 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,821 INFO sqlalchemy.engine.Engine [cached since 0.06291s ago] ('LA-00000350',)
+2026-04-30 03:34:24,823 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,824 INFO sqlalchemy.engine.Engine [cached since 0.06518s ago] ('LA-00000456',)
+2026-04-30 03:34:24,825 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,826 INFO sqlalchemy.engine.Engine [cached since 0.06713s ago] ('LA-00000474',)
+2026-04-30 03:34:24,827 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,827 INFO sqlalchemy.engine.Engine [cached since 0.06888s ago] ('LA-00000557',)
+2026-04-30 03:34:24,829 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,829 INFO sqlalchemy.engine.Engine [cached since 0.07072s ago] ('LA-00000763',)
+2026-04-30 03:34:24,831 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,831 INFO sqlalchemy.engine.Engine [cached since 0.0729s ago] ('LA-00000770',)
+2026-04-30 03:34:24,833 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,833 INFO sqlalchemy.engine.Engine [cached since 0.07471s ago] ('LA-00000976',)
+2026-04-30 03:34:24,835 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,835 INFO sqlalchemy.engine.Engine [cached since 0.07637s ago] ('LA-00001189',)
+2026-04-30 03:34:24,836 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,837 INFO sqlalchemy.engine.Engine [cached since 0.07838s ago] ('LA-00001345',)
+2026-04-30 03:34:24,839 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:34:24,839 INFO sqlalchemy.engine.Engine [cached since 0.08047s ago] ('LA-00000067',)
+INFO:     127.0.0.1:51118 - "POST /api/v1/test-cases/generate HTTP/1.1" 200 OK
+2026-04-30 03:34:24,842 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:34:40,423 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:34:40,424 INFO sqlalchemy.engine.Engine SELECT brd_documents.id, brd_documents.filename, brd_documents.file_path, brd_documents.file_type, brd_documents.parsed_content, brd_documents.metadata_json, brd_documents.created_at 
+FROM brd_documents 
+WHERE brd_documents.id = $1::UUID
+2026-04-30 03:34:40,424 INFO sqlalchemy.engine.Engine [cached since 320.2s ago] (UUID('6ca7012f-9f89-44cc-80c5-4c8d40219c36'),)
+2026-04-30 03:34:40,426 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:34:40,427 INFO sqlalchemy.engine.Engine SELECT brd_documents.id, brd_documents.filename, brd_documents.file_path, brd_documents.file_type, brd_documents.parsed_content, brd_documents.metadata_json, brd_documents.created_at 
+FROM brd_documents 
+WHERE brd_documents.id = $1::UUID
+2026-04-30 03:34:40,427 INFO sqlalchemy.engine.Engine [cached since 320.2s ago] (UUID('6ca7012f-9f89-44cc-80c5-4c8d40219c36'),)
+INFO:     127.0.0.1:59225 - "GET /api/v1/brds/6ca7012f-9f89-44cc-80c5-4c8d40219c36 HTTP/1.1" 200 OK
+2026-04-30 03:34:40,430 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:34:40,432 INFO sqlalchemy.engine.Engine SELECT rule_sets.id, rule_sets.brd_document_id, rule_sets.version, rule_sets.name, rule_sets.description, rule_sets.status, rule_sets.created_at 
+FROM rule_sets 
+WHERE rule_sets.brd_document_id = $1::UUID ORDER BY rule_sets.version DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:34:40,433 INFO sqlalchemy.engine.Engine [cached since 320.1s ago] (UUID('6ca7012f-9f89-44cc-80c5-4c8d40219c36'), 1)
+2026-04-30 03:34:40,435 INFO sqlalchemy.engine.Engine SELECT count(*) AS count_1 
+FROM rules 
+WHERE rules.rule_set_id = $1::UUID
+2026-04-30 03:34:40,436 INFO sqlalchemy.engine.Engine [cached since 320.1s ago] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'),)
+2026-04-30 03:34:40,439 INFO sqlalchemy.engine.Engine SELECT test_case_suites.id, test_case_suites.rule_set_id, test_case_suites.total_cases, test_case_suites.cases_by_category, test_case_suites.coverage_stats, test_case_suites.suggested_counts, test_case_suites.created_at, test_case_suites.last_execution_report, test_case_suites.last_executed_at, test_case_suites.last_executed_against_version_id 
+FROM test_case_suites 
+WHERE test_case_suites.rule_set_id = $1::UUID ORDER BY test_case_suites.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:34:40,439 INFO sqlalchemy.engine.Engine [cached since 320s ago] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'), 1)
+2026-04-30 03:34:40,442 INFO sqlalchemy.engine.Engine SELECT merge_proposals.id, merge_proposals.repository_id, merge_proposals.base_version, merge_proposals.source_brd_id, merge_proposals.source_rule_set_id, merge_proposals.status, merge_proposals.summary, merge_proposals.decided_by, merge_proposals.decided_at, merge_proposals.created_at 
+FROM merge_proposals 
+WHERE merge_proposals.source_rule_set_id = $1::UUID ORDER BY merge_proposals.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:34:40,443 INFO sqlalchemy.engine.Engine [cached since 320s ago] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'), 1)
+2026-04-30 03:34:40,446 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id, live_rule_versions.repository_id, live_rule_versions.version_number, live_rule_versions.parent_version_id, live_rule_versions.source_brd_id, live_rule_versions.merge_proposal_id, live_rule_versions.summary, live_rule_versions.rule_snapshot, live_rule_versions.python_export, live_rule_versions.created_at, live_rule_versions.created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.merge_proposal_id = $1::UUID 
+ LIMIT $2::INTEGER
+2026-04-30 03:34:40,446 INFO sqlalchemy.engine.Engine [cached since 320s ago] (UUID('40e04708-97d3-4263-8bb3-82ebcfebc1b2'), 1)
+2026-04-30 03:34:40,450 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id AS live_rule_versions_id, live_rule_versions.repository_id AS live_rule_versions_repository_id, live_rule_versions.version_number AS live_rule_versions_version_number, live_rule_versions.parent_version_id AS live_rule_versions_parent_version_id, live_rule_versions.source_brd_id AS live_rule_versions_source_brd_id, live_rule_versions.merge_proposal_id AS live_rule_versions_merge_proposal_id, live_rule_versions.summary AS live_rule_versions_summary, live_rule_versions.rule_snapshot AS live_rule_versions_rule_snapshot, live_rule_versions.python_export AS live_rule_versions_python_export, live_rule_versions.created_at AS live_rule_versions_created_at, live_rule_versions.created_by AS live_rule_versions_created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.id = $1::UUID
+2026-04-30 03:34:40,450 INFO sqlalchemy.engine.Engine [cached since 320s ago] (UUID('17ee90de-554d-4bf1-a990-4cd666a63519'),)
+2026-04-30 03:34:40,453 INFO sqlalchemy.engine.Engine SELECT impact_runs.id, impact_runs.repository_id, impact_runs.base_version_id, impact_runs.candidate_version_id, impact_runs.loan_record_filter, impact_runs.status, impact_runs.summary, impact_runs.error, impact_runs.created_at, impact_runs.completed_at, impact_runs.created_by 
+FROM impact_runs 
+WHERE impact_runs.candidate_version_id = $1::UUID ORDER BY impact_runs.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:34:40,454 INFO sqlalchemy.engine.Engine [cached since 320s ago] (UUID('a676bdeb-1866-4453-9fe3-039b38113ec8'), 1)
+INFO:     127.0.0.1:62384 - "GET /api/v1/brds/6ca7012f-9f89-44cc-80c5-4c8d40219c36/workflow HTTP/1.1" 200 OK
+2026-04-30 03:34:40,457 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:57408 - "OPTIONS /api/v1/test-cases/7e249cc5-97c9-4a08-a570-cbf1ee1c893b/execute HTTP/1.1" 200 OK
+2026-04-30 03:35:10,015 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:35:10,016 INFO sqlalchemy.engine.Engine SELECT test_case_suites.id, test_case_suites.rule_set_id, test_case_suites.total_cases, test_case_suites.cases_by_category, test_case_suites.coverage_stats, test_case_suites.suggested_counts, test_case_suites.created_at, test_case_suites.last_execution_report, test_case_suites.last_executed_at, test_case_suites.last_executed_against_version_id 
+FROM test_case_suites 
+WHERE test_case_suites.id = $1::UUID
+2026-04-30 03:35:10,016 INFO sqlalchemy.engine.Engine [cached since 45.27s ago] (UUID('7e249cc5-97c9-4a08-a570-cbf1ee1c893b'),)
+2026-04-30 03:35:10,021 INFO sqlalchemy.engine.Engine SELECT test_cases.suite_id AS test_cases_suite_id, test_cases.id AS test_cases_id, test_cases.test_case_id AS test_cases_test_case_id, test_cases.description AS test_cases_description, test_cases.source_rule_ids AS test_cases_source_rule_ids, test_cases.category AS test_cases_category, test_cases.input_values AS test_cases_input_values, test_cases.filter_logic AS test_cases_filter_logic, test_cases.matched_loan_ids AS test_cases_matched_loan_ids, test_cases.match_count AS test_cases_match_count, test_cases.expected_outcome AS test_cases_expected_outcome, test_cases.rationale AS test_cases_rationale, test_cases.created_at AS test_cases_created_at 
+FROM test_cases 
+WHERE test_cases.suite_id IN ($1::UUID)
+2026-04-30 03:35:10,027 INFO sqlalchemy.engine.Engine [cached since 45.28s ago] (UUID('7e249cc5-97c9-4a08-a570-cbf1ee1c893b'),)
+2026-04-30 03:35:10,035 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id AS live_rule_versions_id, live_rule_versions.repository_id AS live_rule_versions_repository_id, live_rule_versions.version_number AS live_rule_versions_version_number, live_rule_versions.parent_version_id AS live_rule_versions_parent_version_id, live_rule_versions.source_brd_id AS live_rule_versions_source_brd_id, live_rule_versions.merge_proposal_id AS live_rule_versions_merge_proposal_id, live_rule_versions.summary AS live_rule_versions_summary, live_rule_versions.rule_snapshot AS live_rule_versions_rule_snapshot, live_rule_versions.python_export AS live_rule_versions_python_export, live_rule_versions.created_at AS live_rule_versions_created_at, live_rule_versions.created_by AS live_rule_versions_created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.id = $1::UUID
+2026-04-30 03:35:10,043 INFO sqlalchemy.engine.Engine [cached since 349.6s ago] (UUID('a676bdeb-1866-4453-9fe3-039b38113ec8'),)
+2026-04-30 03:35:10,048 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id IN ($1::VARCHAR, $2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR, $7::VARCHAR, $8::VARCHAR, $9::VARCHAR, $10::VARCHAR)
+2026-04-30 03:35:10,048 INFO sqlalchemy.engine.Engine [generated in 0.00061s] ('LA-00002805', 'LA-00003502', 'LA-00000970', 'LA-00002756', 'LA-00003022', 'LA-00000652', 'LA-00000472', 'LA-00000042', 'LA-00001707', 'LA-00003561')
+2026-04-30 03:35:10,059 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id IN ($1::VARCHAR, $2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR, $7::VARCHAR, $8::VARCHAR, $9::VARCHAR, $10::VARCHAR)
+2026-04-30 03:35:10,059 INFO sqlalchemy.engine.Engine [cached since 0.01183s ago] ('LA-00000010', 'LA-00000018', 'LA-00000021', 'LA-00000023', 'LA-00000024', 'LA-00000035', 'LA-00000036', 'LA-00000044', 'LA-00000057', 'LA-00000007')
+2026-04-30 03:35:10,065 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id IN ($1::VARCHAR, $2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR, $7::VARCHAR, $8::VARCHAR, $9::VARCHAR, $10::VARCHAR)
+2026-04-30 03:35:10,065 INFO sqlalchemy.engine.Engine [cached since 0.01791s ago] ('LA-00000350', 'LA-00000456', 'LA-00000474', 'LA-00000557', 'LA-00000763', 'LA-00000770', 'LA-00000976', 'LA-00001189', 'LA-00001345', 'LA-00000067')
+2026-04-30 03:35:10,071 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id IN ($1::VARCHAR, $2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR, $7::VARCHAR, $8::VARCHAR, $9::VARCHAR, $10::VARCHAR)
+2026-04-30 03:35:10,072 INFO sqlalchemy.engine.Engine [cached since 0.02415s ago] ('LA-00000350', 'LA-00000456', 'LA-00000474', 'LA-00000557', 'LA-00000763', 'LA-00000770', 'LA-00000976', 'LA-00001189', 'LA-00001345', 'LA-00000067')
+2026-04-30 03:35:10,078 INFO sqlalchemy.engine.Engine UPDATE test_case_suites SET last_execution_report=$1::JSON, last_executed_at=$2::TIMESTAMP WITHOUT TIME ZONE, last_executed_against_version_id=$3::UUID WHERE test_case_suites.id = $4::UUID
+2026-04-30 03:35:10,078 INFO sqlalchemy.engine.Engine [generated in 0.00078s] ('{"suite_id": "7e249cc5-97c9-4a08-a570-cbf1ee1c893b", "version_id": "a676bdeb-1866-4453-9fe3-039b38113ec8", "version_number": 2, "total_cases": 10, "c ... (2777 characters truncated) ... , "deviates": 10}, "BOUNDARY": {"matches": 0, "deviates": 10}, "EDGE": {"matches": 0, "deviates": 0}, "INTERACTION": {"matches": 0, "deviates": 0}}}}', datetime.datetime(2026, 4, 29, 22, 5, 10, 76294), UUID('a676bdeb-1866-4453-9fe3-039b38113ec8'), UUID('7e249cc5-97c9-4a08-a570-cbf1ee1c893b'))
+2026-04-30 03:35:10,082 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:57408 - "POST /api/v1/test-cases/7e249cc5-97c9-4a08-a570-cbf1ee1c893b/execute HTTP/1.1" 200 OK
+2026-04-30 03:35:10,092 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:35:10,095 INFO sqlalchemy.engine.Engine SELECT brd_documents.id, brd_documents.filename, brd_documents.file_path, brd_documents.file_type, brd_documents.parsed_content, brd_documents.metadata_json, brd_documents.created_at 
+FROM brd_documents 
+WHERE brd_documents.id = $1::UUID
+2026-04-30 03:35:10,095 INFO sqlalchemy.engine.Engine [cached since 349.8s ago] (UUID('6ca7012f-9f89-44cc-80c5-4c8d40219c36'),)
+2026-04-30 03:35:10,099 INFO sqlalchemy.engine.Engine SELECT rule_sets.id, rule_sets.brd_document_id, rule_sets.version, rule_sets.name, rule_sets.description, rule_sets.status, rule_sets.created_at 
+FROM rule_sets 
+WHERE rule_sets.brd_document_id = $1::UUID ORDER BY rule_sets.version DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:35:10,100 INFO sqlalchemy.engine.Engine [cached since 349.7s ago] (UUID('6ca7012f-9f89-44cc-80c5-4c8d40219c36'), 1)
+2026-04-30 03:35:10,102 INFO sqlalchemy.engine.Engine SELECT count(*) AS count_1 
+FROM rules 
+WHERE rules.rule_set_id = $1::UUID
+2026-04-30 03:35:10,103 INFO sqlalchemy.engine.Engine [cached since 349.7s ago] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'),)
+2026-04-30 03:35:10,105 INFO sqlalchemy.engine.Engine SELECT test_case_suites.id, test_case_suites.rule_set_id, test_case_suites.total_cases, test_case_suites.cases_by_category, test_case_suites.coverage_stats, test_case_suites.suggested_counts, test_case_suites.created_at, test_case_suites.last_execution_report, test_case_suites.last_executed_at, test_case_suites.last_executed_against_version_id 
+FROM test_case_suites 
+WHERE test_case_suites.rule_set_id = $1::UUID ORDER BY test_case_suites.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:35:10,106 INFO sqlalchemy.engine.Engine [cached since 349.7s ago] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'), 1)
+2026-04-30 03:35:10,110 INFO sqlalchemy.engine.Engine SELECT merge_proposals.id, merge_proposals.repository_id, merge_proposals.base_version, merge_proposals.source_brd_id, merge_proposals.source_rule_set_id, merge_proposals.status, merge_proposals.summary, merge_proposals.decided_by, merge_proposals.decided_at, merge_proposals.created_at 
+FROM merge_proposals 
+WHERE merge_proposals.source_rule_set_id = $1::UUID ORDER BY merge_proposals.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:35:10,110 INFO sqlalchemy.engine.Engine [cached since 349.7s ago] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'), 1)
+2026-04-30 03:35:10,113 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id, live_rule_versions.repository_id, live_rule_versions.version_number, live_rule_versions.parent_version_id, live_rule_versions.source_brd_id, live_rule_versions.merge_proposal_id, live_rule_versions.summary, live_rule_versions.rule_snapshot, live_rule_versions.python_export, live_rule_versions.created_at, live_rule_versions.created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.merge_proposal_id = $1::UUID 
+ LIMIT $2::INTEGER
+2026-04-30 03:35:10,113 INFO sqlalchemy.engine.Engine [cached since 349.7s ago] (UUID('40e04708-97d3-4263-8bb3-82ebcfebc1b2'), 1)
+2026-04-30 03:35:10,117 INFO sqlalchemy.engine.Engine SELECT live_rule_versions.id AS live_rule_versions_id, live_rule_versions.repository_id AS live_rule_versions_repository_id, live_rule_versions.version_number AS live_rule_versions_version_number, live_rule_versions.parent_version_id AS live_rule_versions_parent_version_id, live_rule_versions.source_brd_id AS live_rule_versions_source_brd_id, live_rule_versions.merge_proposal_id AS live_rule_versions_merge_proposal_id, live_rule_versions.summary AS live_rule_versions_summary, live_rule_versions.rule_snapshot AS live_rule_versions_rule_snapshot, live_rule_versions.python_export AS live_rule_versions_python_export, live_rule_versions.created_at AS live_rule_versions_created_at, live_rule_versions.created_by AS live_rule_versions_created_by 
+FROM live_rule_versions 
+WHERE live_rule_versions.id = $1::UUID
+2026-04-30 03:35:10,117 INFO sqlalchemy.engine.Engine [cached since 349.7s ago] (UUID('17ee90de-554d-4bf1-a990-4cd666a63519'),)
+2026-04-30 03:35:10,121 INFO sqlalchemy.engine.Engine SELECT impact_runs.id, impact_runs.repository_id, impact_runs.base_version_id, impact_runs.candidate_version_id, impact_runs.loan_record_filter, impact_runs.status, impact_runs.summary, impact_runs.error, impact_runs.created_at, impact_runs.completed_at, impact_runs.created_by 
+FROM impact_runs 
+WHERE impact_runs.candidate_version_id = $1::UUID ORDER BY impact_runs.created_at DESC 
+ LIMIT $2::INTEGER
+2026-04-30 03:35:10,121 INFO sqlalchemy.engine.Engine [cached since 349.7s ago] (UUID('a676bdeb-1866-4453-9fe3-039b38113ec8'), 1)
+INFO:     127.0.0.1:57408 - "GET /api/v1/brds/6ca7012f-9f89-44cc-80c5-4c8d40219c36/workflow HTTP/1.1" 200 OK
+2026-04-30 03:35:10,125 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:35:53,279 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:35:53,281 INFO sqlalchemy.engine.Engine SELECT test_case_suites.id, test_case_suites.rule_set_id, test_case_suites.total_cases, test_case_suites.cases_by_category, test_case_suites.coverage_stats, test_case_suites.suggested_counts, test_case_suites.created_at, test_case_suites.last_execution_report, test_case_suites.last_executed_at, test_case_suites.last_executed_against_version_id 
+FROM test_case_suites 
+WHERE test_case_suites.id = $1::UUID
+2026-04-30 03:35:53,281 INFO sqlalchemy.engine.Engine [cached since 88.54s ago] (UUID('7e249cc5-97c9-4a08-a570-cbf1ee1c893b'),)
+2026-04-30 03:35:53,288 INFO sqlalchemy.engine.Engine SELECT test_cases.suite_id AS test_cases_suite_id, test_cases.id AS test_cases_id, test_cases.test_case_id AS test_cases_test_case_id, test_cases.description AS test_cases_description, test_cases.source_rule_ids AS test_cases_source_rule_ids, test_cases.category AS test_cases_category, test_cases.input_values AS test_cases_input_values, test_cases.filter_logic AS test_cases_filter_logic, test_cases.matched_loan_ids AS test_cases_matched_loan_ids, test_cases.match_count AS test_cases_match_count, test_cases.expected_outcome AS test_cases_expected_outcome, test_cases.rationale AS test_cases_rationale, test_cases.created_at AS test_cases_created_at 
+FROM test_cases 
+WHERE test_cases.suite_id IN ($1::UUID)
+2026-04-30 03:35:53,289 INFO sqlalchemy.engine.Engine [cached since 88.54s ago] (UUID('7e249cc5-97c9-4a08-a570-cbf1ee1c893b'),)
+2026-04-30 03:35:53,293 INFO sqlalchemy.engine.Engine SELECT rule_sets.id, rule_sets.brd_document_id, rule_sets.version, rule_sets.name, rule_sets.description, rule_sets.status, rule_sets.created_at 
+FROM rule_sets 
+WHERE rule_sets.id = $1::UUID
+2026-04-30 03:35:53,294 INFO sqlalchemy.engine.Engine [cached since 114.2s ago] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'),)
+2026-04-30 03:35:53,297 INFO sqlalchemy.engine.Engine SELECT rules.rule_set_id AS rules_rule_set_id, rules.id AS rules_id, rules.rule_id AS rules_rule_id, rules.rule_name AS rules_rule_name, rules.description AS rules_description, rules.rule_type AS rules_rule_type, rules.conditions AS rules_conditions, rules.actions AS rules_actions, rules.priority AS rules_priority, rules.confidence AS rules_confidence, rules.compiled_expression AS rules_compiled_expression, rules.source_section AS rules_source_section, rules.has_conflicts AS rules_has_conflicts, rules.conflict_details AS rules_conflict_details, rules.canonical_key AS rules_canonical_key, rules.subsystem AS rules_subsystem, rules.semantic_signature AS rules_semantic_signature, rules.supersedes_rule_id AS rules_supersedes_rule_id, rules.created_at AS rules_created_at 
+FROM rules 
+WHERE rules.rule_set_id IN ($1::UUID)
+2026-04-30 03:35:53,298 INFO sqlalchemy.engine.Engine [cached since 94.31s ago] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'),)
+2026-04-30 03:35:53,301 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,302 INFO sqlalchemy.engine.Engine [cached since 88.54s ago] ('LA-00002805',)
+2026-04-30 03:35:53,308 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,309 INFO sqlalchemy.engine.Engine [cached since 88.55s ago] ('LA-00003502',)
+2026-04-30 03:35:53,312 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,312 INFO sqlalchemy.engine.Engine [cached since 88.55s ago] ('LA-00000970',)
+2026-04-30 03:35:53,318 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,318 INFO sqlalchemy.engine.Engine [cached since 88.56s ago] ('LA-00002756',)
+2026-04-30 03:35:53,323 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,324 INFO sqlalchemy.engine.Engine [cached since 88.57s ago] ('LA-00003022',)
+2026-04-30 03:35:53,328 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,329 INFO sqlalchemy.engine.Engine [cached since 88.57s ago] ('LA-00000652',)
+2026-04-30 03:35:53,333 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,333 INFO sqlalchemy.engine.Engine [cached since 88.58s ago] ('LA-00000472',)
+2026-04-30 03:35:53,336 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,336 INFO sqlalchemy.engine.Engine [cached since 88.58s ago] ('LA-00000042',)
+2026-04-30 03:35:53,340 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,340 INFO sqlalchemy.engine.Engine [cached since 88.58s ago] ('LA-00001707',)
+2026-04-30 03:35:53,344 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,344 INFO sqlalchemy.engine.Engine [cached since 88.59s ago] ('LA-00003561',)
+2026-04-30 03:35:53,347 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,347 INFO sqlalchemy.engine.Engine [cached since 88.59s ago] ('LA-00000010',)
+2026-04-30 03:35:53,351 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,351 INFO sqlalchemy.engine.Engine [cached since 88.59s ago] ('LA-00000018',)
+2026-04-30 03:35:53,355 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,356 INFO sqlalchemy.engine.Engine [cached since 88.6s ago] ('LA-00000021',)
+2026-04-30 03:35:53,358 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,358 INFO sqlalchemy.engine.Engine [cached since 88.6s ago] ('LA-00000023',)
+2026-04-30 03:35:53,361 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,361 INFO sqlalchemy.engine.Engine [cached since 88.6s ago] ('LA-00000024',)
+2026-04-30 03:35:53,366 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,366 INFO sqlalchemy.engine.Engine [cached since 88.61s ago] ('LA-00000035',)
+2026-04-30 03:35:53,369 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,370 INFO sqlalchemy.engine.Engine [cached since 88.61s ago] ('LA-00000036',)
+2026-04-30 03:35:53,372 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,373 INFO sqlalchemy.engine.Engine [cached since 88.61s ago] ('LA-00000044',)
+2026-04-30 03:35:53,376 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,415 INFO sqlalchemy.engine.Engine [cached since 88.66s ago] ('LA-00000057',)
+2026-04-30 03:35:53,417 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,417 INFO sqlalchemy.engine.Engine [cached since 88.66s ago] ('LA-00000007',)
+2026-04-30 03:35:53,420 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,420 INFO sqlalchemy.engine.Engine [cached since 88.66s ago] ('LA-00000350',)
+2026-04-30 03:35:53,425 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,425 INFO sqlalchemy.engine.Engine [cached since 88.67s ago] ('LA-00000456',)
+2026-04-30 03:35:53,428 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,428 INFO sqlalchemy.engine.Engine [cached since 88.67s ago] ('LA-00000474',)
+2026-04-30 03:35:53,431 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,431 INFO sqlalchemy.engine.Engine [cached since 88.67s ago] ('LA-00000557',)
+2026-04-30 03:35:53,435 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,435 INFO sqlalchemy.engine.Engine [cached since 88.68s ago] ('LA-00000763',)
+2026-04-30 03:35:53,438 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,438 INFO sqlalchemy.engine.Engine [cached since 88.68s ago] ('LA-00000770',)
+2026-04-30 03:35:53,441 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,441 INFO sqlalchemy.engine.Engine [cached since 88.68s ago] ('LA-00000976',)
+2026-04-30 03:35:53,444 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,444 INFO sqlalchemy.engine.Engine [cached since 88.69s ago] ('LA-00001189',)
+2026-04-30 03:35:53,448 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,448 INFO sqlalchemy.engine.Engine [cached since 88.69s ago] ('LA-00001345',)
+2026-04-30 03:35:53,451 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,452 INFO sqlalchemy.engine.Engine [cached since 88.69s ago] ('LA-00000067',)
+2026-04-30 03:35:53,454 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,455 INFO sqlalchemy.engine.Engine [cached since 88.7s ago] ('LA-00000350',)
+2026-04-30 03:35:53,458 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,459 INFO sqlalchemy.engine.Engine [cached since 88.7s ago] ('LA-00000456',)
+2026-04-30 03:35:53,462 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,462 INFO sqlalchemy.engine.Engine [cached since 88.7s ago] ('LA-00000474',)
+2026-04-30 03:35:53,464 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,465 INFO sqlalchemy.engine.Engine [cached since 88.71s ago] ('LA-00000557',)
+2026-04-30 03:35:53,467 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,468 INFO sqlalchemy.engine.Engine [cached since 88.71s ago] ('LA-00000763',)
+2026-04-30 03:35:53,470 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,470 INFO sqlalchemy.engine.Engine [cached since 88.71s ago] ('LA-00000770',)
+2026-04-30 03:35:53,472 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,473 INFO sqlalchemy.engine.Engine [cached since 88.71s ago] ('LA-00000976',)
+2026-04-30 03:35:53,475 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,475 INFO sqlalchemy.engine.Engine [cached since 88.72s ago] ('LA-00001189',)
+2026-04-30 03:35:53,479 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,479 INFO sqlalchemy.engine.Engine [cached since 88.72s ago] ('LA-00001345',)
+2026-04-30 03:35:53,483 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,483 INFO sqlalchemy.engine.Engine [cached since 88.73s ago] ('LA-00000067',)
+INFO:     127.0.0.1:56390 - "GET /api/v1/test-cases/7e249cc5-97c9-4a08-a570-cbf1ee1c893b HTTP/1.1" 200 OK
+2026-04-30 03:35:53,490 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-30 03:35:53,494 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-30 03:35:53,494 INFO sqlalchemy.engine.Engine SELECT test_case_suites.id, test_case_suites.rule_set_id, test_case_suites.total_cases, test_case_suites.cases_by_category, test_case_suites.coverage_stats, test_case_suites.suggested_counts, test_case_suites.created_at, test_case_suites.last_execution_report, test_case_suites.last_executed_at, test_case_suites.last_executed_against_version_id 
+FROM test_case_suites 
+WHERE test_case_suites.id = $1::UUID
+2026-04-30 03:35:53,495 INFO sqlalchemy.engine.Engine [cached since 88.75s ago] (UUID('7e249cc5-97c9-4a08-a570-cbf1ee1c893b'),)
+2026-04-30 03:35:53,501 INFO sqlalchemy.engine.Engine SELECT test_cases.suite_id AS test_cases_suite_id, test_cases.id AS test_cases_id, test_cases.test_case_id AS test_cases_test_case_id, test_cases.description AS test_cases_description, test_cases.source_rule_ids AS test_cases_source_rule_ids, test_cases.category AS test_cases_category, test_cases.input_values AS test_cases_input_values, test_cases.filter_logic AS test_cases_filter_logic, test_cases.matched_loan_ids AS test_cases_matched_loan_ids, test_cases.match_count AS test_cases_match_count, test_cases.expected_outcome AS test_cases_expected_outcome, test_cases.rationale AS test_cases_rationale, test_cases.created_at AS test_cases_created_at 
+FROM test_cases 
+WHERE test_cases.suite_id IN ($1::UUID)
+2026-04-30 03:35:53,501 INFO sqlalchemy.engine.Engine [cached since 88.76s ago] (UUID('7e249cc5-97c9-4a08-a570-cbf1ee1c893b'),)
+2026-04-30 03:35:53,504 INFO sqlalchemy.engine.Engine SELECT rule_sets.id, rule_sets.brd_document_id, rule_sets.version, rule_sets.name, rule_sets.description, rule_sets.status, rule_sets.created_at 
+FROM rule_sets 
+WHERE rule_sets.id = $1::UUID
+2026-04-30 03:35:53,505 INFO sqlalchemy.engine.Engine [cached since 114.4s ago] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'),)
+2026-04-30 03:35:53,507 INFO sqlalchemy.engine.Engine SELECT rules.rule_set_id AS rules_rule_set_id, rules.id AS rules_id, rules.rule_id AS rules_rule_id, rules.rule_name AS rules_rule_name, rules.description AS rules_description, rules.rule_type AS rules_rule_type, rules.conditions AS rules_conditions, rules.actions AS rules_actions, rules.priority AS rules_priority, rules.confidence AS rules_confidence, rules.compiled_expression AS rules_compiled_expression, rules.source_section AS rules_source_section, rules.has_conflicts AS rules_has_conflicts, rules.conflict_details AS rules_conflict_details, rules.canonical_key AS rules_canonical_key, rules.subsystem AS rules_subsystem, rules.semantic_signature AS rules_semantic_signature, rules.supersedes_rule_id AS rules_supersedes_rule_id, rules.created_at AS rules_created_at 
+FROM rules 
+WHERE rules.rule_set_id IN ($1::UUID)
+2026-04-30 03:35:53,508 INFO sqlalchemy.engine.Engine [cached since 94.52s ago] (UUID('1289e6e1-093c-4417-9be9-b09e0a879eb8'),)
+2026-04-30 03:35:53,512 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,512 INFO sqlalchemy.engine.Engine [cached since 88.75s ago] ('LA-00002805',)
+2026-04-30 03:35:53,516 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,516 INFO sqlalchemy.engine.Engine [cached since 88.76s ago] ('LA-00003502',)
+2026-04-30 03:35:53,520 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,521 INFO sqlalchemy.engine.Engine [cached since 88.76s ago] ('LA-00000970',)
+2026-04-30 03:35:53,524 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,524 INFO sqlalchemy.engine.Engine [cached since 88.77s ago] ('LA-00002756',)
+2026-04-30 03:35:53,527 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,528 INFO sqlalchemy.engine.Engine [cached since 88.77s ago] ('LA-00003022',)
+2026-04-30 03:35:53,532 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,532 INFO sqlalchemy.engine.Engine [cached since 88.77s ago] ('LA-00000652',)
+2026-04-30 03:35:53,536 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,536 INFO sqlalchemy.engine.Engine [cached since 88.78s ago] ('LA-00000472',)
+2026-04-30 03:35:53,539 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,540 INFO sqlalchemy.engine.Engine [cached since 88.78s ago] ('LA-00000042',)
+2026-04-30 03:35:53,544 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,544 INFO sqlalchemy.engine.Engine [cached since 88.79s ago] ('LA-00001707',)
+2026-04-30 03:35:53,547 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,548 INFO sqlalchemy.engine.Engine [cached since 88.79s ago] ('LA-00003561',)
+2026-04-30 03:35:53,551 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,551 INFO sqlalchemy.engine.Engine [cached since 88.79s ago] ('LA-00000010',)
+2026-04-30 03:35:53,554 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,555 INFO sqlalchemy.engine.Engine [cached since 88.8s ago] ('LA-00000018',)
+2026-04-30 03:35:53,560 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,560 INFO sqlalchemy.engine.Engine [cached since 88.8s ago] ('LA-00000021',)
+2026-04-30 03:35:53,564 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,564 INFO sqlalchemy.engine.Engine [cached since 88.81s ago] ('LA-00000023',)
+2026-04-30 03:35:53,567 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,567 INFO sqlalchemy.engine.Engine [cached since 88.81s ago] ('LA-00000024',)
+2026-04-30 03:35:53,569 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,570 INFO sqlalchemy.engine.Engine [cached since 88.81s ago] ('LA-00000035',)
+2026-04-30 03:35:53,573 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,574 INFO sqlalchemy.engine.Engine [cached since 88.82s ago] ('LA-00000036',)
+2026-04-30 03:35:53,577 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,577 INFO sqlalchemy.engine.Engine [cached since 88.82s ago] ('LA-00000044',)
+2026-04-30 03:35:53,580 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,581 INFO sqlalchemy.engine.Engine [cached since 88.82s ago] ('LA-00000057',)
+2026-04-30 03:35:53,584 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,584 INFO sqlalchemy.engine.Engine [cached since 88.83s ago] ('LA-00000007',)
+2026-04-30 03:35:53,587 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,587 INFO sqlalchemy.engine.Engine [cached since 88.83s ago] ('LA-00000350',)
+2026-04-30 03:35:53,589 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,590 INFO sqlalchemy.engine.Engine [cached since 88.83s ago] ('LA-00000456',)
+2026-04-30 03:35:53,593 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,593 INFO sqlalchemy.engine.Engine [cached since 88.83s ago] ('LA-00000474',)
+2026-04-30 03:35:53,595 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,596 INFO sqlalchemy.engine.Engine [cached since 88.84s ago] ('LA-00000557',)
+2026-04-30 03:35:53,598 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,599 INFO sqlalchemy.engine.Engine [cached since 88.84s ago] ('LA-00000763',)
+2026-04-30 03:35:53,602 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,602 INFO sqlalchemy.engine.Engine [cached since 88.84s ago] ('LA-00000770',)
+2026-04-30 03:35:53,604 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,605 INFO sqlalchemy.engine.Engine [cached since 88.85s ago] ('LA-00000976',)
+2026-04-30 03:35:53,607 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,608 INFO sqlalchemy.engine.Engine [cached since 88.85s ago] ('LA-00001189',)
+2026-04-30 03:35:53,611 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,611 INFO sqlalchemy.engine.Engine [cached since 88.85s ago] ('LA-00001345',)
+2026-04-30 03:35:53,614 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,615 INFO sqlalchemy.engine.Engine [cached since 88.86s ago] ('LA-00000067',)
+2026-04-30 03:35:53,618 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,618 INFO sqlalchemy.engine.Engine [cached since 88.86s ago] ('LA-00000350',)
+2026-04-30 03:35:53,621 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,621 INFO sqlalchemy.engine.Engine [cached since 88.86s ago] ('LA-00000456',)
+2026-04-30 03:35:53,624 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,624 INFO sqlalchemy.engine.Engine [cached since 88.87s ago] ('LA-00000474',)
+2026-04-30 03:35:53,627 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,627 INFO sqlalchemy.engine.Engine [cached since 88.87s ago] ('LA-00000557',)
+2026-04-30 03:35:53,630 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,630 INFO sqlalchemy.engine.Engine [cached since 88.87s ago] ('LA-00000763',)
+2026-04-30 03:35:53,632 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,633 INFO sqlalchemy.engine.Engine [cached since 88.87s ago] ('LA-00000770',)
+2026-04-30 03:35:53,635 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,636 INFO sqlalchemy.engine.Engine [cached since 88.88s ago] ('LA-00000976',)
+2026-04-30 03:35:53,638 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,638 INFO sqlalchemy.engine.Engine [cached since 88.88s ago] ('LA-00001189',)
+2026-04-30 03:35:53,641 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,641 INFO sqlalchemy.engine.Engine [cached since 88.88s ago] ('LA-00001345',)
+2026-04-30 03:35:53,644 INFO sqlalchemy.engine.Engine SELECT loan_records.id, loan_records.loan_application_id, loan_records.request_payload, loan_records.response_payload, loan_records.created_at 
+FROM loan_records 
+WHERE loan_records.loan_application_id = $1::VARCHAR
+2026-04-30 03:35:53,645 INFO sqlalchemy.engine.Engine [cached since 88.89s ago] ('LA-00000067',)
+INFO:     127.0.0.1:56390 - "GET /api/v1/test-cases/7e249cc5-97c9-4a08-a570-cbf1ee1c893b HTTP/1.1" 200 OK
+2026-04-30 03:35:53,651 INFO sqlalchemy.engine.Engine ROLLBACK

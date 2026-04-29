@@ -302,4 +302,7 @@ async def _build_suite_response(suite, rule_set_name: str | None, db: AsyncSessi
         suggested_counts=suite.suggested_counts or {},
         test_cases=test_case_responses,
         created_at=suite.created_at.isoformat(),
+        last_execution_report=suite.last_execution_report,
+        last_executed_at=suite.last_executed_at.isoformat() if suite.last_executed_at else None,
+        last_executed_against_version_id=str(suite.last_executed_against_version_id) if suite.last_executed_against_version_id else None,
     )

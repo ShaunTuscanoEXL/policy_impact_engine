@@ -29,6 +29,16 @@ class TestCaseSuite(Base):
     suggested_counts: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
+    # Latest execution of this suite against a LiveRuleVersion. Populated
+    # by `test_suite_executor.execute_suite_against_version`. Lets the
+    # UI surface scenario-test status (X passing / Y failing) without
+    # re-running the suite every time the page loads.
+    last_execution_report: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    last_executed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_executed_against_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True
+    )
+
     rule_set = relationship("RuleSet", back_populates="test_case_suites")
     test_cases = relationship("TestCase", back_populates="suite", cascade="all, delete-orphan")
 

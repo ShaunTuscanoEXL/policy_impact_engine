@@ -137,6 +137,69 @@ export default function BrdDetailPage() {
     }
   }, [workflow, testCaseCounts, maxMatches]);
 
+  // ── Step 7 wire-up: execute the test suite against the live version ──
+  const [suiteExecuting, setSuiteExecuting] = useState(false);
+  const handleExecuteSuite = useCallback(async () => {
+    const suiteId = workflow?.test_case_suite?.id ?? testCaseSuiteId;
+    const lv = workflow?.live_repo_version;
+    if (!suiteId || !lv) return;
+    setSuiteExecuting(true);
+    try {
+      const { data } = await api.post(
+        `/test-cases/${suiteId}/execute`,
+        { version_id: lv.version_id },
+      );
+      const passed = data.summary?.matches_expected ?? 0;
+      const failed = data.summary?.deviates_from_expected ?? 0;
+      toast.success(
+        failed === 0
+          ? `Suite executed: all ${passed.toLocaleString()} matched outcomes are as expected.`
+          : `Suite executed: ${passed.toLocaleString()} matched, ${failed.toLocaleString()} deviated.`
+      );
+      await fetchWorkflow();
+    } catch (err: any) {
+      toast.error(
+        err?.response?.data?.detail || "Failed to execute test suite."
+      );
+    } finally {
+      setSuiteExecuting(false);
+    }
+  }, [workflow, testCaseSuiteId, fetchWorkflow]);
+
+  // ── Step 5 wire-up: kick off an impact run for this BRD's live version ──
+  const [impactRunning, setImpactRunning] = useState(false);
+  const handleRunImpact = useCallback(async () => {
+    const lv = workflow?.live_repo_version;
+    if (!lv) return;
+    setImpactRunning(true);
+    try {
+      const payload: Record<string, any> = {
+        repository_id: lv.repository_id,
+        candidate_version_id: lv.version_id,
+        created_by: "brd-pipeline",
+      };
+      if (lv.parent_version_id) {
+        payload.base_version_id = lv.parent_version_id;
+      }
+      const { data } = await api.post("/impact-run", payload);
+      toast.success(
+        `Impact analysis ${data.status === "COMPLETED" ? "complete" : "started"}.`
+      );
+      // Re-fetch workflow so the stepper picks up the new impact_run
+      await fetchWorkflow();
+      // Deeplink straight into the impact analysis if it's done
+      if (data.status === "COMPLETED" && data.id) {
+        router.push(`/impact-runs/${data.id}`);
+      }
+    } catch (err: any) {
+      toast.error(
+        err?.response?.data?.detail || "Failed to start impact run."
+      );
+    } finally {
+      setImpactRunning(false);
+    }
+  }, [workflow, fetchWorkflow, router]);
+
   // handleExtractRules is defined above
 
   if (loading) {
@@ -215,6 +278,10 @@ export default function BrdDetailPage() {
               onCountChange={handleCountChange}
               maxMatches={maxMatches}
               onMaxMatchesChange={setMaxMatches}
+              onRunImpact={handleRunImpact}
+              impactRunning={impactRunning}
+              onExecuteSuite={handleExecuteSuite}
+              suiteExecuting={suiteExecuting}
             />
           </Card>
         </motion.div>
@@ -239,106 +306,9 @@ export default function BrdDetailPage() {
           </motion.div>
         )}
 
-        {/* Live Rule Repository linkage (Slice 4 wire-up) */}
-        {(workflow?.merge_proposal || workflow?.live_repo_version) && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <Card className="card-elevated p-5 border-border/40">
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="icon-badge bg-violet-100 dark:bg-violet-900/30">
-                    <GitMerge className="size-4 text-violet-600 dark:text-violet-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">Live Rule Repository</p>
-                    <p className="text-xs text-muted-foreground">
-                      Status of this BRD's proposal against the live US-PERSONAL repo
-                    </p>
-                  </div>
-                </div>
-
-                {workflow.merge_proposal && (
-                  <div className="flex flex-wrap items-center gap-3 rounded-md border border-border/40 bg-muted/30 p-3">
-                    <div className="flex flex-1 flex-wrap items-center gap-2 text-xs">
-                      <span className="text-muted-foreground">Proposal</span>
-                      <Badge
-                        variant={
-                          workflow.merge_proposal.status === "APPLIED"
-                            ? "default"
-                            : workflow.merge_proposal.status === "PENDING"
-                              ? "secondary"
-                              : "outline"
-                        }
-                      >
-                        {workflow.merge_proposal.status}
-                      </Badge>
-                      {workflow.merge_proposal.summary && (
-                        <span className="text-muted-foreground">
-                          · {workflow.merge_proposal.summary}
-                        </span>
-                      )}
-                      <span className="text-muted-foreground">
-                        · base v{workflow.merge_proposal.base_version}
-                      </span>
-                      {workflow.merge_proposal.decided_by && (
-                        <span className="text-muted-foreground">
-                          · decided by{" "}
-                          <span className="font-medium text-foreground">
-                            {workflow.merge_proposal.decided_by}
-                          </span>
-                        </span>
-                      )}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      render={
-                        <Link
-                          href={`/merge-workbench/${workflow.merge_proposal.id}`}
-                        />
-                      }
-                    >
-                      Open Workbench
-                      <ArrowRight className="ml-1.5 size-3.5" />
-                    </Button>
-                  </div>
-                )}
-
-                {workflow.live_repo_version && (
-                  <div className="flex flex-wrap items-center gap-3 rounded-md border border-border/40 bg-muted/30 p-3">
-                    <div className="flex flex-1 flex-wrap items-center gap-2 text-xs">
-                      <GitBranch className="size-3.5 text-amber-500" />
-                      <span className="text-muted-foreground">Applied as</span>
-                      <Badge variant="default">
-                        v{workflow.live_repo_version.version_number}
-                      </Badge>
-                      {workflow.live_repo_version.summary && (
-                        <span className="text-muted-foreground">
-                          · {workflow.live_repo_version.summary}
-                        </span>
-                      )}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      render={
-                        <Link
-                          href={`/live-repo/${workflow.live_repo_version.repository_id}`}
-                        />
-                      }
-                    >
-                      View Repository
-                      <ArrowRight className="ml-1.5 size-3.5" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </Card>
-          </motion.div>
-        )}
+        {/* Live-repo linkage is now part of the WorkflowStepper above
+            (Reconcile / Run Impact steps). The standalone card was
+            redundant once the pipeline absorbed those phases. */}
 
       </div>
     </PageTransition>

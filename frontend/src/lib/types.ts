@@ -96,6 +96,9 @@ export interface TestCaseSuite {
   suggested_counts: Record<string, number>;
   test_cases: TestCase[];
   created_at: string;
+  last_execution_report?: SuiteExecutionResponse | null;
+  last_executed_at?: string | null;
+  last_executed_against_version_id?: string | null;
 }
 
 export interface SuggestedCounts {
@@ -122,7 +125,19 @@ export interface TestCaseSuiteListItem {
 export interface BrdWorkflow {
   brd_id: string;
   rule_set: { id: string; status: string; rules_count: number } | null;
-  test_case_suite?: { id: string; total_cases: number; cases_by_category?: Record<string, number> } | null;
+  test_case_suite?: {
+    id: string;
+    total_cases: number;
+    cases_by_category?: Record<string, number>;
+    last_execution?: {
+      version_id: string | null;
+      version_number: number | null;
+      executed_at: string | null;
+      matches_expected: number;
+      deviates_from_expected: number;
+      cases_evaluated: number;
+    } | null;
+  } | null;
   merge_proposal?: {
     id: string;
     status: "PENDING" | "APPROVED" | "REJECTED" | "APPLIED";
@@ -136,6 +151,16 @@ export interface BrdWorkflow {
     version_number: number;
     version_id: string;
     summary: string | null;
+    parent_version_number: number | null;
+    parent_version_id: string | null;
+  } | null;
+  impact_run?: {
+    id: string;
+    status: ImpactRunStatus;
+    base_version_id: string | null;
+    candidate_version_id: string;
+    summary: ImpactRunSummary | null;
+    created_at: string;
   } | null;
 }
 

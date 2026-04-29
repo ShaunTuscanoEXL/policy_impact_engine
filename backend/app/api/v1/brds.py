@@ -1,4 +1,5 @@
 import logging
+import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
@@ -8,6 +9,7 @@ from app.database import get_db
 from app.services import brd_service, live_repo_service
 from app.schemas.brd import BrdUploadResponse, BrdListResponse
 from app.models.brd import BrdDocument
+from app.models.impact import ImpactRun, ImpactRunStatus
 from app.models.live_repo import LiveRuleVersion
 from app.models.merge import MergeProposal
 from app.models.rule import RuleSet, Rule, RuleSetStatus, RuleType
@@ -98,10 +100,22 @@ async def get_brd_workflow(brd_id: str, db: AsyncSession = Depends(get_db)):
         )
         tc_suite = tc_result.scalar_one_or_none()
         if tc_suite:
+            last_exec = None
+            if tc_suite.last_execution_report:
+                rep = tc_suite.last_execution_report
+                last_exec = {
+                    "version_id": str(tc_suite.last_executed_against_version_id) if tc_suite.last_executed_against_version_id else None,
+                    "version_number": rep.get("version_number"),
+                    "executed_at": tc_suite.last_executed_at.isoformat() if tc_suite.last_executed_at else None,
+                    "matches_expected": (rep.get("summary") or {}).get("matches_expected", 0),
+                    "deviates_from_expected": (rep.get("summary") or {}).get("deviates_from_expected", 0),
+                    "cases_evaluated": rep.get("cases_evaluated", 0),
+                }
             test_case_suite_data = {
                 "id": str(tc_suite.id),
                 "total_cases": tc_suite.total_cases,
                 "cases_by_category": tc_suite.cases_by_category,
+                "last_execution": last_exec,
             }
 
         # Latest merge proposal originating from this rule_set (if any)
@@ -129,12 +143,44 @@ async def get_brd_workflow(brd_id: str, db: AsyncSession = Depends(get_db)):
             )
             v = applied_v.scalar_one_or_none()
             if v:
+                # Resolve the parent version's number so the UI can render
+                # "compare vs vN" without an extra round-trip
+                parent_version_number = None
+                parent_version_id = None
+                if v.parent_version_id is not None:
+                    parent = await db.get(LiveRuleVersion, v.parent_version_id)
+                    if parent is not None:
+                        parent_version_number = parent.version_number
+                        parent_version_id = str(parent.id)
+
                 live_repo_data = {
                     "repository_id": str(v.repository_id),
                     "version_number": v.version_number,
                     "version_id": str(v.id),
                     "summary": v.summary,
+                    "parent_version_number": parent_version_number,
+                    "parent_version_id": parent_version_id,
                 }
+
+    # Latest impact run whose candidate is the live_repo_version (if any)
+    impact_run_data = None
+    if live_repo_data:
+        ir_result = await db.execute(
+            select(ImpactRun)
+            .where(ImpactRun.candidate_version_id == uuid.UUID(live_repo_data["version_id"]))
+            .order_by(ImpactRun.created_at.desc())
+            .limit(1)
+        )
+        ir = ir_result.scalar_one_or_none()
+        if ir:
+            impact_run_data = {
+                "id": str(ir.id),
+                "status": ir.status.value,
+                "base_version_id": str(ir.base_version_id) if ir.base_version_id else None,
+                "candidate_version_id": str(ir.candidate_version_id),
+                "summary": ir.summary,
+                "created_at": ir.created_at.isoformat(),
+            }
 
     return {
         "brd_id": brd_id,
@@ -142,6 +188,7 @@ async def get_brd_workflow(brd_id: str, db: AsyncSession = Depends(get_db)):
         "test_case_suite": test_case_suite_data,
         "merge_proposal": merge_proposal_data,
         "live_repo_version": live_repo_data,
+        "impact_run": impact_run_data,
     }
 
 

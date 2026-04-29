@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { TestCaseTable } from "@/components/test-cases/test-case-table";
 import { TestCaseExportPanel } from "@/components/test-cases/test-case-export-panel";
+import { SuiteExecutionPanel } from "@/components/test-cases/suite-execution-panel";
 import { PageTransition } from "@/components/page-transition";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -113,6 +114,14 @@ export default function TestSuiteDetailPage() {
           totalCases={suite.total_cases}
           casesByCategory={suite.cases_by_category}
         />
+
+        {/* Latest scenario-test execution result, if any */}
+        {suite.last_execution_report && (
+          <SuiteExecutionPanel
+            report={suite.last_execution_report}
+            executedAt={suite.last_executed_at ?? null}
+          />
+        )}
 
         {/* Test Case Table */}
         <TestCaseTable
