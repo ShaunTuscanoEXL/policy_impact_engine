@@ -1,4 +1,4 @@
-"""Seed script to generate 10000 synthetic US-fintech personal loan records.
+"""Seed script to generate 100000 synthetic US-fintech personal loan records.
 
 Mirrors the data shape consumed by the policy impact engine (field_registry +
 loan_record_service stats queries) but populates it with US-market values:
@@ -616,7 +616,7 @@ def generate_single_record(index: int, rng: np.random.Generator) -> dict:
     }
 
 
-def generate_records(count: int = 10000) -> list[dict]:
+def generate_records(count: int = 100_000) -> list[dict]:
     """Reseed every 2000 records to create distinct population segments."""
     rng = np.random.default_rng(seed=42)
     records = []
@@ -630,8 +630,10 @@ def generate_records(count: int = 10000) -> list[dict]:
 async def main():
     force = "--force" in sys.argv
 
-    # Optional override: --count=N
-    count = 10000
+    # Optional override: --count=N (default is 100k for a corpus large enough
+    # to surface long-tail rule interactions while keeping seed time under a
+    # couple of minutes on a developer laptop)
+    count = 100_000
     for arg in sys.argv[1:]:
         if arg.startswith("--count="):
             try:
