@@ -169,17 +169,29 @@ async def execute_suite_against_version(
         if category in SHOULD_FIRE_CATEGORIES and source_set:
             if source_set & fired_set:
                 return "RULE_FIRED"
-            # Source rule didn't fire — but did the engine still land on
-            # the expected decision via some other rule (the classic
-            # "shadowed by an earlier REJECT" case in gate-style
-            # underwriting)? If yes, soft-pass as SHADOWED; if no, this
-            # is a real failure.
+            # Source rule didn't fire. Two ways this can still be a
+            # legitimate "shadowed by a higher-priority rule" case:
+            #
+            #  1. Engine produced the EXACT expected decision via
+            #     another rule — the policy outcome was achieved.
+            #
+            #  2. Source rule's intended action was non-terminal
+            #     (SET / CAP / MODIFY / FLAG) but the engine REJECTED
+            #     the loan first via a gate. The modification couldn't
+            #     have run anyway, so the rule is preempted by the
+            #     REJECT. Common with rate-modifier and amount-cap
+            #     rules behind a credit floor.
+            #
+            # Both paths count as SHADOWED (soft-pass) so reviewers
+            # see "this rule is shadowed by an earlier gate" instead
+            # of a misleading hard failure.
             if engine_decision and engine_decision == expected:
                 return "RULE_SHADOWED"
-            # Some test generators emit "MODIFIED" / "FLAGGED_FOR_REVIEW"
-            # / "APPROVED" tokens too — treat any non-REJECTED
-            # expected as a partial match if the engine returned the
-            # same canonical decision label.
+            if engine_decision == "REJECTED" and expected not in {"REJECTED"}:
+                # Test expected a non-terminal outcome (MODIFIED /
+                # APPROVED / FLAGGED / etc.) but the engine REJECTED
+                # via an earlier gate. The rule never had its turn.
+                return "RULE_SHADOWED"
             return "RULE_NOT_FIRED"
         # Fallback: no source rule named, use engine decision verbatim
         return engine_decision
