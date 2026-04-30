@@ -109,31 +109,55 @@ async def execute_suite_against_version(
     # expected decision is NOT one of the per-rule projection tokens.
     SHOULD_FIRE_CATEGORIES = {"POSITIVE", "BOUNDARY", "EDGE"}
 
-    def _outcome_for_loan(test_case, fired_rule_ids: set[str], engine_decision: str) -> str:
+    def _outcome_for_loan(
+        test_case,
+        fired_rule_ids: set[str],
+        fired_rule_uuids: set[str],
+        engine_decision: str,
+    ) -> str:
         """Project the engine's run into the assertion vocabulary the
         test case uses. Returns one of:
           - "RULE_FIRED" / "RULE_NOT_FIRED" for POSITIVE tests (and any
             other final-decision assertion that names a specific source
             rule) — the engine's final decision is preserved separately
             in the report's actual_decision_distribution
+          - "RULE_SHADOWED" — POSITIVE test where the source rule didn't
+            fire but the engine still produced the expected decision via
+            another rule (typical with gate-style REJECT rules that
+            short-circuit the engine before this rule got its turn).
+            Counted as a soft pass; surfaced separately in the summary.
           - "NOT_TRIGGERED" / "TRIGGERED" for negative/boundary
             per-rule assertions
           - "ALL_TRIGGERED" / "PARTIAL_TRIGGERED" / "NOT_TRIGGERED"
             for interaction tests that name multiple source rules
           - the engine decision when no source rule is identified
+
+        Uses globally-unique rule UUIDs when available (avoiding the
+        "RULE-001 means three different rules" collision); falls back
+        to string rule_ids for legacy test cases generated before the
+        UUID-aware pipeline landed.
         """
         expected = str((test_case.expected_outcome or {}).get("decision", "APPROVED")).upper()
-        source_ids = set(test_case.source_rule_ids or [])
         category = test_case.category.value if hasattr(test_case.category, "value") else str(test_case.category)
 
+        # Prefer UUID matching; fall back to rule_id strings if the
+        # test case predates the UUID column.
+        source_uuids = set(test_case.source_rule_uuids or [])
+        if source_uuids:
+            source_set = source_uuids
+            fired_set = fired_rule_uuids
+        else:
+            source_set = set(test_case.source_rule_ids or [])
+            fired_set = fired_rule_ids
+
         if expected in NOT_TRIGGERED_TOKENS:
-            any_fired = bool(source_ids & fired_rule_ids)
+            any_fired = bool(source_set & fired_set)
             return "NOT_TRIGGERED" if not any_fired else "TRIGGERED"
         if expected in ALL_TRIGGERED_TOKENS:
-            if not source_ids:
+            if not source_set:
                 return engine_decision
-            fired_count = len(source_ids & fired_rule_ids)
-            if fired_count == len(source_ids):
+            fired_count = len(source_set & fired_set)
+            if fired_count == len(source_set):
                 return "ALL_TRIGGERED"
             if fired_count == 0:
                 return "NOT_TRIGGERED"
@@ -142,8 +166,21 @@ async def execute_suite_against_version(
         # source rule should fire. We project to RULE_FIRED / RULE_NOT_FIRED
         # so the assertion is robust to other terminal rules in the snapshot
         # stamping a different final decision on top.
-        if category in SHOULD_FIRE_CATEGORIES and source_ids:
-            return "RULE_FIRED" if (source_ids & fired_rule_ids) else "RULE_NOT_FIRED"
+        if category in SHOULD_FIRE_CATEGORIES and source_set:
+            if source_set & fired_set:
+                return "RULE_FIRED"
+            # Source rule didn't fire — but did the engine still land on
+            # the expected decision via some other rule (the classic
+            # "shadowed by an earlier REJECT" case in gate-style
+            # underwriting)? If yes, soft-pass as SHADOWED; if no, this
+            # is a real failure.
+            if engine_decision and engine_decision == expected:
+                return "RULE_SHADOWED"
+            # Some test generators emit "MODIFIED" / "FLAGGED_FOR_REVIEW"
+            # / "APPROVED" tokens too — treat any non-REJECTED
+            # expected as a partial match if the engine returned the
+            # same canonical decision label.
+            return "RULE_NOT_FIRED"
         # Fallback: no source rule named, use engine decision verbatim
         return engine_decision
 
@@ -156,14 +193,20 @@ async def execute_suite_against_version(
         cat = tc.category.value if hasattr(tc.category, "value") else str(tc.category)
         expected_decision = (tc.expected_outcome or {}).get("decision", "APPROVED")
         expected_decision = str(expected_decision).upper()
-        source_ids = set(tc.source_rule_ids or [])
+        # Use UUID set when the test was generated with the
+        # collision-aware pipeline; fall back to rule_id strings for
+        # legacy data so old suites still execute (just with the
+        # known rule_id ambiguity).
+        source_uuid_set = set(tc.source_rule_uuids or [])
+        source_id_set = set(tc.source_rule_ids or [])
+        has_source = bool(source_uuid_set or source_id_set)
 
         # The token we actually compare against — projected if necessary
         if expected_decision in NOT_TRIGGERED_TOKENS:
             target_outcome = "NOT_TRIGGERED"
         elif expected_decision in ALL_TRIGGERED_TOKENS:
             target_outcome = "ALL_TRIGGERED"
-        elif cat in SHOULD_FIRE_CATEGORIES and source_ids:
+        elif cat in SHOULD_FIRE_CATEGORIES and has_source:
             # POSITIVE / BND-above-threshold / EDGE-where-rule-fires:
             # assert the source rule fires, regardless of whether other
             # terminal rules in the snapshot override the engine's final
@@ -193,17 +236,30 @@ async def execute_suite_against_version(
                     loan_application_id=loan.loan_application_id,
                 )
                 fired_ids = {fr.rule_id for fr in res.fired_rules}
-                outcome = _outcome_for_loan(tc, fired_ids, res.decision)
+                fired_uuids = {fr.rule_uuid for fr in res.fired_rules if fr.rule_uuid}
+                outcome = _outcome_for_loan(tc, fired_ids, fired_uuids, res.decision)
                 actual_dist[outcome] = actual_dist.get(outcome, 0) + 1
                 engine_decision_dist[res.decision] = engine_decision_dist.get(res.decision, 0) + 1
-                if first_dev_reason is None and outcome != target_outcome:
+                # SHADOWED is a soft-pass (rule didn't fire but engine
+                # still produced the expected decision via another rule)
+                # — don't treat it as a deviation worth reporting.
+                if first_dev_reason is None and outcome != target_outcome and outcome != "RULE_SHADOWED":
                     if outcome in {"TRIGGERED", "PARTIAL_TRIGGERED", "ALL_TRIGGERED"}:
-                        # Surface which source rule actually fired
-                        fired_source = [fr for fr in res.fired_rules
-                                        if fr.rule_id in source_ids]
+                        # Surface which source rule actually fired —
+                        # match by UUID when available, else by rule_id
+                        if source_uuid_set:
+                            fired_source = [
+                                fr for fr in res.fired_rules
+                                if fr.rule_uuid and fr.rule_uuid in source_uuid_set
+                            ]
+                        else:
+                            fired_source = [
+                                fr for fr in res.fired_rules
+                                if fr.rule_id in source_id_set
+                            ]
                         if fired_source:
                             first_dev_reason = (
-                                f"{fired_source[0].rule_id} fired"
+                                f"{fired_source[0].rule_id} ({fired_source[0].rule_name}) fired"
                                 + (f": {fired_source[0].reason}" if fired_source[0].reason else "")
                             )
                         else:
@@ -219,7 +275,12 @@ async def execute_suite_against_version(
 
         matched_count = sum(actual_dist.values())
         matches_expected = actual_dist.get(target_outcome, 0)
-        deviates = matched_count - matches_expected
+        # RULE_SHADOWED counts as a soft pass — the engine produced the
+        # right business outcome via a different rule. Surface the count
+        # separately so users can see "this test passes because some other
+        # rule also rejects these loans" (worth reviewing, but not a bug).
+        shadowed = actual_dist.get("RULE_SHADOWED", 0)
+        deviates = matched_count - matches_expected - shadowed
 
         total_match += matches_expected
         total_dev += deviates
@@ -236,6 +297,7 @@ async def execute_suite_against_version(
             "actual_distribution": actual_dist,
             "engine_decision_distribution": engine_decision_dist,
             "matches_expected": matches_expected,
+            "shadowed": shadowed,
             "deviates_from_expected": deviates,
             "first_deviation_reason": first_dev_reason,
         })

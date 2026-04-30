@@ -335,6 +335,11 @@ export interface TestCaseExecutionReport {
    *  engine still REJECTED because another terminal rule overrode it). */
   engine_decision_distribution?: Record<string, number>;
   matches_expected: number;
+  /** POSITIVE / BND-fires test where the source rule didn't fire but
+   *  the engine still produced the expected decision via another rule
+   *  (typical "shadowed by an earlier REJECT" case in gate-style
+   *  underwriting). Counted as a soft pass. */
+  shadowed?: number;
   deviates_from_expected: number;
   first_deviation_reason: string | null;
 }

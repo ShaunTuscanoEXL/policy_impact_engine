@@ -205,6 +205,12 @@ export function SuiteExecutionPanel({ report, executedAt }: SuiteExecutionPanelP
                 const cat = categoryTone(r.category);
                 const noLoans = r.matched_loan_count === 0;
                 const passed = !noLoans && r.deviates_from_expected === 0;
+                const allShadowed =
+                  passed &&
+                  (r.shadowed ?? 0) > 0 &&
+                  r.matches_expected === 0;
+                const someShadowed =
+                  passed && (r.shadowed ?? 0) > 0 && !allShadowed;
                 const StatusIcon = noLoans
                   ? AlertCircle
                   : passed
@@ -212,19 +218,25 @@ export function SuiteExecutionPanel({ report, executedAt }: SuiteExecutionPanelP
                     : XCircle;
                 const statusColor = noLoans
                   ? "text-slate-500"
-                  : passed
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-red-600 dark:text-red-400";
+                  : allShadowed
+                    ? "text-amber-600 dark:text-amber-400"
+                    : passed
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-red-600 dark:text-red-400";
                 const statusLabel = noLoans
                   ? "Untested"
-                  : passed
-                    ? "Pass"
-                    : "Fail";
+                  : allShadowed
+                    ? "Shadowed"
+                    : passed
+                      ? "Pass"
+                      : "Fail";
                 const statusBg = noLoans
                   ? "bg-slate-500/10 ring-slate-500/20"
-                  : passed
-                    ? "bg-emerald-500/10 ring-emerald-500/30"
-                    : "bg-red-500/10 ring-red-500/30";
+                  : allShadowed
+                    ? "bg-amber-500/10 ring-amber-500/30"
+                    : passed
+                      ? "bg-emerald-500/10 ring-emerald-500/30"
+                      : "bg-red-500/10 ring-red-500/30";
                 return (
                   <TableRow
                     key={r.test_case_id}
@@ -284,6 +296,20 @@ export function SuiteExecutionPanel({ report, executedAt }: SuiteExecutionPanelP
                       ) : noLoans ? (
                         <span className="text-muted-foreground italic">
                           No matching loans in corpus
+                        </span>
+                      ) : allShadowed ? (
+                        <span
+                          className="text-amber-700 dark:text-amber-300"
+                          title="The source rule didn't fire on these loans, but a higher-priority REJECT short-circuited the engine first — the policy outcome is still correct."
+                        >
+                          all {r.matched_loan_count.toLocaleString()} shadowed by an earlier REJECT rule
+                        </span>
+                      ) : someShadowed ? (
+                        <span className="text-emerald-600 dark:text-emerald-400">
+                          {r.matches_expected.toLocaleString()} fired ·{" "}
+                          <span className="text-amber-700 dark:text-amber-300">
+                            {r.shadowed?.toLocaleString()} shadowed
+                          </span>
                         </span>
                       ) : (
                         <span className="text-emerald-600 dark:text-emerald-400">

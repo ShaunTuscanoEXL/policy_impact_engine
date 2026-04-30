@@ -48,6 +48,9 @@ class TestCaseResponse(BaseModel):
     test_case_id: str
     description: str | None
     source_rule_ids: list[str]
+    # Globally unique IDs for the source rule(s) — populated when the
+    # test was generated (or backfilled) by the UUID-aware pipeline.
+    source_rule_uuids: list[str] | None = None
     category: str
     input_values: dict = {}
     filter_logic: list[dict]

@@ -103,6 +103,11 @@ class FiredRule:
     target_field: str | None
     value: Any
     reason: str | None
+    # Globally unique identifier from the snapshot (rule.id). The
+    # human-readable `rule_id` can collide across BRDs (multiple rules
+    # named "RULE-001" merged into a single repo); rule_uuid is the
+    # only safe key for "did THIS specific rule fire?" comparisons.
+    rule_uuid: str | None = None
 
 
 @dataclass
@@ -222,6 +227,7 @@ def _sort_key(rule: dict) -> tuple[int, int, str]:
 
 def _action_to_fired(rule: dict, action: dict) -> FiredRule:
     act_type = str(action.get("action_type", "")).strip().upper()
+    rule_uuid_raw = rule.get("id")
     return FiredRule(
         rule_id=str(rule.get("rule_id") or rule.get("id") or "?"),
         rule_name=str(rule.get("rule_name") or rule.get("rule_id") or "?"),
@@ -230,6 +236,7 @@ def _action_to_fired(rule: dict, action: dict) -> FiredRule:
         target_field=str(action.get("target_field") or "") or None,
         value=action.get("value"),
         reason=str(action.get("description") or "") or None,
+        rule_uuid=str(rule_uuid_raw) if rule_uuid_raw else None,
     )
 
 

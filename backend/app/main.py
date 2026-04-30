@@ -40,7 +40,63 @@ async def lifespan(app: FastAPI):
         except Exception:
             # Backfill should never block startup
             pass
+
+    # Backfill source_rule_uuids on legacy test cases so existing
+    # suites can be re-executed without ambiguity. Idempotent — only
+    # touches rows where source_rule_uuids is NULL.
+    async with async_session() as db:
+        try:
+            await _backfill_test_case_uuids(db)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Test-case UUID backfill skipped: %s", e
+            )
     yield
+
+
+async def _backfill_test_case_uuids(db) -> None:
+    """One-off: existing test cases were stored before the source-rule
+    UUID column existed. Look each one up via its suite's rule_set to
+    fill in the UUID(s) so re-execution can disambiguate rule_id
+    collisions across BRDs."""
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+    from app.models.test_case import TestCase, TestCaseSuite
+    from app.models.rule import RuleSet
+    rows_q = await db.execute(
+        select(TestCase)
+        .options(
+            selectinload(TestCase.suite)
+            .selectinload(TestCaseSuite.rule_set)
+            .selectinload(RuleSet.rules)
+        )
+        .where(TestCase.source_rule_uuids.is_(None))
+    )
+    rows = list(rows_q.scalars())
+    if not rows:
+        return
+    updated = 0
+    for tc in rows:
+        rule_set = tc.suite.rule_set if tc.suite else None
+        if not rule_set or not rule_set.rules:
+            continue
+        wanted = set(tc.source_rule_ids or [])
+        if not wanted:
+            continue
+        # Within a rule_set, rule_id IS unique — so this lookup is
+        # collision-free. The collision only happens once rules from
+        # multiple BRDs land in the same live snapshot.
+        uuids = [str(r.id) for r in rule_set.rules if r.rule_id in wanted]
+        if uuids:
+            tc.source_rule_uuids = uuids
+            updated += 1
+    if updated:
+        await db.commit()
+        import logging
+        logging.getLogger(__name__).info(
+            "Backfilled source_rule_uuids on %d test case(s).", updated
+        )
 
 
 async def _apply_additive_migrations(conn) -> None:
@@ -57,6 +113,12 @@ async def _apply_additive_migrations(conn) -> None:
         "ADD COLUMN IF NOT EXISTS production_promoted_at TIMESTAMP NULL",
         "ALTER TABLE live_rule_repositories "
         "ADD COLUMN IF NOT EXISTS production_promoted_by VARCHAR(128) NULL",
+        # Slice — rule_id collision fix: store globally-unique UUIDs of
+        # the source rule(s) so the executor can disambiguate rules that
+        # share a human-readable rule_id (e.g. multiple BRDs both having
+        # RULE-001 merged into one live repo).
+        "ALTER TABLE test_cases "
+        "ADD COLUMN IF NOT EXISTS source_rule_uuids JSON NULL",
     ]
     for stmt in statements:
         try:

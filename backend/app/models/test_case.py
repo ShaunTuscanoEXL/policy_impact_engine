@@ -51,6 +51,13 @@ class TestCase(Base):
     test_case_id: Mapped[str] = mapped_column(String(64))
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_rule_ids: Mapped[dict] = mapped_column(JSON)
+    # Globally unique IDs for the source rule(s) — populated when the
+    # test was generated from a rule_set or live snapshot that exposed
+    # UUIDs. The suite executor prefers these over `source_rule_ids`
+    # because the human-readable rule_id can collide across BRDs (three
+    # different rules can all be named "RULE-001" once they're merged
+    # into the same live repo).
+    source_rule_uuids: Mapped[list | None] = mapped_column(JSON, nullable=True)
     category: Mapped[TestCaseCategory] = mapped_column(SAEnum(TestCaseCategory))
     input_values: Mapped[dict] = mapped_column(JSON, default=dict)
     filter_logic: Mapped[dict] = mapped_column(JSON)

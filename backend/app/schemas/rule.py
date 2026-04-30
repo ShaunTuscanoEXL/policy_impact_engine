@@ -35,6 +35,11 @@ class RuleDefinition(BaseModel):
     priority: int = 0
     source_section: str = ""
     confidence: float = 1.0
+    # Globally unique identifier (DB row UUID for rule-set rules, or
+    # snapshot's `id` field for live-version rules). Used downstream by
+    # the test case generator + executor to disambiguate when the
+    # human-readable rule_id collides across BRDs.
+    uuid: str | None = None
 
 
 class RuleResponse(BaseModel):

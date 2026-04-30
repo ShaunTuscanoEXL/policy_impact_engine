@@ -297,6 +297,7 @@ async def _build_suite_response(suite, rule_set_name: str | None, db: AsyncSessi
             test_case_id=tc.test_case_id,
             description=tc.description,
             source_rule_ids=tc.source_rule_ids or [],
+            source_rule_uuids=tc.source_rule_uuids or None,
             category=tc.category.value if hasattr(tc.category, 'value') else tc.category,
             input_values=tc.input_values or {},
             filter_logic=tc.filter_logic or [],
