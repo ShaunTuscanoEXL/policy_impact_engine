@@ -387,6 +387,20 @@ async def _apply_additive_migrations(conn) -> None:
         # RULE-001 merged into one live repo).
         "ALTER TABLE test_cases "
         "ADD COLUMN IF NOT EXISTS source_rule_uuids JSON NULL",
+        # Slice — rule_set staleness tracking: bumped on every mutation
+        # so downstream artifacts (test suites, merge proposals) can
+        # detect "the rule_set has changed since you last looked".
+        "ALTER TABLE rule_sets "
+        "ADD COLUMN IF NOT EXISTS last_modified_at TIMESTAMP "
+        "DEFAULT CURRENT_TIMESTAMP",
+        # And immediately backfill: existing rule_sets predate this
+        # column. Without this, every existing rule_set looks like it
+        # was "just modified" at startup, marking all suites as stale.
+        # We copy created_at instead so suites only show stale if there
+        # have actually been edits since their generation.
+        "UPDATE rule_sets SET last_modified_at = created_at "
+        "WHERE last_modified_at >= created_at + INTERVAL '1 hour' "
+        "OR last_modified_at IS NULL",
     ]
     for stmt in statements:
         try:

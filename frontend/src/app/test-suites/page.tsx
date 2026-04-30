@@ -153,12 +153,23 @@ export default function TestSuitesListPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Link
-                          href={`/test-suites/${suite.id}`}
-                          className="font-medium text-primary hover:underline"
-                        >
-                          {suite.rule_set_name || suite.rule_set_id.slice(0, 8)}
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/test-suites/${suite.id}`}
+                            className="font-medium text-primary hover:underline"
+                          >
+                            {suite.rule_set_name || suite.rule_set_id.slice(0, 8)}
+                          </Link>
+                          {suite.is_stale && (
+                            <span
+                              title="The source rule_set has been edited after this suite was generated. Re-generate to refresh test cases."
+                              className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700 ring-1 ring-inset ring-amber-500/30 dark:text-amber-300"
+                            >
+                              <AlertCircle className="size-3" />
+                              STALE
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">{suite.total_cases} cases</Badge>

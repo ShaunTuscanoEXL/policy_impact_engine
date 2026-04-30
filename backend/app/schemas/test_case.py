@@ -86,6 +86,11 @@ class TestCaseSuiteResponse(BaseModel):
     last_execution_report: dict[str, Any] | None = None
     last_executed_at: str | None = None
     last_executed_against_version_id: str | None = None
+    # True if the source rule_set has been modified after this suite was
+    # generated — the test cases (and any prior execution report) may
+    # not reflect the current rule contents. UI surfaces a "STALE" badge.
+    is_stale: bool = False
+    rule_set_last_modified_at: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -113,6 +118,8 @@ class TestCaseSuiteListResponse(BaseModel):
     created_at: str
     # Inline-decorated last execution result (Slice D enrichment)
     last_execution: SuiteLastExecutionInline | None = None
+    # Stale = source rule_set was edited after suite generation.
+    is_stale: bool = False
 
     model_config = {"from_attributes": True}
 

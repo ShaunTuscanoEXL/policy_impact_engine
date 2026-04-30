@@ -1,8 +1,76 @@
+import logging
 import uuid
+from datetime import datetime
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from app.models.rule import RuleSet, Rule, RuleSetStatus
+
+logger = logging.getLogger(__name__)
+
+
+async def on_rule_set_modified(
+    db: AsyncSession,
+    rule_set_id: uuid.UUID | str,
+    *,
+    skip_proposal_regen: bool = False,
+) -> None:
+    """Central hook called whenever a rule_set's contents change (rule
+    added/edited/deleted, status flipped, re-classified, etc.).
+
+    It does three things downstream artifacts depend on:
+
+      1. Bumps `rule_set.last_modified_at` so test suites and other
+         consumers can detect staleness.
+      2. Re-runs the canonical_key + subsystem + semantic_signature
+         classification on every rule in the set so the merge engine's
+         pairing/diff stays consistent.
+      3. Regenerates any PENDING merge proposals that point at this
+         rule_set so the workbench shows the *current* rule contents,
+         not the snapshot taken at proposal-creation time.
+
+    Idempotent and safe to call multiple times. Failures in any one
+    step are logged and don't block the others."""
+    if isinstance(rule_set_id, str):
+        try:
+            rule_set_id = uuid.UUID(rule_set_id)
+        except ValueError:
+            return
+
+    # 1. Bump the modified timestamp + 2. Re-classify rules
+    rs_q = await db.execute(
+        select(RuleSet)
+        .options(selectinload(RuleSet.rules))
+        .where(RuleSet.id == rule_set_id)
+    )
+    rs = rs_q.scalar_one_or_none()
+    if rs is None:
+        return
+    rs.last_modified_at = datetime.utcnow()
+    try:
+        from app.services.live_repo_service import ensure_rule_classified
+        for r in rs.rules:
+            await ensure_rule_classified(db, r, force=True)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Re-classify after rule_set modify failed: %s", e)
+    await db.commit()
+
+    # 3. Regenerate any PENDING proposals for this rule_set
+    if not skip_proposal_regen:
+        try:
+            from app.models.merge import MergeProposal, MergeProposalStatus
+            from app.services.live_repo_service import regenerate_proposal_items
+            pending_q = await db.execute(
+                select(MergeProposal).where(
+                    MergeProposal.source_rule_set_id == rule_set_id,
+                    MergeProposal.status == MergeProposalStatus.PENDING,
+                )
+            )
+            for p in pending_q.scalars():
+                await regenerate_proposal_items(db, proposal_id=p.id)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Proposal regen after rule_set modify failed: %s", e)
 
 
 async def list_rule_sets(db: AsyncSession) -> list[RuleSet]:
@@ -31,6 +99,10 @@ async def approve_rule_set(rule_set_id: str, db: AsyncSession) -> RuleSet | None
         return None
     rs.status = RuleSetStatus.APPROVED
     await db.commit()
+    # Trigger downstream sync — approval often follows edits, so we
+    # need to make sure the merge proposal reflects the final state
+    # before the user opens the workbench.
+    await on_rule_set_modified(db, rs.id)
     await db.refresh(rs)
     return rs
 
@@ -83,6 +155,9 @@ async def update_rule(rule_id: str, updates: dict, db: AsyncSession) -> Rule | N
         if value is not None and hasattr(rule, key):
             setattr(rule, key, value)
     await db.commit()
+    # Edited rule needs re-classification + the rule_set's proposal
+    # needs to reflect the new contents.
+    await on_rule_set_modified(db, rule.rule_set_id)
     await db.refresh(rule)
     return rule
 
@@ -96,8 +171,10 @@ async def delete_rule(rule_id: str, db: AsyncSession) -> bool:
     rule = result.scalar_one_or_none()
     if not rule:
         return False
+    rule_set_id = rule.rule_set_id
     await db.delete(rule)
     await db.commit()
+    await on_rule_set_modified(db, rule_set_id)
     return True
 
 
@@ -109,4 +186,5 @@ async def add_rule_to_set(rule_set_id: str, rule_data: dict, db: AsyncSession) -
     db.add(rule)
     await db.commit()
     await db.refresh(rule)
+    await on_rule_set_modified(db, rule_set_id)
     return rule

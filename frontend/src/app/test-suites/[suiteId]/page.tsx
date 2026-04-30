@@ -77,11 +77,22 @@ export default function TestSuiteDetailPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight">
-              <span className="text-gradient">
-                {suite.rule_set_name || `Suite ${suiteId.slice(0, 8)}`}
-              </span>
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-tight">
+                <span className="text-gradient">
+                  {suite.rule_set_name || `Suite ${suiteId.slice(0, 8)}`}
+                </span>
+              </h1>
+              {suite.is_stale && (
+                <span
+                  title="The source rule_set has been edited after this suite was generated. Re-generate to refresh test cases against the current rules."
+                  className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700 ring-1 ring-inset ring-amber-500/30 dark:text-amber-300"
+                >
+                  <AlertCircle className="size-3" />
+                  STALE — rule_set changed
+                </span>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground">
               {suite.total_cases} test cases &middot; Created{" "}
               {new Date(suite.created_at).toLocaleDateString("en-US", {
@@ -89,6 +100,18 @@ export default function TestSuiteDetailPage() {
                 month: "long",
                 day: "numeric",
               })}
+              {suite.is_stale && suite.rule_set_last_modified_at && (
+                <>
+                  {" "}&middot; <span className="text-amber-700 dark:text-amber-300">
+                    Rule set last edited{" "}
+                    {new Date(suite.rule_set_last_modified_at).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </span>
+                </>
+              )}
             </p>
             <div className="flex flex-wrap gap-1 mt-2">
               {Object.entries(suite.cases_by_category).map(([cat, count]) => (

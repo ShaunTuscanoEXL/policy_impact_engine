@@ -62,29 +62,27 @@ def serialize_rule(rule: Rule) -> dict[str, Any]:
 
 # ── Backfill / normalization ─────────────────────────────────────────────
 
-async def ensure_rule_classified(db: AsyncSession, rule: Rule) -> Rule:
-    """Populate subsystem, canonical_key, semantic_signature on a Rule
-    if any are missing. Idempotent — safe to call repeatedly."""
+async def ensure_rule_classified(
+    db: AsyncSession, rule: Rule, *, force: bool = False
+) -> Rule:
+    """Populate subsystem, canonical_key, semantic_signature on a Rule.
+
+    Idempotent — safe to call repeatedly. By default skips fields that
+    are already populated. With ``force=True`` re-runs the classifier
+    over current conditions/actions and overwrites — used by
+    ``on_rule_set_modified`` after a user edit so the canonical_key
+    stays in sync with the new contents."""
+    conds = rule.conditions if isinstance(rule.conditions, list) else []
+    acts = rule.actions if isinstance(rule.actions, list) else []
     changed = False
-    if not rule.subsystem or rule.subsystem == Subsystem.UNCLASSIFIED:
-        rule.subsystem = classify_subsystem(
-            rule.conditions if isinstance(rule.conditions, list) else [],
-            rule.actions if isinstance(rule.actions, list) else [],
-            rule.rule_type,
-        )
+    if force or not rule.subsystem or rule.subsystem == Subsystem.UNCLASSIFIED:
+        rule.subsystem = classify_subsystem(conds, acts, rule.rule_type)
         changed = True
-    if not rule.canonical_key:
-        rule.canonical_key = make_canonical_key(
-            rule.subsystem,
-            rule.conditions if isinstance(rule.conditions, list) else [],
-            rule.actions if isinstance(rule.actions, list) else [],
-        )
+    if force or not rule.canonical_key:
+        rule.canonical_key = make_canonical_key(rule.subsystem, conds, acts)
         changed = True
-    if not rule.semantic_signature:
-        rule.semantic_signature = make_semantic_signature(
-            rule.conditions if isinstance(rule.conditions, list) else [],
-            rule.actions if isinstance(rule.actions, list) else [],
-        )
+    if force or not rule.semantic_signature:
+        rule.semantic_signature = make_semantic_signature(conds, acts)
         changed = True
     if changed:
         await db.flush()

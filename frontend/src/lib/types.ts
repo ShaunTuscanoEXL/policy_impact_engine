@@ -107,6 +107,10 @@ export interface TestCaseSuite {
   last_execution_report?: SuiteExecutionResponse | null;
   last_executed_at?: string | null;
   last_executed_against_version_id?: string | null;
+  /** True when the source rule_set has been edited after this suite
+   *  was generated. */
+  is_stale?: boolean;
+  rule_set_last_modified_at?: string | null;
 }
 
 export interface SuggestedCounts {
@@ -131,6 +135,10 @@ export interface TestCaseSuiteListItem {
   /** Slice D enrichment — inline pass-rate display so the list shows
    *  "X / Y passing vs vN" without forcing a click. */
   last_execution?: SuiteLastExecutionInline | null;
+  /** True when the source rule_set has been edited after this suite
+   *  was generated — the test cases (and any prior execution) may not
+   *  reflect current rules. UI surfaces a STALE badge. */
+  is_stale?: boolean;
 }
 
 export interface BrdWorkflow {

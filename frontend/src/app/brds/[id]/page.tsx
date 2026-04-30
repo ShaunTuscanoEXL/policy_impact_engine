@@ -85,6 +85,27 @@ export default function BrdDetailPage() {
     fetchWorkflow();
   }, [params.id, router, fetchWorkflow]);
 
+  // Auto-refresh the workflow whenever the tab regains focus or the
+  // window becomes visible again. Catches the common cross-page flow:
+  // user clicks into the merge workbench / impact run / suite execution
+  // detail page, takes an action, returns to the BRD pipeline — without
+  // this, the stage cards would still show the pre-action state until a
+  // hard reload.
+  useEffect(() => {
+    const onFocus = () => {
+      fetchWorkflow();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") fetchWorkflow();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [fetchWorkflow]);
+
   const handleExtractRules = useCallback(async () => {
     setExtracting(true);
     try {

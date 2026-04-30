@@ -57,6 +57,13 @@ class RuleSet(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[RuleSetStatus] = mapped_column(SAEnum(RuleSetStatus), default=RuleSetStatus.DRAFT)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    # Bumped whenever a rule in this rule_set is added, edited, deleted,
+    # split, or otherwise mutated. Lets test_case_suites detect
+    # staleness ("you generated this suite when the rule_set looked
+    # different") without needing to diff every rule on every read.
+    last_modified_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow,
+    )
 
     brd_document = relationship("BrdDocument", back_populates="rule_sets")
     rules = relationship("Rule", back_populates="rule_set", cascade="all, delete-orphan")
