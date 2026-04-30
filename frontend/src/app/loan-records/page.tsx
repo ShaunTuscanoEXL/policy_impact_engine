@@ -27,6 +27,7 @@ import {
   ChevronRight,
   Upload,
 } from "lucide-react";
+import { LoanDistributionPanel } from "@/components/loan-records/loan-distribution-panel";
 
 const PAGE_SIZE = 20;
 
@@ -56,6 +57,7 @@ export default function LoanRecordsPage() {
   const router = useRouter();
   const [records, setRecords] = useState<LoanRecordListItem[]>([]);
   const [stats, setStats] = useState<LoanRecordStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -89,11 +91,14 @@ export default function LoanRecordsPage() {
   }, []);
 
   const fetchStats = useCallback(async () => {
+    setStatsLoading(true);
     try {
       const { data } = await api.get<LoanRecordStats>("/loan-records/stats");
       setStats(data);
     } catch {
       // Stats are optional, fail silently
+    } finally {
+      setStatsLoading(false);
     }
   }, []);
 
@@ -182,59 +187,15 @@ export default function LoanRecordsPage() {
           </div>
         </div>
 
-        {/* Stats Panel */}
-        {stats && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card className="card-elevated border-border/40">
-                <CardContent className="p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Total Records</p>
-                  <p className="text-2xl font-bold tabular-nums">{formatNumber(stats.total_records)}</p>
-                </CardContent>
-              </Card>
-
-              <Card className="card-elevated border-border/40">
-                <CardContent className="p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Decision Distribution</p>
-                  <div className="space-y-1">
-                    {Object.entries(stats.decision_distribution).map(([key, count]) => (
-                      <div key={key} className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">{key}</span>
-                        <span className="font-medium tabular-nums">{count}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="card-elevated border-border/40">
-                <CardContent className="p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Bureau Score Range</p>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Min</span><span className="font-medium tabular-nums">{formatNumber(stats.bureau_score_range.min)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Max</span><span className="font-medium tabular-nums">{formatNumber(stats.bureau_score_range.max)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Avg</span><span className="font-medium tabular-nums">{formatNumber(Math.round(stats.bureau_score_range.avg))}</span></div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="card-elevated border-border/40">
-                <CardContent className="p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Income Range</p>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Min</span><span className="font-medium tabular-nums">{formatCurrency(stats.income_range.min)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Max</span><span className="font-medium tabular-nums">{formatCurrency(stats.income_range.max)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Avg</span><span className="font-medium tabular-nums">{formatCurrency(Math.round(stats.income_range.avg))}</span></div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </motion.div>
-        )}
+        {/* Stats Panel — colored bars + histograms (always rendered, with
+            inline skeletons + spinners while data loads) */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <LoanDistributionPanel stats={stats} statsLoading={statsLoading} />
+        </motion.div>
 
         {/* Search */}
         <div className="flex items-center gap-3">

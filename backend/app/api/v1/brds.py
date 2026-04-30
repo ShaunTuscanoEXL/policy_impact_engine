@@ -38,11 +38,81 @@ async def upload_brd(file: UploadFile = File(...), db: AsyncSession = Depends(ge
 
 @router.get("", response_model=list[BrdListResponse])
 async def list_brds(db: AsyncSession = Depends(get_db)):
+    """List BRDs with downstream-progression flags so the UI can show
+    "what's been done with this BRD" without N+1 fetches."""
     brds = await brd_service.list_brds(db)
-    return [BrdListResponse(
-        id=str(b.id), filename=b.filename, file_type=b.file_type.value,
-        created_at=b.created_at.isoformat(),
-    ) for b in brds]
+    if not brds:
+        return []
+    brd_ids = [b.id for b in brds]
+
+    # Rule-set counts + total rules per BRD
+    rs_q = await db.execute(
+        select(RuleSet.brd_document_id, func.count(RuleSet.id))
+        .where(RuleSet.brd_document_id.in_(brd_ids))
+        .group_by(RuleSet.brd_document_id)
+    )
+    rs_counts = {row[0]: row[1] for row in rs_q.all()}
+
+    rules_q = await db.execute(
+        select(RuleSet.brd_document_id, func.count(Rule.id))
+        .join(Rule, Rule.rule_set_id == RuleSet.id)
+        .where(RuleSet.brd_document_id.in_(brd_ids))
+        .group_by(RuleSet.brd_document_id)
+    )
+    rule_counts = {row[0]: row[1] for row in rules_q.all()}
+
+    # BRDs that have a merge proposal
+    mp_q = await db.execute(
+        select(MergeProposal.source_brd_id).where(
+            MergeProposal.source_brd_id.in_(brd_ids)
+        )
+    )
+    has_proposal = {row[0] for row in mp_q.all()}
+
+    # BRDs that have been merged into a live version
+    merged_q = await db.execute(
+        select(LiveRuleVersion.source_brd_id).where(
+            LiveRuleVersion.source_brd_id.in_(brd_ids)
+        )
+    )
+    is_merged = {row[0] for row in merged_q.all() if row[0]}
+
+    # BRDs with a generated test suite (via rule_set → suite)
+    suite_q = await db.execute(
+        select(RuleSet.brd_document_id, func.count(TestCaseSuite.id))
+        .join(TestCaseSuite, TestCaseSuite.rule_set_id == RuleSet.id)
+        .where(RuleSet.brd_document_id.in_(brd_ids))
+        .group_by(RuleSet.brd_document_id)
+    )
+    has_suite = {row[0] for row in suite_q.all() if row[1] > 0}
+
+    # BRDs with at least one executed suite
+    exec_q = await db.execute(
+        select(RuleSet.brd_document_id, func.count(TestCaseSuite.id))
+        .join(TestCaseSuite, TestCaseSuite.rule_set_id == RuleSet.id)
+        .where(
+            RuleSet.brd_document_id.in_(brd_ids),
+            TestCaseSuite.last_executed_at.is_not(None),
+        )
+        .group_by(RuleSet.brd_document_id)
+    )
+    has_executed = {row[0] for row in exec_q.all() if row[1] > 0}
+
+    return [
+        BrdListResponse(
+            id=str(b.id),
+            filename=b.filename,
+            file_type=b.file_type.value,
+            created_at=b.created_at.isoformat(),
+            rule_set_count=rs_counts.get(b.id, 0),
+            total_rules=rule_counts.get(b.id, 0),
+            has_merge_proposal=b.id in has_proposal,
+            is_merged_into_repo=b.id in is_merged,
+            has_test_suite=b.id in has_suite,
+            has_executed_test_suite=b.id in has_executed,
+        )
+        for b in brds
+    ]
 
 
 @router.get("/{brd_id}")

@@ -16,10 +16,34 @@ class RepositorySummary(BaseModel):
     jurisdiction: str
     description: str | None
     current_version: int
+    # The version currently flagged as production-live. May be null on a
+    # brand-new repo before its first version is promoted, and may be a
+    # version_number BELOW current_version when a newer candidate exists
+    # but hasn't been promoted yet.
+    production_version_id: str | None = None
+    production_version_number: int | None = None
+    production_promoted_at: str | None = None
+    production_promoted_by: str | None = None
     created_at: str
     updated_at: str
 
     model_config = {"from_attributes": True}
+
+
+class PromoteVersionRequest(BaseModel):
+    version_number: int = Field(description="Version number to mark as production-live.")
+    promoted_by: str | None = Field(
+        default=None,
+        description="Operator name; falls back to 'system' if omitted.",
+    )
+
+
+class PromoteVersionResponse(BaseModel):
+    repository_id: str
+    production_version_id: str
+    production_version_number: int
+    promoted_by: str
+    promoted_at: str
 
 
 class VersionSummary(BaseModel):

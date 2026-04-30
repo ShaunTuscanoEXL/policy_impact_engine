@@ -30,6 +30,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { FileText, ArrowRight, Trash2, Loader2 } from "lucide-react";
+import { DownstreamFlowChips } from "@/components/brds/downstream-flow-chips";
 
 export default function BrdsPage() {
   const [brds, setBrds] = useState<BrdDocument[]>([]);
@@ -140,6 +141,8 @@ export default function BrdsPage() {
                   <TableRow>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-blue-500/20">Filename</TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-blue-500/20">Type</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-blue-500/20">Rules</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-blue-500/20">Pipeline</TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-blue-500/20">Uploaded At</TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-blue-500/20 text-right">Actions</TableHead>
                   </TableRow>
@@ -154,6 +157,24 @@ export default function BrdsPage() {
                         </div>
                       </TableCell>
                       <TableCell>{fileTypeBadge(brd.file_type)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {(brd.total_rules ?? 0) > 0 ? (
+                          <span className="font-mono font-semibold text-foreground">
+                            {brd.total_rules}
+                          </span>
+                        ) : (
+                          <span className="italic">none</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <DownstreamFlowChips
+                          hasRules={(brd.total_rules ?? 0) > 0}
+                          hasMergeProposal={brd.has_merge_proposal ?? false}
+                          isMergedIntoRepo={brd.is_merged_into_repo ?? false}
+                          hasTestSuite={brd.has_test_suite ?? false}
+                          hasExecutedTestSuite={brd.has_executed_test_suite ?? false}
+                        />
+                      </TableCell>
                       <TableCell className="text-muted-foreground">
                         {new Date(brd.created_at).toLocaleDateString("en-US", {
                           year: "numeric",

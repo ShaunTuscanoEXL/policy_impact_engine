@@ -43,7 +43,11 @@ import {
   Download,
   Eye,
   FileCode,
+  Clock,
 } from "lucide-react";
+import { ProductionBadge } from "@/components/live-repo/production-badge";
+import { PromoteToProductionButton } from "@/components/live-repo/promote-button";
+import { VersionTimeline } from "@/components/live-repo/version-timeline";
 
 const SUBSYSTEM_COLORS: Record<string, string> = {
   BUREAU_GATE: "bg-blue-500/10 text-blue-600 border-blue-500/20 dark:text-blue-400",
@@ -237,6 +241,22 @@ export default function LiveRepoDetailPage() {
                 >
                   HEAD v{repo.current_version}
                 </Badge>
+                {repo.production_version_number != null && (
+                  <Badge
+                    variant="outline"
+                    className="bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-300"
+                    title={
+                      repo.production_promoted_by
+                        ? `Promoted by ${repo.production_promoted_by}` +
+                          (repo.production_promoted_at
+                            ? ` on ${new Date(repo.production_promoted_at).toLocaleString()}`
+                            : "")
+                        : undefined
+                    }
+                  >
+                    LIVE v{repo.production_version_number}
+                  </Badge>
+                )}
               </div>
               {repo.description && (
                 <p className="mt-1 ml-9 text-sm text-muted-foreground">
@@ -263,11 +283,30 @@ export default function LiveRepoDetailPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <Tabs defaultValue="versions">
+          <Tabs defaultValue="timeline">
             <TabsList>
-              <TabsTrigger value="versions">Versions</TabsTrigger>
+              <TabsTrigger value="timeline">
+                <Clock className="size-3.5" />
+                Timeline
+              </TabsTrigger>
+              <TabsTrigger value="versions">Versions Table</TabsTrigger>
               <TabsTrigger value="head">HEAD Snapshot</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="timeline">
+              <Card className="card-elevated border-border/40 p-6">
+                <VersionTimeline
+                  repoId={repoId}
+                  repoName={repo.name}
+                  versions={repo.versions}
+                  productionVersionNumber={repo.production_version_number ?? null}
+                  productionVersionId={repo.production_version_id ?? null}
+                  onRefresh={fetchRepo}
+                  onViewSnapshot={handleViewVersion}
+                  onDownload={handleDownloadVersion}
+                />
+              </Card>
+            </TabsContent>
 
             <TabsContent value="versions">
               <Card className="card-elevated border-border/40">
@@ -315,15 +354,20 @@ export default function LiveRepoDetailPage() {
                             className="group transition-colors duration-150 hover:bg-accent/50"
                           >
                             <TableCell>
-                              <Badge
-                                variant={
-                                  v.version_number === repo.current_version
-                                    ? "default"
-                                    : "outline"
-                                }
-                              >
-                                v{v.version_number}
-                              </Badge>
+                              <div className="flex items-center gap-1.5">
+                                <Badge
+                                  variant={
+                                    v.version_number === repo.current_version
+                                      ? "default"
+                                      : "outline"
+                                  }
+                                >
+                                  v{v.version_number}
+                                </Badge>
+                                {v.version_number === repo.production_version_number && (
+                                  <ProductionBadge size="sm" />
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell className="max-w-xs">
                               <span className="text-sm">
@@ -368,6 +412,18 @@ export default function LiveRepoDetailPage() {
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
+                                {v.version_number > 0 && (
+                                  <PromoteToProductionButton
+                                    repoId={repoId}
+                                    versionNumber={v.version_number}
+                                    currentProductionVersionNumber={
+                                      repo.production_version_number ?? null
+                                    }
+                                    size="sm"
+                                    variant="outline"
+                                    onPromoted={() => fetchRepo()}
+                                  />
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="icon-sm"

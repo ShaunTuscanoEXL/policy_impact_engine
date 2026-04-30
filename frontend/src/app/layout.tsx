@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/sidebar";
+import { TopBar } from "@/components/topbar";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
 
@@ -32,7 +33,8 @@ export default function RootLayout({
       >
         <ThemeProvider attribute="class" defaultTheme="light">
           <Sidebar />
-          <main className="ml-16 min-h-screen overflow-y-auto px-10 py-8">
+          <TopBar />
+          <main className="ml-16 min-h-screen overflow-y-auto px-10 pb-8 pt-16">
             {children}
           </main>
           <Toaster />

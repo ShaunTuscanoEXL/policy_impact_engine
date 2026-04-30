@@ -87,6 +87,18 @@ class TestCaseSuiteResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class SuiteLastExecutionInline(BaseModel):
+    """Compact summary of the suite's most recent execution — surfaced
+    inline on the suite list so the table can show "X passing / Y failing"
+    without a per-row drill-in."""
+    executed_at: str
+    version_number: int | None = None
+    total_assertions: int
+    passing: int
+    failing: int
+    pass_rate: float
+
+
 class TestCaseSuiteListResponse(BaseModel):
     id: str
     rule_set_id: str
@@ -96,6 +108,8 @@ class TestCaseSuiteListResponse(BaseModel):
     total_cases: int
     cases_by_category: dict
     created_at: str
+    # Inline-decorated last execution result (Slice D enrichment)
+    last_execution: SuiteLastExecutionInline | None = None
 
     model_config = {"from_attributes": True}
 

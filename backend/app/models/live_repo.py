@@ -33,16 +33,33 @@ class LiveRuleRepository(Base):
     jurisdiction: Mapped[str] = mapped_column(String(8))       # e.g. "US"
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     current_version: Mapped[int] = mapped_column(Integer, default=0)
+    # The version that is "live in production" — may NOT be the latest
+    # (current_version). Lets a team create v3 from a BRD, validate it via
+    # impact + suite execution, then explicitly promote it. Nullable so
+    # existing repos don't have to be migrated; the promote endpoint and
+    # the production-backfill on startup will populate it.
+    production_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("live_rule_versions.id", use_alter=True, name="fk_repo_production_version"),
+        nullable=True,
+    )
+    production_promoted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    production_promoted_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
+    # Disambiguate: there are now TWO FK paths between repos and versions
+    # (LiveRuleVersion.repository_id, plus the new
+    # LiveRuleRepository.production_version_id pointer). The `versions`
+    # collection follows the historical ownership FK only.
     versions = relationship(
         "LiveRuleVersion",
         back_populates="repository",
         cascade="all, delete-orphan",
         order_by="LiveRuleVersion.version_number",
+        foreign_keys="[LiveRuleVersion.repository_id]",
     )
     entries = relationship(
         "LiveRuleEntry",
@@ -87,7 +104,11 @@ class LiveRuleVersion(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     created_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
-    repository = relationship("LiveRuleRepository", back_populates="versions")
+    repository = relationship(
+        "LiveRuleRepository",
+        back_populates="versions",
+        foreign_keys="[LiveRuleVersion.repository_id]",
+    )
 
 
 class LiveRuleEntry(Base):

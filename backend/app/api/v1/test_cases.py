@@ -77,6 +77,27 @@ async def generate_test_cases(body: TestCaseGenerateRequest, db: AsyncSession = 
     return await _build_suite_response(suite, rule_set.name, db)
 
 
+def _build_last_execution_inline(suite) -> dict | None:
+    """Project the suite's stored last_execution_report into the slim
+    inline shape used by list endpoints. Returns None if the suite has
+    never been executed."""
+    if not suite.last_executed_at or not suite.last_execution_report:
+        return None
+    rep = suite.last_execution_report or {}
+    summary = rep.get("summary", {}) or {}
+    matches = int(summary.get("matches_expected") or 0)
+    deviates = int(summary.get("deviates_from_expected") or 0)
+    total = matches + deviates
+    return {
+        "executed_at": suite.last_executed_at.isoformat(),
+        "version_number": rep.get("version_number"),
+        "total_assertions": total,
+        "passing": matches,
+        "failing": deviates,
+        "pass_rate": (matches / total) if total else 0.0,
+    }
+
+
 @router.get("", response_model=list[TestCaseSuiteListResponse])
 async def list_test_suites(db: AsyncSession = Depends(get_db)):
     """List all test case suites."""
@@ -91,6 +112,7 @@ async def list_test_suites(db: AsyncSession = Depends(get_db)):
             total_cases=item["suite"].total_cases,
             cases_by_category=item["suite"].cases_by_category,
             created_at=item["suite"].created_at.isoformat(),
+            last_execution=_build_last_execution_inline(item["suite"]),
         )
         for item in suites
     ]

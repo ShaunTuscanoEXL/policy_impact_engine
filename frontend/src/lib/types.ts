@@ -3,6 +3,14 @@ export interface BrdDocument {
   filename: string;
   file_type: string;
   created_at: string;
+  /** Slice D enrichments — let the BRD list show downstream
+   *  progression at a glance. */
+  rule_set_count?: number;
+  total_rules?: number;
+  has_merge_proposal?: boolean;
+  is_merged_into_repo?: boolean;
+  has_test_suite?: boolean;
+  has_executed_test_suite?: boolean;
 }
 
 
@@ -120,6 +128,9 @@ export interface TestCaseSuiteListItem {
   total_cases: number;
   cases_by_category: Record<string, number>;
   created_at: string;
+  /** Slice D enrichment — inline pass-rate display so the list shows
+   *  "X / Y passing vs vN" without forcing a click. */
+  last_execution?: SuiteLastExecutionInline | null;
 }
 
 export interface BrdWorkflow {
@@ -174,8 +185,24 @@ export interface LiveRepository {
   jurisdiction: string;
   description: string | null;
   current_version: number;
+  /** ID of the version flagged as production-live. May be null on a brand-
+   *  new repo before its first promotion. May point at a version BELOW
+   *  current_version when a newer candidate is sitting unpromoted. */
+  production_version_id?: string | null;
+  /** Convenience: integer version number of production_version_id. */
+  production_version_number?: number | null;
+  production_promoted_at?: string | null;
+  production_promoted_by?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface PromoteVersionResponse {
+  repository_id: string;
+  production_version_id: string;
+  production_version_number: number;
+  promoted_by: string;
+  promoted_at: string;
 }
 
 export interface LiveRepositoryDetail extends LiveRepository {
@@ -344,9 +371,119 @@ export interface LoanRecordListItem {
   created_at: string;
 }
 
+export interface SuiteLastExecutionInline {
+  executed_at: string;
+  version_number: number | null;
+  total_assertions: number;
+  passing: number;
+  failing: number;
+  pass_rate: number;
+}
+
+
 export interface LoanRecordStats {
   total_records: number;
   decision_distribution: Record<string, number>;
   bureau_score_range: { min: number; max: number; avg: number };
   income_range: { min: number; max: number; avg: number };
+}
+
+
+// ── Dashboard payload (enriched in Slice B) ────────────────────────────
+
+export interface DashboardLiveRepoSummary {
+  id: string;
+  name: string;
+  product: string;
+  jurisdiction: string;
+  current_version: number;
+  production_version_number: number | null;
+  has_unpromoted_candidate: boolean;
+  updated_at: string | null;
+}
+
+export interface DashboardPendingMergeQueue {
+  count: number;
+  oldest_age_hours: number | null;
+  oldest_id: string | null;
+}
+
+export interface DashboardLastImpactRun {
+  id: string;
+  repository_id: string;
+  completed_at: string | null;
+  total_loans: number;
+  total_flips: number;
+  flip_rate: number;
+  decision_distribution: {
+    base: Record<string, number>;
+    candidate: Record<string, number>;
+  } | null;
+  by_subsystem_top: Array<{ key: string; value: number }>;
+}
+
+export interface DashboardLastSuiteExecution {
+  suite_id: string;
+  executed_at: string | null;
+  total_assertions: number;
+  passing: number;
+  failing: number;
+  pass_rate: number;
+  version_number: number | null;
+}
+
+export interface DashboardPipelineCounters {
+  brds_uploaded: number;
+  rules_extracted: number;
+  rule_sets: number;
+  merge_proposals: number;
+  live_versions: number;
+  impact_runs: number;
+  test_executions: number;
+}
+
+export interface DashboardStats {
+  /** Backward-compat fields (kept so existing StatsCards still render) */
+  total_brds: number;
+  total_loan_records: number;
+  total_test_suites: number;
+  /** Slice B additions */
+  total_repositories: number;
+  total_versions: number;
+  total_impact_runs: number;
+  pipeline: DashboardPipelineCounters;
+  pending_merge_queue: DashboardPendingMergeQueue;
+  live_repos: DashboardLiveRepoSummary[];
+  last_impact_run: DashboardLastImpactRun | null;
+  last_suite_execution: DashboardLastSuiteExecution | null;
+}
+
+export interface DashboardActivityEvent {
+  type:
+    | "brd_uploaded"
+    | "version_created"
+    | "version_promoted"
+    | "merge_proposal"
+    | "impact_run"
+    | "suite_executed";
+  ts: string | null;
+  title: string;
+  subtitle: string;
+  href: string;
+  accent: "blue" | "amber" | "emerald" | "violet" | "rose" | "fuchsia" | "slate";
+}
+
+export interface DashboardTrends {
+  approval_rate_history: Array<{
+    completed_at: string | null;
+    approval_rate: number;
+    total_loans: number;
+    run_id: string;
+  }>;
+  rule_count_history: Array<{
+    created_at: string | null;
+    repository: string;
+    version_number: number;
+    rule_count: number;
+  }>;
 }

@@ -26,6 +26,157 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
     return LoanRecordStatsResponse(**stats)
 
 
+# Pre-defined binning strategies — match how lending teams actually
+# segment borrowers, instead of equi-width bins that don't align with
+# any meaningful threshold.
+_FICO_BAND_EDGES: list[tuple[float, float, str]] = [
+    (300, 579, "Subprime\n(<580)"),
+    (580, 669, "Near-prime\n(580–669)"),
+    (670, 739, "Prime\n(670–739)"),
+    (740, 799, "Super-prime\n(740–799)"),
+    (800, 850, "Exceptional\n(800+)"),
+]
+_INCOME_BRACKET_EDGES: list[tuple[float, float, str]] = [
+    (0, 3000, "<$3k"),
+    (3000, 5000, "$3k–5k"),
+    (5000, 7500, "$5k–7.5k"),
+    (7500, 10000, "$7.5k–10k"),
+    (10000, 15000, "$10k–15k"),
+    (15000, 25000, "$15k–25k"),
+    (25000, 1_000_000, "$25k+"),
+]
+_DTI_BAND_EDGES: list[tuple[float, float, str]] = [
+    (0, 0.20, "0–20%"),
+    (0.20, 0.36, "20–36%\n(comfortable)"),
+    (0.36, 0.43, "36–43%\n(QM cap)"),
+    (0.43, 0.50, "43–50%"),
+    (0.50, 1.0, "50%+\n(stretched)"),
+]
+
+
+@router.get("/histogram")
+async def get_histogram(
+    field: str = Query("bureau_score", description="Field to bucket: bureau_score | monthly_income | dti_ratio"),
+    bins: int = Query(20, ge=4, le=60),
+    mode: str = Query(
+        "auto",
+        description=(
+            "Binning strategy: 'auto' picks the recommended bands per field "
+            "(FICO bands for bureau_score, lending income brackets for "
+            "monthly_income, QM-anchored bands for dti_ratio). 'equi_width' "
+            "forces equal-width bins of size derived from `bins`."
+        ),
+    ),
+    sample: int = Query(
+        15000,
+        ge=500,
+        le=200000,
+        description=(
+            "Cap on the number of records to scan for the histogram. With "
+            "100k+ rows the full scan can take 10s+ — sampling 15k preserves "
+            "the distribution shape and keeps the response under 2s."
+        ),
+    ),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return a histogram of one numeric field across the loan corpus.
+
+    Used by the loan-records page to render distribution charts. The
+    bucketing is done in Python because the field lives in JSONB. We
+    cap the scan at ``sample`` rows so the page loads quickly even on
+    100k+ corpora.
+
+    Default ``mode=auto`` uses meaningful lending-domain bands (FICO
+    segments, income brackets, QM-anchored DTI bands) so the chart
+    aligns with how lenders think rather than producing equi-width
+    bins that don't map to any threshold.
+    """
+    from sqlalchemy import select
+    from app.models.loan_record import LoanRecord
+    rows_q = await db.execute(select(LoanRecord.request_payload).limit(sample))
+    values: list[float] = []
+    for (payload,) in rows_q.all():
+        if not payload:
+            continue
+        bcm = payload.get("borrower_credit_model", {}) or {}
+        if field == "bureau_score":
+            v = (bcm.get("bureau_credits", {}) or {}).get("bureau_score")
+        elif field == "monthly_income":
+            v = (bcm.get("customer_inputs", {}) or {}).get("monthly_income")
+        elif field == "dti_ratio":
+            v = (payload.get("calculated_attributes", {}) or {}).get("debt_to_income_ratio")
+        else:
+            v = None
+        if isinstance(v, (int, float)):
+            values.append(float(v))
+    if not values:
+        return {"field": field, "bins": [], "min": None, "max": None, "count": 0, "mode": mode}
+
+    lo, hi = min(values), max(values)
+
+    # Pick the band table for "auto" mode based on the field
+    band_table: list[tuple[float, float, str]] | None = None
+    effective_mode = mode
+    if mode == "auto":
+        if field == "bureau_score":
+            band_table = _FICO_BAND_EDGES
+            effective_mode = "fico_bands"
+        elif field == "monthly_income":
+            band_table = _INCOME_BRACKET_EDGES
+            effective_mode = "income_brackets"
+        elif field == "dti_ratio":
+            band_table = _DTI_BAND_EDGES
+            effective_mode = "dti_bands"
+        else:
+            effective_mode = "equi_width"
+
+    if band_table:
+        # Variable-width bands using domain-specific edges
+        bins_payload = []
+        for x0, x1, label in band_table:
+            count = sum(1 for v in values if x0 <= v < x1)
+            # The very last band is inclusive on the upper side
+            if (x0, x1) == (band_table[-1][0], band_table[-1][1]):
+                count = sum(1 for v in values if x0 <= v <= x1)
+            bins_payload.append({"x0": x0, "x1": x1, "count": count, "label": label})
+        return {
+            "field": field,
+            "bins": bins_payload,
+            "min": lo,
+            "max": hi,
+            "count": len(values),
+            "mode": effective_mode,
+        }
+
+    # Fallback: equi-width
+    if lo == hi:
+        return {
+            "field": field,
+            "bins": [{"x0": lo, "x1": hi, "count": len(values)}],
+            "min": lo,
+            "max": hi,
+            "count": len(values),
+            "mode": "equi_width",
+        }
+    width = (hi - lo) / bins
+    counts = [0] * bins
+    for v in values:
+        idx = min(bins - 1, int((v - lo) / width))
+        counts[idx] += 1
+    bins_payload = [
+        {"x0": lo + i * width, "x1": lo + (i + 1) * width, "count": counts[i]}
+        for i in range(bins)
+    ]
+    return {
+        "field": field,
+        "bins": bins_payload,
+        "min": lo,
+        "max": hi,
+        "count": len(values),
+        "mode": "equi_width",
+    }
+
+
 @router.get("", response_model=list[LoanRecordListItem])
 async def list_loan_records(
     limit: int = Query(50, ge=1, le=200),

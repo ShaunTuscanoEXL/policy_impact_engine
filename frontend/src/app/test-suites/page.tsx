@@ -15,7 +15,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FlaskConical, Loader2, AlertCircle, FileSpreadsheet, FileJson, FileText } from "lucide-react";
+import { FlaskConical, Loader2, AlertCircle, FileSpreadsheet, FileJson, FileText, CheckCircle, XCircle, Minus } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { PageTransition } from "@/components/page-transition";
 import { toast } from "sonner";
 
@@ -130,6 +131,7 @@ export default function TestSuitesListPage() {
                     <TableHead>Rule Set Name</TableHead>
                     <TableHead>Total Cases</TableHead>
                     <TableHead>Categories</TableHead>
+                    <TableHead>Last Execution</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead className="text-right">Export</TableHead>
                   </TableRow>
@@ -173,6 +175,45 @@ export default function TestSuitesListPage() {
                             </Badge>
                           ))}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {suite.last_execution ? (
+                          (() => {
+                            const exec = suite.last_execution;
+                            const pct = Math.round(exec.pass_rate * 100);
+                            const isGood = pct >= 95;
+                            const isMid = pct >= 80;
+                            const tone = isGood
+                              ? "bg-emerald-500/10 text-emerald-700 ring-emerald-500/30 dark:text-emerald-300"
+                              : isMid
+                                ? "bg-amber-500/10 text-amber-700 ring-amber-500/30 dark:text-amber-300"
+                                : "bg-red-500/10 text-red-700 ring-red-500/30 dark:text-red-300";
+                            const Icon = isGood ? CheckCircle : isMid ? AlertCircle : XCircle;
+                            return (
+                              <div className="space-y-0.5">
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ring-1 ring-inset",
+                                    tone,
+                                  )}
+                                  title={`${exec.passing} / ${exec.total_assertions} assertions passing`}
+                                >
+                                  <Icon className="size-3" />
+                                  {pct}% PASS
+                                </span>
+                                <div className="text-[10px] text-muted-foreground">
+                                  vs v{exec.version_number} · {exec.passing}/
+                                  {exec.total_assertions}
+                                </div>
+                              </div>
+                            );
+                          })()
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] italic text-muted-foreground">
+                            <Minus className="size-3" />
+                            never executed
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {new Date(suite.created_at).toLocaleDateString("en-US", {

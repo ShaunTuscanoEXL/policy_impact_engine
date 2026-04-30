@@ -3,6 +3,7 @@ and download generated Python."""
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +14,8 @@ from app.schemas.live_repo import (
     CreateRepositoryRequest,
     ImportPythonRequest,
     ImportPythonResponse,
+    PromoteVersionRequest,
+    PromoteVersionResponse,
     ProposeFromBrdRequest,
     ProposeFromBrdResponse,
     RepositoryDetail,
@@ -25,7 +28,7 @@ from app.services import live_repo_service as svc
 router = APIRouter(prefix="/live-repo", tags=["Live Rule Repository"])
 
 
-def _repo_summary(r) -> RepositorySummary:
+def _repo_summary(r, *, production_version_number: int | None = None) -> RepositorySummary:
     return RepositorySummary(
         id=str(r.id),
         name=r.name,
@@ -33,9 +36,27 @@ def _repo_summary(r) -> RepositorySummary:
         jurisdiction=r.jurisdiction,
         description=r.description,
         current_version=r.current_version,
+        production_version_id=str(r.production_version_id) if r.production_version_id else None,
+        production_version_number=production_version_number,
+        production_promoted_at=(
+            r.production_promoted_at.isoformat() if r.production_promoted_at else None
+        ),
+        production_promoted_by=r.production_promoted_by,
         created_at=r.created_at.isoformat(),
         updated_at=r.updated_at.isoformat(),
     )
+
+
+def _production_version_number(repo) -> int | None:
+    """Resolve the integer version number of the repo's production
+    pointer using its already-loaded versions list (avoids an extra
+    round-trip)."""
+    if repo.production_version_id is None:
+        return None
+    for v in repo.versions or []:
+        if v.id == repo.production_version_id:
+            return v.version_number
+    return None
 
 
 def _version_summary(v) -> VersionSummary:
@@ -54,8 +75,22 @@ def _version_summary(v) -> VersionSummary:
 
 @router.get("", response_model=list[RepositorySummary])
 async def list_repos(db: AsyncSession = Depends(get_db)):
+    from sqlalchemy import select as _select  # local import to avoid shadowing
+    from app.models.live_repo import LiveRuleVersion as _Version
     repos = await svc.list_repositories(db)
-    return [_repo_summary(r) for r in repos]
+    prod_ids = [r.production_version_id for r in repos if r.production_version_id]
+    prod_map: dict = {}
+    if prod_ids:
+        rows = await db.execute(
+            _select(_Version.id, _Version.version_number).where(
+                _Version.id.in_(prod_ids)
+            )
+        )
+        prod_map = {row[0]: row[1] for row in rows.all()}
+    return [
+        _repo_summary(r, production_version_number=prod_map.get(r.production_version_id))
+        for r in repos
+    ]
 
 
 @router.post("", response_model=RepositorySummary, status_code=201)
@@ -75,9 +110,39 @@ async def get_repo(repo_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     repo = await svc.get_repository(db, repo_id)
     if repo is None:
         raise HTTPException(status_code=404, detail="Repository not found")
+    prod_n = _production_version_number(repo)
     return RepositoryDetail(
-        **_repo_summary(repo).model_dump(),
+        **_repo_summary(repo, production_version_number=prod_n).model_dump(),
         versions=[_version_summary(v) for v in repo.versions],
+    )
+
+
+@router.post("/{repo_id}/promote", response_model=PromoteVersionResponse)
+async def promote_version(
+    repo_id: uuid.UUID,
+    payload: PromoteVersionRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Mark a specific version of this repo as production-live.
+
+    Idempotent — re-promoting the current production version just
+    refreshes the timestamp and `promoted_by` audit field.
+    """
+    try:
+        repo, version = await svc.promote_version_to_production(
+            db,
+            repository_id=repo_id,
+            version_number=payload.version_number,
+            promoted_by=payload.promoted_by,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return PromoteVersionResponse(
+        repository_id=str(repo.id),
+        production_version_id=str(version.id),
+        production_version_number=version.version_number,
+        promoted_by=repo.production_promoted_by or "system",
+        promoted_at=(repo.production_promoted_at or datetime.utcnow()).isoformat(),
     )
 
 

@@ -58,6 +58,7 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const STATUS_STYLES: Record<string, string> = {
   PENDING: "bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400",
@@ -481,6 +482,9 @@ export default function ImpactRunsPage() {
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-rose-500/20">
                       Loans
                     </TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-rose-500/20 w-40">
+                      Flips
+                    </TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-rose-500/20 text-right">
                       Actions
                     </TableHead>
@@ -530,7 +534,51 @@ export default function ImpactRunsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {run.summary?.total_loans ?? "—"}
+                        {run.summary?.total_loans?.toLocaleString() ?? "—"}
+                      </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const flips = run.summary?.decision_flips ?? {};
+                          const totalFlips = Object.entries(flips).reduce<number>(
+                            (acc, [k, v]) => (typeof v === "number" && k.includes("_to_") ? acc + v : acc),
+                            0,
+                          );
+                          const total = run.summary?.total_loans ?? 0;
+                          if (!total) {
+                            return (
+                              <span className="text-[10px] italic text-muted-foreground">
+                                —
+                              </span>
+                            );
+                          }
+                          const pct = (totalFlips / total) * 100;
+                          const tone =
+                            pct >= 20
+                              ? "bg-rose-500"
+                              : pct >= 5
+                                ? "bg-amber-500"
+                                : "bg-emerald-500";
+                          return (
+                            <div className="space-y-1">
+                              <div className="flex items-baseline justify-between gap-2 text-[11px] font-mono">
+                                <span className="font-semibold">
+                                  {pct.toFixed(1)}%
+                                </span>
+                                <span className="text-muted-foreground">
+                                  {totalFlips.toLocaleString()}
+                                </span>
+                              </div>
+                              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/50">
+                                <div
+                                  className={cn("h-full rounded-full transition-all", tone)}
+                                  style={{
+                                    width: `${Math.min(100, Math.max(2, pct))}%`,
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button

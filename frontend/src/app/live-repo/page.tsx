@@ -30,6 +30,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { GitBranch, ArrowRight, Loader2, Sparkles } from "lucide-react";
+import { ProductionBadge } from "@/components/live-repo/production-badge";
 
 export default function LiveRepoListPage() {
   const [repos, setRepos] = useState<LiveRepository[]>([]);
@@ -243,12 +244,27 @@ export default function LiveRepoListPage() {
                         <Badge variant="secondary">{repo.jurisdiction}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant="outline"
-                          className="bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400"
-                        >
-                          v{repo.current_version}
-                        </Badge>
+                        <div className="flex items-center gap-1.5">
+                          <Badge
+                            variant="outline"
+                            className="bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400"
+                          >
+                            v{repo.current_version}
+                          </Badge>
+                          {repo.production_version_number != null &&
+                            repo.production_version_number !== repo.current_version && (
+                              <span
+                                className="text-[10px] text-muted-foreground"
+                                title={`Production is on v${repo.production_version_number}`}
+                              >
+                                · live: v{repo.production_version_number}
+                              </span>
+                            )}
+                          {repo.production_version_number != null &&
+                            repo.production_version_number === repo.current_version && (
+                              <ProductionBadge size="sm" />
+                            )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {new Date(repo.updated_at).toLocaleDateString("en-US", {

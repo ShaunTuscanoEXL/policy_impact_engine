@@ -224,6 +224,83 @@ async def get_head_version(
     return await get_version(db, repo_id, repo.current_version)
 
 
+# ── Production promotion ────────────────────────────────────────────────
+
+async def promote_version_to_production(
+    db: AsyncSession,
+    *,
+    repository_id: uuid.UUID,
+    version_number: int,
+    promoted_by: str | None = None,
+) -> tuple[LiveRuleRepository, LiveRuleVersion]:
+    """Mark a specific version as production-live for the repository.
+
+    The version stays where it is (no data movement) — we just flip a
+    pointer + timestamp on the repo. Idempotent: promoting the already-
+    production version updates only the timestamp + actor.
+    """
+    repo = await db.get(LiveRuleRepository, repository_id)
+    if repo is None:
+        raise ValueError(f"Repository {repository_id} not found")
+    version = await get_version(db, repo.id, version_number)
+    if version is None:
+        raise ValueError(
+            f"Version {version_number} not found in repo {repository_id}"
+        )
+    if version_number == 0:
+        raise ValueError("Cannot promote v0 (empty seed) to production.")
+
+    repo.production_version_id = version.id
+    repo.production_promoted_at = datetime.utcnow()
+    repo.production_promoted_by = promoted_by or "system"
+    repo.updated_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(repo)
+    return repo, version
+
+
+async def auto_promote_first_version(
+    db: AsyncSession, repo: LiveRuleRepository, new_version: LiveRuleVersion
+) -> None:
+    """Called from inside an in-flight transaction (NO commit). When a
+    repository's FIRST real version (v >= 1) lands and nothing has been
+    promoted yet, promote it automatically. This preserves the natural
+    "the only version is the live one" expectation while still requiring
+    explicit promotion for v2, v3, … candidates.
+    """
+    if repo.production_version_id is not None:
+        return
+    if new_version.version_number < 1:
+        return
+    repo.production_version_id = new_version.id
+    repo.production_promoted_at = datetime.utcnow()
+    repo.production_promoted_by = new_version.created_by or "auto-baseline"
+
+
+async def backfill_production_versions(db: AsyncSession) -> int:
+    """Idempotent startup helper: any repo with current_version >= 1 but
+    no production_version_id gets backfilled to point at its highest
+    version. Returns the number of repos updated."""
+    result = await db.execute(
+        select(LiveRuleRepository).where(
+            LiveRuleRepository.production_version_id.is_(None),
+            LiveRuleRepository.current_version >= 1,
+        )
+    )
+    updated = 0
+    for repo in result.scalars():
+        head = await get_version(db, repo.id, repo.current_version)
+        if head is None:
+            continue
+        repo.production_version_id = head.id
+        repo.production_promoted_at = datetime.utcnow()
+        repo.production_promoted_by = "auto-backfill"
+        updated += 1
+    if updated:
+        await db.commit()
+    return updated
+
+
 # ── Codegen ──────────────────────────────────────────────────────────────
 
 async def import_python_as_version(
@@ -308,6 +385,9 @@ async def import_python_as_version(
 
     repo.current_version = new_version_number
     repo.updated_at = datetime.utcnow()
+    # First-version auto-promote: a freshly imported v1 with no prior
+    # production state should show up as live without a separate click.
+    await auto_promote_first_version(db, repo, new_version)
 
     await db.commit()
     await db.refresh(new_version)
@@ -666,6 +746,10 @@ async def apply_merge_proposal(
 
     repo.current_version = new_version_number
     repo.updated_at = datetime.utcnow()
+    # First-version auto-promote: new repos becoming v1 should land as
+    # production without a manual promote step (preserves prior UX).
+    # v2+ candidates require explicit promotion.
+    await auto_promote_first_version(db, repo, new_version)
     proposal.status = MergeProposalStatus.APPLIED
     proposal.decided_by = decided_by
     proposal.decided_at = datetime.utcnow()
