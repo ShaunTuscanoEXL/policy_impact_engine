@@ -214,15 +214,15 @@ export function VersionTimeline({
                     <Button
                       variant="default"
                       size="sm"
-                      asChild
                       title="Open the validation pane (impact + suite tests + promote)"
+                      render={
+                        <Link
+                          href={`/live-repo/${repoId}/validate/${v.version_number}`}
+                        />
+                      }
                     >
-                      <Link
-                        href={`/live-repo/${repoId}/validate/${v.version_number}`}
-                      >
-                        <ShieldCheck className="size-3.5" />
-                        Validate
-                      </Link>
+                      <ShieldCheck className="size-3.5" />
+                      Validate
                     </Button>
                   )}
                   {!isProduction && productionVersionId && (
