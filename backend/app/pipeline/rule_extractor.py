@@ -72,6 +72,42 @@ IMPORTANT — read the entire document carefully:
 - If a rule applies only to a segment (e.g., self-employed, Tier 3 cities), \
 encode the segment as a condition
 
+CRITICAL — TIERED TABLES MUST BE SPLIT INTO INDEPENDENT RULES:
+A table that maps score / amount / income BANDS to different OUTPUT VALUES
+(e.g., "score 680-719 → 16.99%, score 720-749 → 14.99%, …") is N RULES,
+not one rule with N OR'd conditions and N actions. NEVER combine tier
+rows. Each row gets its own rule with ONE condition and ONE action.
+
+WRONG (do NOT do this):
+{
+  "rule_id": "RULE-002", "rule_name": "Tiered Interest Rate",
+  "conditions": [
+    {"field":"bureau_score","operator":"between","value":[680,719],"logic":"OR"},
+    {"field":"bureau_score","operator":"between","value":[720,749],"logic":"OR"},
+    {"field":"bureau_score","operator":">=","value":800,"logic":"OR"}
+  ],
+  "actions": [
+    {"action_type":"SET","target_field":"interest_rate","value":0.1699,...},
+    {"action_type":"SET","target_field":"interest_rate","value":0.1499,...},
+    {"action_type":"SET","target_field":"interest_rate","value":0.0999,...}
+  ]
+}
+This collapses the table — every loan would receive ALL the SET actions
+and the engine would simply keep the last value, defeating the tiers.
+
+RIGHT (emit one rule per tier row):
+[
+  {"rule_id":"RULE-002A","rule_name":"Interest Rate — Tier 680-719",
+   "conditions":[{"field":"bureau_score","operator":"between","value":[680,719]}],
+   "actions":[{"action_type":"SET","target_field":"interest_rate","value":0.1699,...}]},
+  {"rule_id":"RULE-002B","rule_name":"Interest Rate — Tier 720-749",
+   "conditions":[{"field":"bureau_score","operator":"between","value":[720,749]}],
+   "actions":[{"action_type":"SET","target_field":"interest_rate","value":0.1499,...}]},
+  {"rule_id":"RULE-002C","rule_name":"Interest Rate — Tier 800+",
+   "conditions":[{"field":"bureau_score","operator":">=","value":800}],
+   "actions":[{"action_type":"SET","target_field":"interest_rate","value":0.0999,...}]}
+]
+
 For each rule, return a JSON object:
 
 {
@@ -462,6 +498,124 @@ def _normalize_action_type(raw: str) -> str:
         "FLAG": "FLAG", "ALERT": "FLAG", "WARN": "FLAG", "REVIEW": "FLAG",
     }
     return mapping.get(upper, "FLAG")
+
+
+def _fan_out_tiers(rules: list[RuleDefinition]) -> list[RuleDefinition]:
+    """Detect collapsed-tier rules and split them into N independent rules.
+
+    LLMs frequently read a tiered pricing/cap/limit table (e.g. four
+    bureau-score bands each mapping to its own interest rate) and
+    cram all four rows into a single rule with N OR'd conditions and
+    N actions — which is semantic nonsense because every loan would
+    fire all N actions and the engine would just keep the last value.
+
+    Heuristic: a rule is a fan-out candidate when ALL of these hold:
+      1. It has K >= 2 conditions on the SAME field, joined by OR.
+         (Or K >= 2 SET-style actions on the same target plus exactly
+         K conditions in some shape.)
+      2. It has M >= 2 actions, all SET/ADJUST/CAP on the SAME
+         target field with DIFFERENT values.
+      3. K == M (we can pair condition[i] with action[i] 1:1).
+
+    When all three hold, the rule is split into K rules — each with
+    one condition and one action — preserving the original rule_name
+    plus a tier suffix and inheriting description/priority/source.
+
+    Idempotent: runs through every rule, returns a (possibly longer)
+    list. Rules that don't match the pattern pass through unchanged.
+    """
+    if not rules:
+        return rules
+
+    SET_LIKE = {"SET", "ADJUST", "CAP"}
+    out: list[RuleDefinition] = []
+    fanout_count = 0
+
+    for rule in rules:
+        conds = list(rule.conditions or [])
+        actions = list(rule.actions or [])
+
+        # Skip if too few of either to be a tier table
+        if len(conds) < 2 or len(actions) < 2:
+            out.append(rule)
+            continue
+
+        # All actions must be SET-like, on the same target, with
+        # distinct values — otherwise this isn't a tiered output.
+        first_action = actions[0]
+        if first_action.action_type not in SET_LIKE:
+            out.append(rule)
+            continue
+        if not all(
+            a.action_type == first_action.action_type
+            and a.target_field == first_action.target_field
+            for a in actions
+        ):
+            out.append(rule)
+            continue
+        action_values = [a.value for a in actions]
+        if len(set(map(str, action_values))) != len(action_values):
+            # Duplicate action values — not a true tier table
+            out.append(rule)
+            continue
+
+        # All conditions must be on the same field, joined by OR.
+        cond_fields = {c.field for c in conds}
+        if len(cond_fields) != 1:
+            out.append(rule)
+            continue
+        # Look at the OR/AND logic of conditions 2..N. If any is "AND",
+        # this isn't a pure tier table (might be a guard + tier set).
+        cond_logics = [str(c.logic or "AND").upper() for c in conds[1:]]
+        if any(l != "OR" for l in cond_logics):
+            out.append(rule)
+            continue
+
+        if len(conds) != len(actions):
+            # Counts mismatch — can't pair 1:1, leave alone
+            out.append(rule)
+            continue
+
+        # All checks passed — fan out.
+        fanout_count += 1
+        for tier_idx, (cond, act) in enumerate(zip(conds, actions), start=1):
+            tier_label = _describe_condition_tier(cond)
+            new_name = f"{rule.rule_name} — Tier {tier_idx} ({tier_label})"
+            # Force this single condition to logic=AND (it's standalone now)
+            new_cond = cond.model_copy(update={"logic": "AND"})
+            tier_rule = rule.model_copy(update={
+                "rule_id": f"{rule.rule_id}-T{tier_idx}",
+                "rule_name": new_name,
+                "description": (
+                    rule.description
+                    + f" (Tier {tier_idx}/{len(conds)}: {tier_label})"
+                    if rule.description
+                    else f"Tier {tier_idx}/{len(conds)}: {tier_label}"
+                ),
+                "conditions": [new_cond],
+                "actions": [act],
+            })
+            out.append(tier_rule)
+
+    if fanout_count:
+        logger.info(
+            "Fanned out %d collapsed-tier rule(s) into %d total rules.",
+            fanout_count,
+            len(out) - (len(rules) - fanout_count),
+        )
+    return out
+
+
+def _describe_condition_tier(cond) -> str:
+    """Compact human label for a single condition, used in tier rule names.
+    Examples: '680-719' for between, '>= 800' for scalar, 'in [...]' for in."""
+    op = str(cond.operator or "").lower()
+    val = cond.value
+    if op == "between" and isinstance(val, (list, tuple)) and len(val) == 2:
+        return f"{val[0]}-{val[1]}"
+    if op in ("in", "not_in") and isinstance(val, (list, tuple)):
+        return f"{op} [{', '.join(str(v) for v in val)}]"
+    return f"{cond.operator} {val}"
 
 
 def _parse_rule(d: dict, index: int) -> RuleDefinition | None:
@@ -938,6 +1092,10 @@ def _extract_rules_internal(
         rule = _parse_rule(d, i + 1)
         if rule is not None:
             rules.append(rule)
+
+    # Fan out collapsed tier rules into N independent rules (a common
+    # LLM mistake when reading tiered pricing tables — see _fan_out_tiers).
+    rules = _fan_out_tiers(rules)
 
     # Ensure unique IDs
     seen = set()

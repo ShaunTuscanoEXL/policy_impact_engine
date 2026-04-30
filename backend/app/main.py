@@ -52,7 +52,153 @@ async def lifespan(app: FastAPI):
             logging.getLogger(__name__).warning(
                 "Test-case UUID backfill skipped: %s", e
             )
+
+    # Backfill: split collapsed tiered rules in existing rule_sets that
+    # haven't been merged yet. Idempotent — already-split rules pass
+    # through unchanged.
+    async with async_session() as db:
+        try:
+            await _backfill_split_tier_rules(db)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Tier-rule split backfill skipped: %s", e
+            )
     yield
+
+
+async def _backfill_split_tier_rules(db) -> None:
+    """One-off: legacy rule_sets may have rules where the LLM collapsed
+    a tiered table (e.g. four interest-rate bands) into a single rule
+    with N OR'd conditions and N actions. Walk all DRAFT rule_sets and
+    apply the same _fan_out_tiers logic the live extraction pipeline now
+    uses, persisting the split as new Rule rows.
+
+    APPROVED rule_sets are left alone — they've already been reviewed
+    and may have been merged into the live repo; re-splitting them would
+    require a coordinated re-merge."""
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+    from app.models.rule import RuleSet, Rule, RuleSetStatus, RuleType, Subsystem
+    from app.pipeline.rule_extractor import _fan_out_tiers
+    from app.schemas.rule import (
+        Action as ActionSchema,
+        Condition as ConditionSchema,
+        RuleDefinition,
+    )
+
+    rule_sets_q = await db.execute(
+        select(RuleSet)
+        .options(selectinload(RuleSet.rules))
+        .where(RuleSet.status == RuleSetStatus.DRAFT)
+    )
+    rule_sets = list(rule_sets_q.scalars())
+    if not rule_sets:
+        return
+
+    total_added = 0
+    total_split = 0
+    for rs in rule_sets:
+        # Build RuleDefinition objects from DB rows so we can run the
+        # same fan-out logic the extractor uses.
+        defs: list[RuleDefinition] = []
+        original_uuid_by_rule_id: dict[str, str] = {}
+        for r in rs.rules:
+            try:
+                conds = [
+                    ConditionSchema(**c) if isinstance(c, dict) else c
+                    for c in (r.conditions or [])
+                ]
+                acts = [
+                    ActionSchema(**a) if isinstance(a, dict) else a
+                    for a in (r.actions or [])
+                ]
+                defs.append(
+                    RuleDefinition(
+                        rule_id=r.rule_id,
+                        rule_name=r.rule_name,
+                        description=r.description or "",
+                        rule_type=r.rule_type.value if hasattr(r.rule_type, "value") else r.rule_type,
+                        conditions=conds,
+                        actions=acts,
+                        priority=r.priority,
+                    )
+                )
+                original_uuid_by_rule_id[r.rule_id] = str(r.id)
+            except Exception:
+                # If a rule can't be parsed, leave it alone
+                continue
+
+        before = len(defs)
+        after_defs = _fan_out_tiers(defs)
+        after = len(after_defs)
+
+        if after == before:
+            continue  # Nothing to do for this rule_set
+
+        # Identify which original rules were split — they're the ones
+        # whose rule_id no longer appears in the after list (because
+        # _fan_out_tiers gives them suffixes like "RULE-002-T1").
+        before_ids = {d.rule_id for d in defs}
+        after_ids = {d.rule_id for d in after_defs}
+        replaced_original_ids = before_ids - after_ids
+
+        if not replaced_original_ids:
+            continue
+
+        # Delete the originals that got split, add the new tier rows.
+        # Also nuke any merge_proposal_items that point at the rule,
+        # since those proposals were generated against the malformed
+        # collapsed rule and are stale once the rule is split. The
+        # user can re-trigger propose-from-brd to get fresh proposals.
+        from sqlalchemy import delete as sql_delete, text as sql_text
+        for rid in replaced_original_ids:
+            uuid_str = original_uuid_by_rule_id.get(rid)
+            if uuid_str:
+                import uuid as _u
+                ru = _u.UUID(uuid_str)
+                # Drop referencing merge_proposal_items first
+                try:
+                    await db.execute(
+                        sql_text(
+                            "DELETE FROM merge_proposal_items "
+                            "WHERE incoming_rule_id = :rid"
+                        ),
+                        {"rid": ru},
+                    )
+                except Exception:
+                    # Table or column may not exist on fresh DBs
+                    pass
+                await db.execute(
+                    sql_delete(Rule).where(Rule.id == ru)
+                )
+        for d in after_defs:
+            if d.rule_id in before_ids:
+                continue  # Existing rule, untouched
+            db.add(Rule(
+                rule_set_id=rs.id,
+                rule_id=d.rule_id,
+                rule_name=d.rule_name,
+                description=d.description,
+                rule_type=RuleType(d.rule_type.value if hasattr(d.rule_type, "value") else d.rule_type),
+                conditions=[c.model_dump() for c in d.conditions],
+                actions=[a.model_dump() for a in d.actions],
+                priority=d.priority,
+                confidence=d.confidence,
+                source_section=d.source_section,
+                subsystem=Subsystem.UNCLASSIFIED,
+            ))
+        total_split += len(replaced_original_ids)
+        total_added += after - before
+
+    if total_split:
+        await db.commit()
+        import logging
+        logging.getLogger(__name__).info(
+            "Split %d collapsed tier rule(s) into %d additional rules.",
+            total_split,
+            total_added,
+        )
 
 
 async def _backfill_test_case_uuids(db) -> None:
