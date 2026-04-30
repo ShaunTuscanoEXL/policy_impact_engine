@@ -33,6 +33,7 @@ import { ConflictPanel } from "@/components/rules/conflict-panel";
 import { TestCaseTable } from "@/components/test-cases/test-case-table";
 import { TestCaseExportPanel } from "@/components/test-cases/test-case-export-panel";
 import { PageTransition } from "@/components/page-transition";
+import { PipelineContextBar } from "@/components/brds/pipeline/pipeline-context-bar";
 import { motion } from "framer-motion";
 
 const STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
@@ -259,6 +260,7 @@ export default function RuleReviewPage() {
 
   return (
     <PageTransition>
+    <PipelineContextBar />
     <div className="space-y-6">
       <p className="text-xs text-muted-foreground mb-4">Dashboard / Rules / Detail</p>
       {/* Header */}

@@ -164,7 +164,7 @@ export function PipelineStageCard({
               ACCENT_TINT_BG[accent],
             )
           : status === "completed"
-            ? "border-border/50 bg-card/60"
+            ? "border-border/50 bg-card/60 hover:border-foreground/20 hover:bg-card hover:shadow-sm"
             : "border-dashed border-border/40 bg-muted/20",
       )}
     >

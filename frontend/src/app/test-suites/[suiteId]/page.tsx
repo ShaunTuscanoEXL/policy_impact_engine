@@ -13,6 +13,7 @@ import { TestCaseTable } from "@/components/test-cases/test-case-table";
 import { TestCaseExportPanel } from "@/components/test-cases/test-case-export-panel";
 import { SuiteExecutionPanel } from "@/components/test-cases/suite-execution-panel";
 import { PageTransition } from "@/components/page-transition";
+import { PipelineContextBar } from "@/components/brds/pipeline/pipeline-context-bar";
 
 const CATEGORY_COLORS: Record<string, string> = {
   POSITIVE: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
@@ -67,6 +68,7 @@ export default function TestSuiteDetailPage() {
 
   return (
     <PageTransition>
+      <PipelineContextBar />
       <div className="space-y-6">
         <p className="text-xs text-muted-foreground mb-4">
           Dashboard / <Link href="/test-suites" className="hover:underline">Test Suites</Link> / Detail
