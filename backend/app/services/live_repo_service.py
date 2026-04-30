@@ -572,6 +572,83 @@ async def build_merge_proposal(
     return refreshed.scalar_one()
 
 
+async def regenerate_proposal_items(
+    db: AsyncSession, *, proposal_id: uuid.UUID
+) -> MergeProposal | None:
+    """Re-run the merge engine for an existing PENDING proposal and
+    replace its items with a fresh diff. Useful when the underlying
+    rule_set changed (e.g. tier-rule fan-out added new rules) and the
+    proposal is now stale.
+
+    Only operates on PENDING proposals — APPLIED/REJECTED proposals are
+    immutable and re-running their diff would be misleading.
+    Preserves the proposal's id, repository_id, source_brd_id, and
+    source_rule_set_id so the URL / context bar stays valid.
+    """
+    proposal = await db.get(MergeProposal, proposal_id)
+    if proposal is None:
+        return None
+    if proposal.status != MergeProposalStatus.PENDING:
+        # Don't touch already-decided proposals.
+        return proposal
+
+    # Refresh the rule_set with its current rules
+    rs_q = await db.execute(
+        select(RuleSet)
+        .options(selectinload(RuleSet.rules))
+        .where(RuleSet.id == proposal.source_rule_set_id)
+    )
+    rule_set = rs_q.scalar_one_or_none()
+    if rule_set is None:
+        return proposal
+
+    for r in rule_set.rules:
+        await ensure_rule_classified(db, r)
+
+    head = await get_head_version(db, proposal.repository_id)
+    live_rules: list[dict] = list(head.rule_snapshot or []) if head else []
+    incoming_rules = [serialize_rule(r) for r in rule_set.rules]
+    item_specs = diff_rule_sets(incoming_rules, live_rules)
+
+    # Delete existing items, recreate from fresh diff
+    from sqlalchemy import delete as sql_delete
+    await db.execute(
+        sql_delete(MergeProposalItem)
+        .where(MergeProposalItem.proposal_id == proposal.id)
+    )
+
+    def _maybe_uuid(v):
+        if not v:
+            return None
+        try:
+            return uuid.UUID(str(v))
+        except (TypeError, ValueError):
+            return None
+
+    for spec in item_specs:
+        db.add(MergeProposalItem(
+            proposal_id=proposal.id,
+            category=spec.category,
+            severity=spec.severity,
+            suggested_action=spec.suggested_action,
+            incoming_rule_id=_maybe_uuid(spec.incoming_rule_id),
+            live_rule_id=_maybe_uuid(spec.live_rule_id),
+            canonical_key=spec.canonical_key,
+            diff=spec.diff,
+            rationale=spec.rationale,
+            confidence=spec.confidence,
+        ))
+    proposal.summary = _summarize_specs(item_specs)
+    await db.commit()
+
+    refreshed = await db.execute(
+        select(MergeProposal)
+        .options(selectinload(MergeProposal.items))
+        .where(MergeProposal.id == proposal.id)
+    )
+    return refreshed.scalar_one()
+
+
 async def get_merge_proposal(
     db: AsyncSession, proposal_id: uuid.UUID
 ) -> MergeProposal | None:

@@ -64,7 +64,80 @@ async def lifespan(app: FastAPI):
             logging.getLogger(__name__).warning(
                 "Tier-rule split backfill skipped: %s", e
             )
+
+    # Backfill: any rule missing canonical_key / subsystem (e.g. created
+    # before the classification step ran, or by a previous version of
+    # the tier-split backfill that hardcoded UNCLASSIFIED) gets the
+    # proper classification + key now. Idempotent.
+    async with async_session() as db:
+        try:
+            await _backfill_rule_canonical_keys(db)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Canonical-key backfill skipped: %s", e
+            )
     yield
+
+
+async def _backfill_rule_canonical_keys(db) -> None:
+    """Walk every Rule with NULL canonical_key OR with subsystem
+    UNCLASSIFIED that *should* be classifiable, and populate the
+    classification + canonical_key + semantic_signature. Idempotent —
+    rules with valid keys are left alone."""
+    from sqlalchemy import select
+    from app.models.rule import Rule, Subsystem, RuleType
+    from app.services.canonical_key import (
+        make_canonical_key,
+        make_semantic_signature,
+    )
+    from app.services.rule_classifier import classify as classify_subsystem
+
+    # Also refresh rules whose canonical_key contains the legacy
+    # "unknown_field::UNK" placeholder — those were generated before
+    # the unconditional-rule fix landed and now have meaningful keys
+    # available via the action's target_field.
+    rows_q = await db.execute(
+        select(Rule).where(
+            (Rule.canonical_key.is_(None))
+            | (Rule.canonical_key == "")
+            | (Rule.canonical_key.like("%unknown_field%"))
+            | (Rule.canonical_key.like("%::UNK::%"))
+        )
+    )
+    rules = list(rows_q.scalars())
+    if not rules:
+        return
+
+    updated = 0
+    for r in rules:
+        conds = r.conditions if isinstance(r.conditions, list) else []
+        acts = r.actions if isinstance(r.actions, list) else []
+        try:
+            new_sub = classify_subsystem(
+                conds,
+                acts,
+                r.rule_type if isinstance(r.rule_type, RuleType) else RuleType(r.rule_type),
+            )
+            new_ck = make_canonical_key(new_sub, conds, acts)
+            new_sig = make_semantic_signature(conds, acts)
+        except Exception:
+            continue
+        # Only overwrite if the new key is actually better than the old
+        # one (i.e. doesn't still contain unknown_field). Prevents
+        # accidentally clobbering a hand-curated key.
+        if new_ck and "unknown_field" not in new_ck:
+            r.canonical_key = new_ck
+            r.semantic_signature = new_sig
+            if r.subsystem == Subsystem.UNCLASSIFIED:
+                r.subsystem = new_sub
+            updated += 1
+    if updated:
+        await db.commit()
+        import logging
+        logging.getLogger(__name__).info(
+            "Backfilled canonical_key + subsystem on %d rule(s).", updated
+        )
 
 
 async def _backfill_split_tier_rules(db) -> None:
@@ -72,7 +145,8 @@ async def _backfill_split_tier_rules(db) -> None:
     a tiered table (e.g. four interest-rate bands) into a single rule
     with N OR'd conditions and N actions. Walk all DRAFT rule_sets and
     apply the same _fan_out_tiers logic the live extraction pipeline now
-    uses, persisting the split as new Rule rows.
+    uses, persisting the split as new Rule rows with subsystem +
+    canonical_key + semantic_signature properly populated.
 
     APPROVED rule_sets are left alone — they've already been reviewed
     and may have been merged into the live repo; re-splitting them would
@@ -86,6 +160,11 @@ async def _backfill_split_tier_rules(db) -> None:
         Condition as ConditionSchema,
         RuleDefinition,
     )
+    from app.services.canonical_key import (
+        make_canonical_key,
+        make_semantic_signature,
+    )
+    from app.services.rule_classifier import classify as classify_subsystem
 
     rule_sets_q = await db.execute(
         select(RuleSet)
@@ -175,18 +254,33 @@ async def _backfill_split_tier_rules(db) -> None:
         for d in after_defs:
             if d.rule_id in before_ids:
                 continue  # Existing rule, untouched
+            cond_dicts = [c.model_dump() for c in d.conditions]
+            act_dicts = [a.model_dump() for a in d.actions]
+            # Properly classify the new tier rule + compute its keys so
+            # the merge engine can reason about it. Without this, split
+            # rules show up with empty canonical_key and UNCLASSIFIED
+            # subsystem, breaking diff/pairing.
+            sub = classify_subsystem(
+                cond_dicts,
+                act_dicts,
+                RuleType(d.rule_type.value if hasattr(d.rule_type, "value") else d.rule_type),
+            )
+            ck = make_canonical_key(sub, cond_dicts, act_dicts)
+            sig = make_semantic_signature(cond_dicts, act_dicts)
             db.add(Rule(
                 rule_set_id=rs.id,
                 rule_id=d.rule_id,
                 rule_name=d.rule_name,
                 description=d.description,
                 rule_type=RuleType(d.rule_type.value if hasattr(d.rule_type, "value") else d.rule_type),
-                conditions=[c.model_dump() for c in d.conditions],
-                actions=[a.model_dump() for a in d.actions],
+                conditions=cond_dicts,
+                actions=act_dicts,
                 priority=d.priority,
                 confidence=d.confidence,
                 source_section=d.source_section,
-                subsystem=Subsystem.UNCLASSIFIED,
+                subsystem=sub,
+                canonical_key=ck,
+                semantic_signature=sig,
             ))
         total_split += len(replaced_original_ids)
         total_added += after - before
@@ -198,6 +292,34 @@ async def _backfill_split_tier_rules(db) -> None:
             "Split %d collapsed tier rule(s) into %d additional rules.",
             total_split,
             total_added,
+        )
+
+    # Any PENDING merge proposal whose source_rule_set was modified by
+    # the split is now stale (its items reference rule UUIDs that no
+    # longer exist). Regenerate them from a fresh diff so the workbench
+    # shows all current rules.
+    from sqlalchemy import select
+    from app.models.merge import MergeProposal, MergeProposalStatus
+    from app.services.live_repo_service import regenerate_proposal_items
+    pending_q = await db.execute(
+        select(MergeProposal)
+        .where(MergeProposal.status == MergeProposalStatus.PENDING)
+    )
+    refreshed = 0
+    for p in pending_q.scalars():
+        try:
+            await regenerate_proposal_items(db, proposal_id=p.id)
+            refreshed += 1
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Failed to refresh proposal %s: %s", p.id, e
+            )
+    if refreshed:
+        import logging
+        logging.getLogger(__name__).info(
+            "Refreshed %d PENDING merge proposal(s) after rule-split backfill.",
+            refreshed,
         )
 
 

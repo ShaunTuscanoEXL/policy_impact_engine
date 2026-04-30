@@ -101,6 +101,26 @@ async def get_proposal(proposal_id: uuid.UUID, db: AsyncSession = Depends(get_db
     return _proposal_to_response(proposal)
 
 
+@router.post("/{proposal_id}/regenerate", response_model=MergeProposalResponse)
+async def regenerate_proposal(
+    proposal_id: uuid.UUID, db: AsyncSession = Depends(get_db)
+):
+    """Re-run the merge engine for an existing PENDING proposal.
+
+    Useful when the underlying rule_set has changed since the proposal
+    was first issued (e.g., the tier-rule fan-out added new rules) and
+    the workbench is now showing stale items. Replaces the proposal's
+    items with a fresh diff while keeping the proposal id, repo, BRD,
+    and rule_set links intact so the URL / context stays valid.
+
+    No-op on APPLIED / REJECTED / APPROVED proposals.
+    """
+    proposal = await svc.regenerate_proposal_items(db, proposal_id=proposal_id)
+    if proposal is None:
+        raise HTTPException(status_code=404, detail="Merge proposal not found")
+    return _proposal_to_response(proposal)
+
+
 @router.patch("/{proposal_id}/items/{item_id}", response_model=MergeItemResponse)
 async def update_item(
     proposal_id: uuid.UUID,
