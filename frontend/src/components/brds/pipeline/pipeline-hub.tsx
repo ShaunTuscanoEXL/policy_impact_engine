@@ -136,41 +136,55 @@ export function PipelineHub(props: PipelineHubProps) {
   const rulesApproved = rs?.status === "APPROVED";
   const rulesDraft = rs?.status === "DRAFT";
 
-  // Walk through and determine each stage's status. The "active" stage
-  // is the first non-completed one; everything after stays pending.
+  // Compute each stage's status. Two-pass:
+  //   1. Decide what's COMPLETED (action has happened) vs anything else.
+  //   2. The EARLIEST non-completed stage becomes the single "active"
+  //      focal point — everything after stays "pending".
+  // This guarantees there is exactly one active stage at any moment, so
+  // the visual hierarchy (glow, pulse, hero callout) has a single anchor
+  // instead of the previous "everything is active!" mess.
   const stageStatuses: StageStatus[] = useMemo(() => {
-    const arr: StageStatus[] = ["pending", "pending", "pending", "pending", "pending", "pending", "pending", "pending"];
-    arr[0] = "completed"; // Upload always done
+    // Pass 1 — completed flags only
+    const completed: boolean[] = Array(8).fill(false);
+    completed[0] = true; // Upload always done
 
-    if (extracting) arr[1] = "active";
-    else if (hasRuleSet) arr[1] = "completed";
+    if (hasRuleSet && !extracting) completed[1] = true;
+    if (rulesApproved) completed[2] = true;
+    if (lv && mp?.status === "APPLIED") completed[3] = true;
+    if (ir?.status === "COMPLETED") completed[4] = true;
+    if (testCaseSuiteId && !testCaseLoading) completed[5] = true;
+    if (lastExec && lastExec.cases_evaluated > 0 && !suiteExecuting)
+      completed[6] = true;
+    // Stage 8 (Export) is "completed" the moment a suite exists — there's
+    // no further step needed; downloading is on-demand.
+    if (testCaseSuiteId) completed[7] = true;
 
-    if (rulesApproved) arr[2] = "completed";
-    else if (rulesDraft) arr[2] = "active";
+    // In-flight async work overrides "completed" back to active so the
+    // user sees the spinner while it's still running.
+    const inFlight = [
+      false,
+      extracting,
+      false,
+      false,
+      ir?.status === "RUNNING" || ir?.status === "PENDING" || impactRunning,
+      testCaseLoading,
+      suiteExecuting,
+      false,
+    ];
 
-    if (lv && mp?.status === "APPLIED") arr[3] = "completed";
-    else if (mp?.status === "PENDING") arr[3] = "active";
+    // Pass 2 — pick the earliest stage that's either:
+    //   - currently in-flight (highest priority), or
+    //   - not yet completed
+    let activeIdx = inFlight.findIndex(Boolean);
+    if (activeIdx === -1) activeIdx = completed.findIndex((c) => !c);
 
-    if (ir?.status === "COMPLETED") arr[4] = "completed";
-    else if (ir?.status === "RUNNING" || ir?.status === "PENDING" || impactRunning)
-      arr[4] = "active";
-
-    if (testCaseSuiteId) arr[5] = "completed";
-    else if (testCaseLoading) arr[5] = "active";
-
-    if (lastExec && lastExec.cases_evaluated > 0) arr[6] = "completed";
-    else if (suiteExecuting) arr[6] = "active";
-
-    if (testCaseSuiteId) arr[7] = "active"; // export available
-
-    // First non-completed becomes active (if not already)
-    const firstIncomplete = arr.findIndex(
-      (s) => s !== "completed" && s !== "active",
-    );
-    if (firstIncomplete !== -1) {
-      arr[firstIncomplete] = "active";
-    }
-    return arr;
+    return Array(8)
+      .fill(null)
+      .map((_, i) => {
+        if (i === activeIdx) return "active";
+        if (completed[i]) return "completed";
+        return "pending";
+      }) as StageStatus[];
   }, [
     extracting,
     hasRuleSet,

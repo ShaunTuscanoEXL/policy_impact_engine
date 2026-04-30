@@ -246,7 +246,10 @@ export function PipelineStageCard({
             {subtitle && (
               <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
             )}
-            {isPending && pendingReason && (
+            {/* Lock copy only when truly waiting — if a metric chip is
+                already conveying queued state (e.g. ACTION REQUIRED),
+                the lock + "available after X" copy contradicts it. */}
+            {isPending && pendingReason && !metric && (
               <p className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground/70">
                 <Lock className="size-2.5" />
                 {pendingReason}
