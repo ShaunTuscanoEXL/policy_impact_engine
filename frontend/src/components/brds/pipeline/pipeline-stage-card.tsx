@@ -45,6 +45,9 @@ interface PipelineStageCardProps {
   anchorId?: string;
   /** Force expand on mount even if status would normally collapse it. */
   defaultExpanded?: boolean;
+  /** Short copy explaining why a pending stage isn't actionable yet
+   *  ("Available after Stage 4"). */
+  pendingReason?: string;
 }
 
 const ACCENT_BG: Record<StageAccent, string> = {
@@ -69,15 +72,18 @@ const ACCENT_TEXT: Record<StageAccent, string> = {
   slate: "text-slate-600 dark:text-slate-400",
 };
 
-const ACCENT_RING: Record<StageAccent, string> = {
-  blue: "ring-blue-500/30",
-  cyan: "ring-cyan-500/30",
-  violet: "ring-violet-500/30",
-  amber: "ring-amber-500/30",
-  rose: "ring-rose-500/30",
-  fuchsia: "ring-fuchsia-500/30",
-  emerald: "ring-emerald-500/30",
-  slate: "ring-slate-500/30",
+const ACCENT_GLOW: Record<StageAccent, string> = {
+  blue: "shadow-[0_0_0_1px_rgb(59_130_246/0.4),0_8px_30px_-8px_rgb(59_130_246/0.35)]",
+  cyan: "shadow-[0_0_0_1px_rgb(6_182_212/0.4),0_8px_30px_-8px_rgb(6_182_212/0.35)]",
+  violet:
+    "shadow-[0_0_0_1px_rgb(139_92_246/0.4),0_8px_30px_-8px_rgb(139_92_246/0.35)]",
+  amber: "shadow-[0_0_0_1px_rgb(245_158_11/0.4),0_8px_30px_-8px_rgb(245_158_11/0.35)]",
+  rose: "shadow-[0_0_0_1px_rgb(244_63_94/0.4),0_8px_30px_-8px_rgb(244_63_94/0.35)]",
+  fuchsia:
+    "shadow-[0_0_0_1px_rgb(217_70_239/0.4),0_8px_30px_-8px_rgb(217_70_239/0.35)]",
+  emerald:
+    "shadow-[0_0_0_1px_rgb(16_185_129/0.4),0_8px_30px_-8px_rgb(16_185_129/0.35)]",
+  slate: "shadow-[0_0_0_1px_rgb(100_116_139/0.4),0_8px_30px_-8px_rgb(100_116_139/0.35)]",
 };
 
 const ACCENT_TINT_BG: Record<StageAccent, string> = {
@@ -91,47 +97,19 @@ const ACCENT_TINT_BG: Record<StageAccent, string> = {
   slate: "bg-slate-500/[0.04]",
 };
 
-function StageStatusIcon({
-  status,
-  accent,
-}: {
-  status: StageStatus;
-  accent: StageAccent;
-}) {
-  if (status === "completed") {
-    return <CheckCircle2 className="size-5 text-emerald-500" />;
-  }
-  if (status === "active") {
-    return (
-      <div className="relative">
-        <div
-          className={cn(
-            "absolute inset-0 size-5 animate-ping rounded-full opacity-30",
-            ACCENT_BG[accent],
-          )}
-        />
-        <div
-          className={cn(
-            "relative flex size-5 items-center justify-center rounded-full",
-            ACCENT_BG[accent],
-          )}
-        >
-          <Loader2 className="size-3 animate-spin text-white" />
-        </div>
-      </div>
-    );
-  }
-  if (status === "blocked") {
-    return <Lock className="size-5 text-muted-foreground/50" />;
-  }
-  return <Circle className="size-5 text-muted-foreground/30" />;
-}
-
 /**
- * One stage in the BRD pipeline. Renders a number badge, status icon,
- * title + subtitle, optional metric chip, and an expandable body. Active
- * stages auto-expand and visually highlight; completed stages collapse
- * to a compact summary by default but can be re-opened.
+ * One stage in the BRD pipeline. Renders as a node on the vertical
+ * journey rail, with status-aware visual treatment:
+ *
+ *   - **completed**: compact card, emerald checkmark, click to expand
+ *     for retrospective body content
+ *   - **active**: glowing card with colored top strip + pulse animation
+ *     on the rail node, body always expanded with inline CTAs
+ *   - **pending**: dimmed card with lock icon and "available after"
+ *     explainer copy
+ *
+ * The parent renders a continuous left-side rail; this card aligns its
+ * 9px node circle to the rail (left: -22px relative).
  */
 export function PipelineStageCard({
   stepNumber,
@@ -144,121 +122,189 @@ export function PipelineStageCard({
   cta,
   anchorId,
   defaultExpanded,
+  pendingReason,
 }: PipelineStageCardProps) {
-  // Active stages always expanded; completed default-collapsed; pending
-  // stays collapsed (no body to show).
   const initiallyOpen =
     defaultExpanded ?? (status === "active" || status === "blocked");
   const [open, setOpen] = useState(initiallyOpen);
   const hasBody = !!children || !!cta;
+  const isCompleted = status === "completed";
+  const isActive = status === "active";
+  const isPending = status === "pending";
 
   return (
-    <section
-      id={anchorId}
-      className={cn(
-        "group relative overflow-hidden rounded-2xl border transition-all",
-        status === "active"
-          ? cn(
-              "border-2 shadow-lg",
-              ACCENT_RING[accent].replace("ring-", "border-"),
-              ACCENT_TINT_BG[accent],
-            )
-          : status === "completed"
-            ? "border-border/50 bg-card/60 hover:border-foreground/20 hover:bg-card hover:shadow-sm"
-            : "border-dashed border-border/40 bg-muted/20",
-      )}
-    >
-      {/* Top accent strip for active stages */}
-      {status === "active" && (
-        <div className={cn("h-1 w-full", ACCENT_BG[accent])} />
-      )}
-
-      {/* Header */}
-      <button
-        type="button"
-        onClick={() => hasBody && setOpen((o) => !o)}
-        disabled={!hasBody}
+    <section id={anchorId} className="relative">
+      {/* Rail node — sits on the left rail, perfectly aligned */}
+      <div
         className={cn(
-          "flex w-full items-start gap-4 px-5 py-4 text-left transition-colors",
-          hasBody && "hover:bg-accent/30",
-          !hasBody && "cursor-default",
+          "absolute left-[-30px] top-5 z-10 flex size-4 items-center justify-center rounded-full ring-4 transition-all",
+          isCompleted &&
+            "bg-emerald-500 ring-background dark:ring-background",
+          isActive &&
+            cn(
+              "ring-background dark:ring-background",
+              ACCENT_BG[accent],
+              "shadow-md",
+            ),
+          isPending && "bg-muted-foreground/30 ring-background",
         )}
       >
-        {/* Step number badge */}
-        <div
+        {isActive && (
+          <span
+            className={cn(
+              "absolute inline-flex size-full animate-ping rounded-full opacity-50",
+              ACCENT_BG[accent],
+            )}
+          />
+        )}
+        {isCompleted && (
+          <CheckCircle2 className="size-2.5 text-white relative" />
+        )}
+        {isActive && (
+          <span className="size-1.5 rounded-full bg-white relative" />
+        )}
+        {isPending && (
+          <Lock className="size-2 text-background relative" />
+        )}
+      </div>
+
+      <article
+        className={cn(
+          "group overflow-hidden rounded-2xl border transition-all",
+          isActive
+            ? cn(
+                "border-2",
+                ACCENT_GLOW[accent].split(" ").pop()
+                  ? ACCENT_GLOW[accent]
+                  : "shadow-lg",
+                ACCENT_TINT_BG[accent],
+                "border-current/30",
+              )
+            : isCompleted
+              ? "border-border/50 bg-card hover:border-foreground/30 hover:shadow-sm"
+              : "border-dashed border-border/40 bg-muted/[0.15] opacity-75",
+        )}
+        style={
+          isActive
+            ? { borderColor: getAccentBorderColor(accent) }
+            : undefined
+        }
+      >
+        {/* Top accent strip for active stages */}
+        {isActive && (
+          <div className={cn("h-1 w-full", ACCENT_BG[accent])} />
+        )}
+
+        {/* Header */}
+        <button
+          type="button"
+          onClick={() => hasBody && setOpen((o) => !o)}
+          disabled={!hasBody}
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-xl font-mono text-sm font-bold ring-1 ring-inset",
-            status === "completed"
-              ? "bg-emerald-500/10 text-emerald-700 ring-emerald-500/30 dark:text-emerald-300"
-              : status === "active"
-                ? cn(
-                    "text-white shadow-md",
-                    ACCENT_BG[accent],
-                    ACCENT_RING[accent],
-                  )
-                : "bg-muted/40 text-muted-foreground/60 ring-border/60",
+            "flex w-full items-start gap-4 px-5 py-4 text-left transition-colors",
+            hasBody && "hover:bg-foreground/[0.02]",
+            !hasBody && "cursor-default",
           )}
         >
-          {status === "completed" ? (
-            <CheckCircle2 className="size-4" />
-          ) : (
-            stepNumber
-          )}
-        </div>
-
-        {/* Title block */}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h3
-              className={cn(
-                "text-sm font-semibold tracking-tight",
-                status === "completed" && "text-foreground",
-                status === "active" && ACCENT_TEXT[accent],
-                (status === "pending" || status === "blocked") &&
-                  "text-muted-foreground",
-              )}
-            >
-              {title}
-            </h3>
-            <StageStatusIcon status={status} accent={accent} />
+          {/* Step number badge */}
+          <div
+            className={cn(
+              "flex size-9 shrink-0 items-center justify-center rounded-xl font-mono text-sm font-bold ring-1 ring-inset",
+              isCompleted &&
+                "bg-emerald-500/10 text-emerald-700 ring-emerald-500/30 dark:text-emerald-300",
+              isActive &&
+                cn("text-white shadow-md", ACCENT_BG[accent], "ring-white/20"),
+              isPending && "bg-muted/40 text-muted-foreground/60 ring-border/60",
+            )}
+          >
+            {isCompleted ? <CheckCircle2 className="size-4" /> : stepNumber}
           </div>
-          {subtitle && (
-            <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
-          )}
-        </div>
 
-        {/* Right side: metric + chevron */}
-        <div className="flex shrink-0 items-center gap-2">
-          {metric && (
-            <div className="text-xs font-medium text-muted-foreground">
-              {metric}
-            </div>
-          )}
-          {hasBody && (
-            <span className="text-muted-foreground/40">
-              {open ? (
-                <ChevronUp className="size-4" />
-              ) : (
-                <ChevronDown className="size-4" />
+          {/* Title block */}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h3
+                className={cn(
+                  "text-sm font-semibold tracking-tight",
+                  isCompleted && "text-foreground",
+                  isActive && ACCENT_TEXT[accent],
+                  isPending && "text-muted-foreground",
+                )}
+              >
+                {title}
+              </h3>
+              {isActive && (
+                <span
+                  className={cn(
+                    "inline-flex h-1.5 w-1.5 animate-pulse rounded-full",
+                    ACCENT_BG[accent],
+                  )}
+                  aria-hidden
+                />
               )}
-            </span>
-          )}
-        </div>
-      </button>
-
-      {/* Body */}
-      {hasBody && open && (
-        <div className="border-t border-border/40 px-5 py-4 space-y-3">
-          {children}
-          {cta && (
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              {cta}
             </div>
-          )}
-        </div>
-      )}
+            {subtitle && (
+              <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
+            )}
+            {isPending && pendingReason && (
+              <p className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground/70">
+                <Lock className="size-2.5" />
+                {pendingReason}
+              </p>
+            )}
+          </div>
+
+          {/* Right side: metric + chevron */}
+          <div className="flex shrink-0 items-center gap-2">
+            {metric && (
+              <div className="text-xs font-medium text-muted-foreground">
+                {metric}
+              </div>
+            )}
+            {hasBody && (
+              <span
+                className={cn(
+                  "text-muted-foreground/40 transition-colors",
+                  isCompleted && "group-hover:text-foreground",
+                )}
+                title={open ? "Collapse" : "Expand for details"}
+              >
+                {open ? (
+                  <ChevronUp className="size-4" />
+                ) : (
+                  <ChevronDown className="size-4" />
+                )}
+              </span>
+            )}
+          </div>
+        </button>
+
+        {/* Body */}
+        {hasBody && open && (
+          <div className="border-t border-border/40 px-5 py-4 space-y-3">
+            {children}
+            {cta && (
+              <div className="flex flex-wrap items-center gap-2 pt-1">{cta}</div>
+            )}
+          </div>
+        )}
+      </article>
     </section>
   );
+}
+
+function getAccentBorderColor(accent: StageAccent): string {
+  const map: Record<StageAccent, string> = {
+    blue: "rgb(59 130 246 / 0.5)",
+    cyan: "rgb(6 182 212 / 0.5)",
+    violet: "rgb(139 92 246 / 0.5)",
+    amber: "rgb(245 158 11 / 0.5)",
+    rose: "rgb(244 63 94 / 0.5)",
+    fuchsia: "rgb(217 70 239 / 0.5)",
+    emerald: "rgb(16 185 129 / 0.5)",
+    slate: "rgb(100 116 139 / 0.5)",
+  };
+  return map[accent];
 }
 
 /**
@@ -279,8 +325,7 @@ export function StageMetric({
       "bg-emerald-500/15 text-emerald-700 ring-emerald-500/30 dark:text-emerald-300",
     warning:
       "bg-amber-500/15 text-amber-700 ring-amber-500/30 dark:text-amber-300",
-    danger:
-      "bg-rose-500/15 text-rose-700 ring-rose-500/30 dark:text-rose-300",
+    danger: "bg-rose-500/15 text-rose-700 ring-rose-500/30 dark:text-rose-300",
     info: "bg-blue-500/15 text-blue-700 ring-blue-500/30 dark:text-blue-300",
   };
   return (

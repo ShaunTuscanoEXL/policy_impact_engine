@@ -1,6 +1,7 @@
 "use client";
 
-import { CheckCircle2, Lock } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle2, Lock, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StageAccent, StageStatus } from "./pipeline-stage-card";
 
@@ -11,6 +12,10 @@ export interface ProgressStrip {
   accent: StageAccent;
   /** Anchor id on the page to scroll to when the strip is clicked. */
   anchorId: string;
+  /** Optional deep-link to the corresponding detail page (e.g.
+   *  /rules/{id}?from_brd=…) — when set, clicking the pill navigates
+   *  away. When omitted, pill smooth-scrolls to the anchor on this page. */
+  deepLink?: string;
 }
 
 interface PipelineProgressStripProps {
@@ -53,85 +58,88 @@ export function PipelineProgressStrip({
 
   return (
     <div className="space-y-3">
-      {/* Counter line */}
-      <div className="flex items-baseline justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Pipeline progress
-        </p>
-        <p className="font-mono text-xs text-muted-foreground tabular-nums">
-          <span className="text-base font-bold text-foreground">
-            {completedCount}
-          </span>
-          <span className="mx-0.5 opacity-60">/</span>
-          {totalCount} stages complete
-          <span className="ml-2 inline-block rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
-            {Math.round(overallPct)}%
-          </span>
-        </p>
-      </div>
-
-      {/* The pill row */}
+      {/* The pill row — each pill is either a Link (deep-link to the
+          detail page when one exists) or a button (smooth-scroll to the
+          anchor on this page when no detail page applies). */}
       <ol className="flex items-stretch gap-1.5 overflow-x-auto pb-1">
         {steps.map((s, idx) => {
           const isCurrent = s.stepNumber === current;
           const isCompleted = s.status === "completed";
-          const isPending =
-            s.status === "pending" || s.status === "blocked";
+          const isPending = s.status === "pending" || s.status === "blocked";
+
+          const innerContent = (
+            <>
+              {/* Filled bar at top */}
+              <div
+                className={cn(
+                  "absolute inset-x-0 top-0 h-0.5",
+                  isCompleted
+                    ? "bg-emerald-500"
+                    : isCurrent
+                      ? ACCENT_BG[s.accent]
+                      : "bg-border/40",
+                )}
+              />
+              <div className="flex items-center gap-1.5">
+                {/* Step number / icon */}
+                <span
+                  className={cn(
+                    "flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold tabular-nums",
+                    isCompleted
+                      ? "bg-emerald-500 text-white"
+                      : isCurrent
+                        ? cn("text-white", ACCENT_BG[s.accent])
+                        : "bg-muted/60 text-muted-foreground/70",
+                  )}
+                >
+                  {isCompleted ? (
+                    <CheckCircle2 className="size-3" />
+                  ) : s.status === "blocked" ? (
+                    <Lock className="size-2.5" />
+                  ) : (
+                    s.stepNumber
+                  )}
+                </span>
+                <span
+                  className={cn(
+                    "truncate text-[10px] font-semibold uppercase tracking-wider",
+                    isCurrent ? "text-foreground" : "text-muted-foreground",
+                  )}
+                >
+                  {s.title}
+                </span>
+                {s.deepLink && (
+                  <ExternalLink className="ml-auto size-2.5 shrink-0 text-muted-foreground/40 transition-opacity group-hover:text-foreground" />
+                )}
+              </div>
+            </>
+          );
+
+          const className = cn(
+            "group relative w-full overflow-hidden rounded-lg px-2 py-2 text-left transition-all",
+            isCurrent &&
+              "bg-card shadow-sm ring-2 ring-inset ring-foreground/10",
+            isCompleted && !isCurrent && "bg-emerald-500/[0.06] hover:bg-emerald-500/[0.10]",
+            isPending && "bg-muted/30 opacity-60",
+            !isPending && "hover:shadow-sm",
+          );
+
           return (
             <li key={s.stepNumber} className="flex-1 min-w-0">
-              <button
-                type="button"
-                onClick={() => handleJump(s.anchorId)}
-                className={cn(
-                  "group relative w-full overflow-hidden rounded-lg px-2 py-2 text-left transition-all",
-                  isCurrent &&
-                    "bg-card shadow-sm ring-2 ring-inset ring-foreground/10",
-                  isCompleted && !isCurrent && "bg-emerald-500/[0.06]",
-                  isPending && "bg-muted/30 opacity-60",
-                )}
-                title={s.title}
-              >
-                {/* Filled bar at top */}
-                <div
-                  className={cn(
-                    "absolute inset-x-0 top-0 h-0.5",
-                    isCompleted
-                      ? "bg-emerald-500"
-                      : isCurrent
-                        ? ACCENT_BG[s.accent]
-                        : "bg-border/40",
-                  )}
-                />
-                <div className="flex items-center gap-1.5">
-                  {/* Step number / icon */}
-                  <span
-                    className={cn(
-                      "flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold tabular-nums",
-                      isCompleted
-                        ? "bg-emerald-500 text-white"
-                        : isCurrent
-                          ? cn("text-white", ACCENT_BG[s.accent])
-                          : "bg-muted/60 text-muted-foreground/70",
-                    )}
-                  >
-                    {isCompleted ? (
-                      <CheckCircle2 className="size-3" />
-                    ) : s.status === "blocked" ? (
-                      <Lock className="size-2.5" />
-                    ) : (
-                      s.stepNumber
-                    )}
-                  </span>
-                  <span
-                    className={cn(
-                      "truncate text-[10px] font-semibold uppercase tracking-wider",
-                      isCurrent ? "text-foreground" : "text-muted-foreground",
-                    )}
-                  >
-                    {s.title}
-                  </span>
-                </div>
-              </button>
+              {s.deepLink ? (
+                <Link href={s.deepLink} className={className} title={s.title}>
+                  {innerContent}
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleJump(s.anchorId)}
+                  className={className}
+                  title={s.title}
+                >
+                  {innerContent}
+                </button>
+              )}
             </li>
           );
         })}

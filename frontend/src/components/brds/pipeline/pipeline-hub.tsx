@@ -12,6 +12,7 @@ import {
   PipelineProgressStrip,
   type ProgressStrip,
 } from "./pipeline-progress-strip";
+import { ProgressRing } from "./progress-ring";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,10 @@ import {
   XCircle,
   Sparkles,
   AlertTriangle,
+  ArrowDown,
+  Layers,
+  GitBranch,
+  ShieldCheck,
 } from "lucide-react";
 import type { BrdWorkflow, BrdDocument } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -202,6 +207,34 @@ export function PipelineHub(props: PipelineHubProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep]);
 
+  // Smart deep-links: when a stage maps to a detail page (Rules /
+  // Workbench / Live Repo / Impact / Suite), the strip pill links there
+  // with ?from_brd=…&step=… so the destination's PipelineContextBar
+  // shows the journey context. Otherwise pills smooth-scroll to the
+  // stage anchor on this page.
+  const stageDeepLinks: (string | undefined)[] = [
+    undefined, // 1 Upload — stays on this page
+    undefined, // 2 Extract — stays on this page
+    rs ? `/rules/${rs.id}?from_brd=${brd.id}&step=3` : undefined,
+    mp?.status === "PENDING"
+      ? `/merge-workbench/${mp.id}?from_brd=${brd.id}&step=4`
+      : lv
+        ? `/live-repo/${lv.repository_id}?from_brd=${brd.id}&step=4`
+        : undefined,
+    ir?.status === "COMPLETED"
+      ? `/impact-runs/${ir.id}?from_brd=${brd.id}&step=5`
+      : undefined,
+    testCaseSuiteId
+      ? `/test-suites/${testCaseSuiteId}?from_brd=${brd.id}&step=6`
+      : undefined,
+    testCaseSuiteId
+      ? `/test-suites/${testCaseSuiteId}?from_brd=${brd.id}&step=7`
+      : undefined,
+    testCaseSuiteId
+      ? `/test-suites/${testCaseSuiteId}?from_brd=${brd.id}&step=8`
+      : undefined,
+  ];
+
   const stripSteps: ProgressStrip[] = [
     "Upload",
     "Extract",
@@ -217,6 +250,7 @@ export function PipelineHub(props: PipelineHubProps) {
     status: stageStatuses[i],
     accent: STAGE_ACCENTS[i],
     anchorId: `stage-${i + 1}`,
+    deepLink: stageDeepLinks[i],
   }));
 
   // ── Hero status pill text ───────────────────────────────────────────
@@ -235,19 +269,50 @@ export function PipelineHub(props: PipelineHubProps) {
       ? "Pipeline complete"
       : `Stage ${currentStep} of ${stagesLabels.length} · ${stagesLabels[currentStep - 1]}`;
 
+  const isComplete = completedCount === stagesLabels.length;
+  const handleContinue = () => {
+    if (typeof document === "undefined") return;
+    const el = document.getElementById(`stage-${currentStep}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
   return (
     <div className="space-y-6">
       {/* ── Hero band ───────────────────────────────────────────────── */}
-      <div className="rounded-2xl border border-border/50 bg-gradient-to-br from-blue-500/[0.04] via-card to-violet-500/[0.04] p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              BRD Pipeline
-            </p>
-            <h1 className="text-2xl font-bold tracking-tight">
+      <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-blue-500/[0.05] via-card to-violet-500/[0.05] p-6">
+        {/* Decorative gradient blob */}
+        <div className="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-gradient-to-br from-blue-500/15 to-violet-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -left-20 -bottom-20 size-64 rounded-full bg-gradient-to-tr from-emerald-500/10 to-fuchsia-500/10 blur-3xl" />
+
+        <div className="relative flex flex-wrap items-start justify-between gap-6">
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="flex items-center gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                BRD Pipeline
+              </p>
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ring-1 ring-inset",
+                  isComplete
+                    ? "bg-emerald-500/10 text-emerald-700 ring-emerald-500/30 dark:text-emerald-300"
+                    : "bg-blue-500/10 text-blue-700 ring-blue-500/30 dark:text-blue-300",
+                )}
+              >
+                {isComplete ? (
+                  <>
+                    <CheckCircle2 className="size-3" /> Complete
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="size-3" /> In Progress
+                  </>
+                )}
+              </span>
+            </div>
+            <h1 className="break-words text-2xl font-bold leading-tight tracking-tight">
               <span className="text-gradient">{brd.filename}</span>
             </h1>
-            <div className="flex flex-wrap items-center gap-2 text-xs">
+            <div className="flex flex-wrap items-center gap-3 text-xs">
               <Badge
                 variant="outline"
                 className="bg-blue-500/10 text-blue-700 dark:text-blue-300"
@@ -265,34 +330,59 @@ export function PipelineHub(props: PipelineHubProps) {
                 })}
               </span>
             </div>
+            {!isComplete && (
+              <div className="!mt-4 flex flex-wrap items-center gap-2">
+                <p className="text-sm text-muted-foreground">
+                  Next:{" "}
+                  <span className="font-semibold text-foreground">
+                    {stagesLabels[currentStep - 1]}
+                  </span>
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleContinue}
+                  className="h-7"
+                >
+                  Continue to Stage {currentStep}
+                  <ArrowDown className="size-3" />
+                </Button>
+              </div>
+            )}
           </div>
-          <div className="text-right">
-            <p
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset",
-                completedCount === stagesLabels.length
-                  ? "bg-emerald-500/10 text-emerald-700 ring-emerald-500/30 dark:text-emerald-300"
-                  : "bg-blue-500/10 text-blue-700 ring-blue-500/30 dark:text-blue-300",
-              )}
-            >
-              {completedCount === stagesLabels.length ? (
-                <CheckCircle2 className="size-3.5" />
-              ) : (
-                <Sparkles className="size-3.5" />
-              )}
-              {heroStatusText}
-            </p>
+
+          {/* Progress ring */}
+          <div className="shrink-0">
+            <ProgressRing
+              completed={completedCount}
+              total={stagesLabels.length}
+              size={104}
+              stroke={9}
+            />
           </div>
         </div>
 
-        <div className="mt-5">
+        {/* Pill strip */}
+        <div className="relative mt-5">
           <PipelineProgressStrip steps={stripSteps} current={currentStep} />
         </div>
       </div>
 
-      {/* ── Stage cards ─────────────────────────────────────────────── */}
-      <div className="space-y-3">
-        {/* Stage 1 — Upload */}
+      {/* ── Stage cards arranged on a vertical journey rail, grouped
+              into three lifecycle phases (Capture / Apply / Validate). */}
+      <div className="relative pl-8">
+        {/* Vertical rail */}
+        <div className="absolute left-[7px] top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-500/30 via-amber-500/30 to-emerald-500/30" />
+
+        {/* Phase 1 — CAPTURE (Upload, Extract, Review) */}
+        <PhaseLabel
+          label="Capture"
+          subtitle="Pull rules out of the document and approve them"
+          icon={Layers}
+          accent="blue"
+        />
+        <div className="mb-8 space-y-3">
+          {/* Stage 1 — Upload */}
         <PipelineStageCard
           stepNumber={1}
           title="Upload BRD"
@@ -317,6 +407,7 @@ export function PipelineHub(props: PipelineHubProps) {
           status={stageStatuses[1]}
           accent={STAGE_ACCENTS[1]}
           anchorId="stage-2"
+          pendingReason="Available right after upload"
           metric={
             hasRuleSet ? (
               <StageMetric label={`${rs!.rules_count} rules`} tone="info" />
@@ -369,6 +460,7 @@ export function PipelineHub(props: PipelineHubProps) {
           status={stageStatuses[2]}
           accent={STAGE_ACCENTS[2]}
           anchorId="stage-3"
+          pendingReason="Available after rules are extracted"
           metric={
             rs ? (
               <StageMetric
@@ -409,6 +501,16 @@ export function PipelineHub(props: PipelineHubProps) {
             </p>
           )}
         </PipelineStageCard>
+        </div>
+
+        {/* Phase 2 — APPLY (Reconcile, Impact) */}
+        <PhaseLabel
+          label="Apply"
+          subtitle="Merge into the live repo and measure the impact on real loans"
+          icon={GitBranch}
+          accent="amber"
+        />
+        <div className="mb-8 space-y-3">
 
         {/* Stage 4 — Reconcile with Live Repo */}
         <PipelineStageCard
@@ -424,6 +526,7 @@ export function PipelineHub(props: PipelineHubProps) {
           status={stageStatuses[3]}
           accent={STAGE_ACCENTS[3]}
           anchorId="stage-4"
+          pendingReason="Available after rules are approved"
           metric={
             lv && mp?.status === "APPLIED" ? (
               <StageMetric label={`v${lv.version_number}`} tone="success" />
@@ -494,6 +597,7 @@ export function PipelineHub(props: PipelineHubProps) {
           status={stageStatuses[4]}
           accent={STAGE_ACCENTS[4]}
           anchorId="stage-5"
+          pendingReason="Available after the BRD is applied to the live repo"
           metric={
             ir?.status === "COMPLETED" && ir.summary ? (
               <StageMetric
@@ -566,6 +670,16 @@ export function PipelineHub(props: PipelineHubProps) {
             </div>
           )}
         </PipelineStageCard>
+        </div>
+
+        {/* Phase 3 — VALIDATE (Generate, Execute, Export) */}
+        <PhaseLabel
+          label="Validate"
+          subtitle="Generate scenarios, execute the test suite, and ship the results"
+          icon={ShieldCheck}
+          accent="emerald"
+        />
+        <div className="space-y-3">
 
         {/* Stage 6 — Generate Test Cases */}
         <PipelineStageCard
@@ -581,6 +695,7 @@ export function PipelineHub(props: PipelineHubProps) {
           status={stageStatuses[5]}
           accent={STAGE_ACCENTS[5]}
           anchorId="stage-6"
+          pendingReason="Available after rules are approved"
           metric={
             testCaseSuiteId ? (
               <StageMetric label={`${testCaseCount} cases`} tone="info" />
@@ -695,6 +810,7 @@ export function PipelineHub(props: PipelineHubProps) {
           status={stageStatuses[6]}
           accent={STAGE_ACCENTS[6]}
           anchorId="stage-7"
+          pendingReason="Available after test cases are generated and rules are applied"
           metric={
             lastExec && lastExec.cases_evaluated > 0
               ? (() => {
@@ -788,6 +904,7 @@ export function PipelineHub(props: PipelineHubProps) {
           status={stageStatuses[7]}
           accent={STAGE_ACCENTS[7]}
           anchorId="stage-8"
+          pendingReason="Available after test cases are generated"
         >
           {testCaseSuiteId ? (
             <div className="grid gap-2 sm:grid-cols-3">
@@ -845,6 +962,7 @@ export function PipelineHub(props: PipelineHubProps) {
             </p>
           )}
         </PipelineStageCard>
+        </div>
       </div>
 
       {/* Pipeline complete celebration */}
@@ -863,6 +981,57 @@ export function PipelineHub(props: PipelineHubProps) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Phase label ─────────────────────────────────────────────────────────
+
+const PHASE_ACCENT_BG: Record<string, string> = {
+  blue: "bg-blue-500/10 ring-blue-500/30 text-blue-700 dark:text-blue-300",
+  amber: "bg-amber-500/10 ring-amber-500/30 text-amber-700 dark:text-amber-300",
+  emerald:
+    "bg-emerald-500/10 ring-emerald-500/30 text-emerald-700 dark:text-emerald-300",
+};
+
+const PHASE_ICON_COLOR: Record<string, string> = {
+  blue: "text-blue-600 dark:text-blue-400",
+  amber: "text-amber-600 dark:text-amber-400",
+  emerald: "text-emerald-600 dark:text-emerald-400",
+};
+
+interface PhaseLabelProps {
+  label: string;
+  subtitle: string;
+  icon: React.ComponentType<{ className?: string }>;
+  accent: "blue" | "amber" | "emerald";
+}
+
+/**
+ * Subtle phase divider sitting on the journey rail. Three phases
+ * group the eight stages: Capture (1-3), Apply (4-5), Validate (6-8).
+ * The label appears as a chip floating to the left of the rail.
+ */
+function PhaseLabel({ label, subtitle, icon: Icon, accent }: PhaseLabelProps) {
+  return (
+    <div className="relative mb-3 mt-1">
+      {/* Chip that overlays the rail */}
+      <div className="absolute left-[-26px] top-0 z-10 flex items-center gap-2">
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ring-1 ring-inset",
+            PHASE_ACCENT_BG[accent],
+          )}
+        >
+          <Icon className={cn("size-3", PHASE_ICON_COLOR[accent])} />
+          {label}
+        </span>
+        <span className="hidden text-xs italic text-muted-foreground/70 sm:inline">
+          {subtitle}
+        </span>
+      </div>
+      {/* spacer so the next stage card starts below the chip */}
+      <div className="h-7" />
     </div>
   );
 }
