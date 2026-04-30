@@ -249,16 +249,20 @@ async def test_execute_suite_against_version_reports_real_decisions(client, db_s
     # vocabularies the executor projects into:
     # - engine decisions (APPROVED / REJECTED / FLAGGED) for tests that
     #   assert a final decision and don't name a source rule
-    # - RULE_FIRED / RULE_NOT_FIRED for POSITIVE tests (assertion is
-    #   "did the source rule fire" — robust to other terminal rules
-    #   in the snapshot stamping a different final decision)
+    # - RULE_FIRED / RULE_NOT_FIRED / RULE_SHADOWED for POSITIVE/BND/EDGE
+    #   tests (assertion is "did the source rule fire" — robust to other
+    #   terminal rules in the snapshot stamping a different final
+    #   decision; SHADOWED is the soft-pass for preemption-by-gate)
     # - NOT_TRIGGERED / TRIGGERED for NEG/BND tests
     # - ALL_TRIGGERED / PARTIAL_TRIGGERED for INTERACTION tests
+    # - CONFLICT_OBSERVED for INTERACTION tests asserting two
+    #   contradictory rules both apply on the matched loans
     valid = {
         "APPROVED", "REJECTED", "FLAGGED",
-        "RULE_FIRED", "RULE_NOT_FIRED",
+        "RULE_FIRED", "RULE_NOT_FIRED", "RULE_SHADOWED",
         "NOT_TRIGGERED", "TRIGGERED",
         "ALL_TRIGGERED", "PARTIAL_TRIGGERED",
+        "CONFLICT_OBSERVED",
     }
     for item in report["results"]:
         for decision_token in item["actual_distribution"].keys():
