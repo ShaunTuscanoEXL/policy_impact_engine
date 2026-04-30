@@ -23,6 +23,24 @@ class MergeApplyRequest(BaseModel):
     )
 
 
+class MergeRulePayload(BaseModel):
+    """Full rule shape exposed inline on merge items so the workbench
+    can render the actual policy (rule name, conditions, actions with
+    target_field+value, subsystem, etc.) without losing fidelity to
+    the canonical projection in `diff`."""
+    rule_id: str | None = None
+    rule_name: str | None = None
+    description: str | None = None
+    rule_type: str | None = None
+    subsystem: str | None = None
+    canonical_key: str | None = None
+    conditions: list[dict[str, Any]] = []
+    actions: list[dict[str, Any]] = []
+    priority: int | None = None
+    confidence: float | None = None
+    source_section: str | None = None
+
+
 class MergeItemResponse(BaseModel):
     id: str
     category: str
@@ -37,6 +55,13 @@ class MergeItemResponse(BaseModel):
     notes: str | None
     rationale: str | None
     confidence: float
+    # Full rule details — populated by the API layer by joining
+    # incoming_rule_id against the rules table and live_rule_id against
+    # the live snapshot. Lets the workbench show the entire rule
+    # (name, all conditions, all actions with target+value) instead of
+    # just the canonical 4-field projection in `diff`.
+    incoming_rule: MergeRulePayload | None = None
+    live_rule: MergeRulePayload | None = None
 
 
 class MergeProposalResponse(BaseModel):

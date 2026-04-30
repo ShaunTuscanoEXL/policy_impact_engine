@@ -92,124 +92,255 @@ function formatThreshold(value: any): string {
   return String(value);
 }
 
-function DiffBlock({ diff, category }: { diff: Record<string, any> | null; category: string }) {
-  if (!diff) {
-    return (
-      <p className="text-xs text-muted-foreground italic">No diff payload.</p>
-    );
+function formatCondition(c: Record<string, any>): string {
+  const field = c.field ?? "?";
+  const op = c.operator ?? "?";
+  const value = c.value;
+  if (op === "between" && Array.isArray(value)) {
+    return `${field} between [${value.join(", ")}]`;
   }
+  if (op === "in" || op === "not_in") {
+    return `${field} ${op} [${Array.isArray(value) ? value.join(", ") : value}]`;
+  }
+  return `${field} ${op} ${formatThreshold(value)}`;
+}
 
-  if (category === "NEW_RULE") {
+function formatActionLine(a: Record<string, any>): {
+  type: string;
+  target: string;
+  value: string;
+} {
+  const type = String(a.action_type ?? "?").toUpperCase();
+  const target = a.target_field ?? "";
+  const value =
+    a.value === undefined || a.value === null ? "" : formatThreshold(a.value);
+  return { type, target, value };
+}
+
+const ACTION_TONE: Record<string, string> = {
+  REJECT: "text-rose-700 bg-rose-500/10 ring-rose-500/30 dark:text-rose-300",
+  DECLINE: "text-rose-700 bg-rose-500/10 ring-rose-500/30 dark:text-rose-300",
+  AUTO_REJECT:
+    "text-rose-700 bg-rose-500/10 ring-rose-500/30 dark:text-rose-300",
+  FLAG: "text-amber-700 bg-amber-500/10 ring-amber-500/30 dark:text-amber-300",
+  MANUAL_REVIEW:
+    "text-amber-700 bg-amber-500/10 ring-amber-500/30 dark:text-amber-300",
+  REVIEW: "text-amber-700 bg-amber-500/10 ring-amber-500/30 dark:text-amber-300",
+  SET: "text-blue-700 bg-blue-500/10 ring-blue-500/30 dark:text-blue-300",
+  CAP: "text-violet-700 bg-violet-500/10 ring-violet-500/30 dark:text-violet-300",
+  ADJUST:
+    "text-violet-700 bg-violet-500/10 ring-violet-500/30 dark:text-violet-300",
+  MODIFY:
+    "text-violet-700 bg-violet-500/10 ring-violet-500/30 dark:text-violet-300",
+  APPROVE:
+    "text-emerald-700 bg-emerald-500/10 ring-emerald-500/30 dark:text-emerald-300",
+};
+
+const SUBSYSTEM_TONE: Record<string, string> = {
+  BUREAU_GATE:
+    "bg-blue-500/10 text-blue-700 dark:text-blue-300 ring-blue-500/30",
+  DTI_GATE:
+    "bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-amber-500/30",
+  INCOME_GATE:
+    "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-emerald-500/30",
+  AMOUNT_CAP:
+    "bg-orange-500/10 text-orange-700 dark:text-orange-300 ring-orange-500/30",
+  PRICING_TIER:
+    "bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-300 ring-fuchsia-500/30",
+  EMPLOYMENT_GATE:
+    "bg-violet-500/10 text-violet-700 dark:text-violet-300 ring-violet-500/30",
+  BANKING_BEHAVIOR:
+    "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 ring-cyan-500/30",
+  RATE_MODIFIER:
+    "bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-rose-500/30",
+  FRAUD_SIGNAL:
+    "bg-red-500/10 text-red-700 dark:text-red-300 ring-red-500/30",
+  REGULATORY_FLOOR:
+    "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 ring-indigo-500/30",
+  EXPOSURE_LIMIT:
+    "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 ring-yellow-500/30",
+  SCORING_MODEL:
+    "bg-purple-500/10 text-purple-700 dark:text-purple-300 ring-purple-500/30",
+  UNCLASSIFIED:
+    "bg-slate-500/10 text-slate-600 dark:text-slate-400 ring-slate-500/30",
+};
+
+/**
+ * Renders a complete rule (name, description, all conditions, all
+ * actions with target+value) — full fidelity, no canonical projection
+ * collapsing fields. The merge engine still does its diff work on the
+ * canonical projection, but the reviewer sees the actual rule.
+ */
+function RulePanel({
+  rule,
+  side,
+  side_label,
+}: {
+  rule: import("@/lib/types").MergeRulePayload | null | undefined;
+  side: "incoming" | "live" | "neutral";
+  side_label?: string;
+}) {
+  if (!rule) {
     return (
-      <div className="space-y-1.5 rounded-md border border-border/40 bg-muted/30 p-3">
-        <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-          NEW
-        </div>
-        <div className="font-mono text-xs">
-          <div>
-            <span className="text-muted-foreground">field:</span>{" "}
-            {diff.field ?? "—"}
-          </div>
-          <div>
-            <span className="text-muted-foreground">operator:</span>{" "}
-            {diff.operator ?? "—"}
-          </div>
-          <div>
-            <span className="text-muted-foreground">threshold:</span>{" "}
-            {formatThreshold(diff.threshold)}
-          </div>
-          <div>
-            <span className="text-muted-foreground">action:</span>{" "}
-            {formatThreshold(diff.action)}
-          </div>
-        </div>
+      <div className="rounded-md border border-dashed border-border/40 bg-muted/20 p-3">
+        <p className="text-xs italic text-muted-foreground">
+          No rule data on this side.
+        </p>
       </div>
     );
   }
-
-  if (category === "REMOVED_RULE") {
-    return (
-      <div className="space-y-1.5 rounded-md border border-border/40 bg-muted/30 p-3">
-        <div className="text-xs font-semibold text-red-600 dark:text-red-400">
-          REMOVED
-        </div>
-        <div className="font-mono text-xs">
-          <div>
-            <span className="text-muted-foreground">field:</span>{" "}
-            {diff.field ?? "—"}
-          </div>
-          <div>
-            <span className="text-muted-foreground">operator:</span>{" "}
-            {diff.operator ?? "—"}
-          </div>
-          <div>
-            <span className="text-muted-foreground">threshold:</span>{" "}
-            {formatThreshold(diff.threshold)}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // diff: live → incoming
-  const field = diff.field ?? "—";
-  const operatorLive = diff.operator_live ?? diff.operator ?? "—";
-  const operatorIncoming = diff.operator_incoming ?? diff.operator ?? "—";
-  const thresholdLive = diff.threshold_live ?? diff.threshold;
-  const thresholdIncoming = diff.threshold_incoming ?? diff.threshold;
-  const actionLive = diff.action_live;
-  const actionIncoming = diff.action_incoming;
-
+  const sideTone =
+    side === "incoming"
+      ? "border-emerald-500/30 bg-emerald-500/[0.03]"
+      : side === "live"
+        ? "border-rose-500/30 bg-rose-500/[0.03]"
+        : "border-border/50 bg-muted/20";
+  const labelTone =
+    side === "incoming"
+      ? "text-emerald-700 dark:text-emerald-300"
+      : side === "live"
+        ? "text-rose-700 dark:text-rose-300"
+        : "text-muted-foreground";
   return (
-    <div className="grid grid-cols-2 gap-2">
-      <div className="space-y-1.5 rounded-md border border-border/40 bg-red-500/5 p-3">
-        <div className="text-xs font-semibold text-red-600 dark:text-red-400">
-          LIVE
-        </div>
-        <div className="font-mono text-xs">
-          <div>
-            <span className="text-muted-foreground">field:</span> {field}
-          </div>
-          <div>
-            <span className="text-muted-foreground">operator:</span>{" "}
-            {operatorLive}
-          </div>
-          <div>
-            <span className="text-muted-foreground">threshold:</span>{" "}
-            {formatThreshold(thresholdLive)}
-          </div>
-          {actionLive !== undefined && (
-            <div>
-              <span className="text-muted-foreground">action:</span>{" "}
-              {formatThreshold(actionLive)}
-            </div>
+    <div className={`space-y-3 rounded-lg border p-3.5 ${sideTone}`}>
+      {/* Side label + subsystem + rule_type */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className={`text-[10px] font-bold uppercase tracking-[0.14em] ${labelTone}`}
+        >
+          {side_label ?? (side === "incoming" ? "Incoming" : side === "live" ? "Live" : "Rule")}
+        </span>
+        {rule.subsystem && (
+          <span
+            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ring-1 ring-inset ${SUBSYSTEM_TONE[rule.subsystem] ?? SUBSYSTEM_TONE.UNCLASSIFIED}`}
+          >
+            {rule.subsystem}
+          </span>
+        )}
+        {rule.rule_type && (
+          <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {rule.rule_type}
+          </span>
+        )}
+        {rule.rule_id && (
+          <span className="ml-auto font-mono text-[10px] text-muted-foreground">
+            {rule.rule_id}
+          </span>
+        )}
+      </div>
+
+      {/* Rule name + description */}
+      {rule.rule_name && (
+        <div>
+          <p className="text-sm font-semibold leading-tight">{rule.rule_name}</p>
+          {rule.description && (
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {rule.description}
+            </p>
           )}
         </div>
-      </div>
-      <div className="space-y-1.5 rounded-md border border-border/40 bg-emerald-500/5 p-3">
-        <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-          INCOMING
+      )}
+
+      {/* Conditions */}
+      {rule.conditions && rule.conditions.length > 0 ? (
+        <div>
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Conditions
+          </p>
+          <ul className="space-y-1">
+            {rule.conditions.map((c, i) => (
+              <li key={i} className="font-mono text-[11px]">
+                <span className="rounded bg-muted/40 px-1.5 py-0.5">
+                  {formatCondition(c)}
+                </span>
+                {i < rule.conditions.length - 1 && (
+                  <span className="mx-1 text-[9px] font-bold text-muted-foreground/60">
+                    {(rule.conditions[i + 1]?.logic ?? "AND")
+                      .toString()
+                      .toUpperCase()}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
         </div>
-        <div className="font-mono text-xs">
-          <div>
-            <span className="text-muted-foreground">field:</span> {field}
-          </div>
-          <div>
-            <span className="text-muted-foreground">operator:</span>{" "}
-            {operatorIncoming}
-          </div>
-          <div>
-            <span className="text-muted-foreground">threshold:</span>{" "}
-            {formatThreshold(thresholdIncoming)}
-          </div>
-          {actionIncoming !== undefined && (
-            <div>
-              <span className="text-muted-foreground">action:</span>{" "}
-              {formatThreshold(actionIncoming)}
-            </div>
-          )}
+      ) : (
+        <p className="text-[11px] italic text-muted-foreground/70">
+          No conditions — applies always.
+        </p>
+      )}
+
+      {/* Actions */}
+      {rule.actions && rule.actions.length > 0 && (
+        <div>
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Actions
+          </p>
+          <ul className="space-y-1">
+            {rule.actions.map((a, i) => {
+              const { type, target, value } = formatActionLine(a);
+              return (
+                <li key={i} className="flex flex-wrap items-baseline gap-1.5 font-mono text-[11px]">
+                  <span
+                    className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ring-1 ring-inset ${ACTION_TONE[type] ?? "bg-muted/40 text-muted-foreground"}`}
+                  >
+                    {type}
+                  </span>
+                  {target && (
+                    <span className="font-mono">
+                      <span className="text-muted-foreground">→</span> {target}
+                    </span>
+                  )}
+                  {value && (
+                    <>
+                      <span className="text-muted-foreground">=</span>
+                      <span className="font-mono font-semibold">{value}</span>
+                    </>
+                  )}
+                  {a.description && (
+                    <span className="text-[10px] italic text-muted-foreground">
+                      — {a.description}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </div>
-      </div>
+      )}
+    </div>
+  );
+}
+
+function DiffBlock({
+  item,
+}: {
+  item: import("@/lib/types").MergeItem;
+}) {
+  const incoming = item.incoming_rule;
+  const live = item.live_rule;
+
+  if (item.category === "NEW_RULE") {
+    return (
+      <RulePanel rule={incoming} side="incoming" side_label="New Rule" />
+    );
+  }
+
+  if (item.category === "REMOVED_RULE") {
+    return (
+      <RulePanel
+        rule={live}
+        side="live"
+        side_label="Removed from BRD (still live)"
+      />
+    );
+  }
+
+  // Collision categories: side-by-side LIVE vs INCOMING
+  return (
+    <div className="grid gap-3 lg:grid-cols-2">
+      <RulePanel rule={live} side="live" side_label="Live (current)" />
+      <RulePanel rule={incoming} side="incoming" side_label="Incoming (BRD)" />
     </div>
   );
 }
@@ -625,7 +756,7 @@ export default function MergeWorkbenchDetailPage() {
                     </div>
 
                     {/* Diff */}
-                    <DiffBlock diff={item.diff} category={item.category} />
+                    <DiffBlock item={item} />
 
                     {/* Rationale */}
                     {item.rationale && (

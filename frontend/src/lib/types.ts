@@ -239,6 +239,23 @@ export type MergeAction =
   | "ACCEPT" | "REJECT" | "SUPERSEDE" | "SUPERSEDE_GROUP"
   | "DROP" | "KEEP_BOTH" | "EDIT_NEEDED" | "RETIRE" | "NEEDS_HUMAN";
 
+/** Full rule details inlined on merge items so the workbench can render
+ *  the actual policy (rule name, all conditions, all actions with target+
+ *  value) rather than just the canonical 4-field projection in `diff`. */
+export interface MergeRulePayload {
+  rule_id: string | null;
+  rule_name: string | null;
+  description: string | null;
+  rule_type: string | null;
+  subsystem: string | null;
+  canonical_key: string | null;
+  conditions: Array<Record<string, any>>;
+  actions: Array<Record<string, any>>;
+  priority: number | null;
+  confidence: number | null;
+  source_section: string | null;
+}
+
 export interface MergeItem {
   id: string;
   category: MergeCategory;
@@ -253,6 +270,10 @@ export interface MergeItem {
   notes: string | null;
   rationale: string | null;
   confidence: number;
+  /** Full incoming-side rule (from candidate rule_set). */
+  incoming_rule?: MergeRulePayload | null;
+  /** Full live-side rule (from current HEAD snapshot). */
+  live_rule?: MergeRulePayload | null;
 }
 
 export interface MergeProposal {
