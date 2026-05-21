@@ -4,17 +4,8 @@ import { useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog";
-import { Loader2, Rocket, CheckCircle2 } from "lucide-react";
+import { Rocket, CheckCircle2 } from "lucide-react";
+import { DecisionDialog } from "@/components/decision-dialog";
 import type { PromoteVersionResponse } from "@/lib/types";
 
 interface PromoteToProductionButtonProps {
@@ -32,8 +23,9 @@ interface PromoteToProductionButtonProps {
 }
 
 /**
- * "Promote to Production" CTA. Confirms via dialog before flipping the
- * repo's production_version_id pointer. Used on the version timeline,
+ * "Promote to Production" CTA. Confirms via DecisionDialog so we capture
+ * who promoted + (optionally) why before flipping the repo's
+ * production_version_id pointer. Used on the version timeline,
  * impact-run detail, and validate-version pages.
  */
 export function PromoteToProductionButton({
@@ -49,22 +41,37 @@ export function PromoteToProductionButton({
   const [busy, setBusy] = useState(false);
 
   const isCurrentProduction = currentProductionVersionNumber === versionNumber;
+  const isRollback =
+    currentProductionVersionNumber != null &&
+    versionNumber < currentProductionVersionNumber;
   const buttonLabel =
     label ??
     (isCurrentProduction
       ? "Currently Live"
-      : currentProductionVersionNumber != null && versionNumber < currentProductionVersionNumber
+      : isRollback
         ? "Roll Back to This Version"
         : "Promote to Production");
 
-  const handlePromote = async () => {
+  const handlePromoteConfirm = async ({
+    actor,
+    rationale,
+  }: {
+    actor: string;
+    rationale: string;
+  }) => {
     setBusy(true);
     try {
       const { data } = await api.post<PromoteVersionResponse>(
         `/live-repo/${repoId}/promote`,
-        { version_number: versionNumber },
+        {
+          version_number: versionNumber,
+          promoted_by: actor,
+          rationale: rationale || null,
+        },
       );
-      toast.success(`v${data.production_version_number} is now live in production.`);
+      toast.success(
+        `v${data.production_version_number} is now live in production (promoted by ${actor}).`,
+      );
       setOpen(false);
       onPromoted?.(data);
     } catch (err: any) {
@@ -83,37 +90,28 @@ export function PromoteToProductionButton({
     );
   }
 
+  const description =
+    currentProductionVersionNumber != null
+      ? `Replaces v${currentProductionVersionNumber} as the live policy. Decisions made after this point will use v${versionNumber}.`
+      : `This is the first version to be promoted. Decisions made after this point will use v${versionNumber}.`;
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant={variant} size={size} />}>
+    <>
+      <Button variant={variant} size={size} onClick={() => setOpen(true)}>
         <Rocket className="size-3.5" />
         {buttonLabel}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Promote v{versionNumber} to production?</DialogTitle>
-          <DialogDescription>
-            {currentProductionVersionNumber != null ? (
-              <>
-                This will replace v{currentProductionVersionNumber} as the live
-                policy. Decisions made after this point will use v{versionNumber}.
-              </>
-            ) : (
-              <>
-                This is the first version to be promoted. Decisions made after
-                this point will use v{versionNumber}.
-              </>
-            )}
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
-          <Button onClick={handlePromote} disabled={busy}>
-            {busy && <Loader2 className="mr-2 size-4 animate-spin" />}
-            Promote v{versionNumber}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </Button>
+      <DecisionDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={`Promote v${versionNumber} to production?`}
+        description={description}
+        confirmLabel={`Promote v${versionNumber}`}
+        confirmVariant={isRollback ? "destructive" : "default"}
+        rationalePlaceholder="e.g. all 142 scenario tests pass + impact rate change within tolerance"
+        loading={busy}
+        onConfirm={handlePromoteConfirm}
+      />
+    </>
   );
 }

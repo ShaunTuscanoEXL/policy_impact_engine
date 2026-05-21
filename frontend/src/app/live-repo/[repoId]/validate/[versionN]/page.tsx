@@ -33,6 +33,7 @@ import { PromoteToProductionButton } from "@/components/live-repo/promote-button
 import { SummaryCards } from "@/components/impact/summary-cards";
 import { DistributionChart } from "@/components/impact/distribution-chart";
 import { FlipsChart } from "@/components/impact/flips-chart";
+import { BusinessImpactCard } from "@/components/impact/business-impact-card";
 import { SuiteExecutionPanel } from "@/components/test-cases/suite-execution-panel";
 import { cn } from "@/lib/utils";
 
@@ -351,14 +352,19 @@ export default function ValidateVersionPage() {
                 </div>
               ) : (
                 <>
+                  {/* Slice 2: business-friendly summary above the
+                      developer-view charts. Renders only when the
+                      run produced a `business_summary` block (post-
+                      Slice 2 runs). */}
+                  {impactRun.summary && (
+                    <BusinessImpactCard summary={impactRun.summary} />
+                  )}
                   <SummaryCards summary={impactRun.summary as any} />
                   {impactRun.summary?.decision_distribution && (
-                    <DistributionChart
-                      distribution={impactRun.summary.decision_distribution}
-                    />
+                    <DistributionChart summary={impactRun.summary} />
                   )}
                   {impactRun.summary?.decision_flips && (
-                    <FlipsChart flips={impactRun.summary.decision_flips} />
+                    <FlipsChart summary={impactRun.summary} />
                   )}
                   <Button
                     variant="outline"

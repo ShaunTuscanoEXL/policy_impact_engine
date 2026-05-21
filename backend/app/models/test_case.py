@@ -39,6 +39,10 @@ class TestCaseSuite(Base):
         UUID(as_uuid=True), nullable=True
     )
 
+    # ── Slice 1: decision attribution on suite execution ────────────────
+    last_executed_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    last_execution_rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     rule_set = relationship("RuleSet", back_populates="test_case_suites")
     test_cases = relationship("TestCase", back_populates="suite", cascade="all, delete-orphan")
 

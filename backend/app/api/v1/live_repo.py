@@ -5,10 +5,11 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.schemas.drift import DriftReportResponse
 from app.schemas.live_repo import (
     BackfillResponse,
     CreateRepositoryRequest,
@@ -23,7 +24,7 @@ from app.schemas.live_repo import (
     VersionDetail,
     VersionSummary,
 )
-from app.services import live_repo_service as svc
+from app.services import drift_service, live_repo_service as svc
 
 router = APIRouter(prefix="/live-repo", tags=["Live Rule Repository"])
 
@@ -42,6 +43,7 @@ def _repo_summary(r, *, production_version_number: int | None = None) -> Reposit
             r.production_promoted_at.isoformat() if r.production_promoted_at else None
         ),
         production_promoted_by=r.production_promoted_by,
+        production_promotion_rationale=getattr(r, "production_promotion_rationale", None),
         created_at=r.created_at.isoformat(),
         updated_at=r.updated_at.isoformat(),
     )
@@ -134,6 +136,7 @@ async def promote_version(
             repository_id=repo_id,
             version_number=payload.version_number,
             promoted_by=payload.promoted_by,
+            rationale=payload.rationale,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -143,7 +146,34 @@ async def promote_version(
         production_version_number=version.version_number,
         promoted_by=repo.production_promoted_by or "system",
         promoted_at=(repo.production_promoted_at or datetime.utcnow()).isoformat(),
+        rationale=getattr(repo, "production_promotion_rationale", None),
     )
+
+
+@router.get("/{repo_id}/drift", response_model=DriftReportResponse)
+async def get_production_drift(
+    repo_id: uuid.UUID,
+    loan_limit: int | None = Query(default=None, ge=1, le=200000),
+    db: AsyncSession = Depends(get_db),
+):
+    """Slice 10 — production drift watch.
+
+    Compares the current production version's predicted decision
+    distribution (sourced from the impact run that produced it) against
+    a fresh evaluation of the loan corpus. Returns a structured drift
+    report — the UI binds the result to a panel on the live-repo
+    detail page.
+
+    `loan_limit` is mostly for testing; production should run unlimited
+    (or use a future Celery beat job).
+    """
+    try:
+        report = await drift_service.compute_drift_for_repo(
+            db, repository_id=repo_id, loan_limit=loan_limit,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return DriftReportResponse(**report)
 
 
 @router.get("/{repo_id}/versions", response_model=list[VersionSummary])

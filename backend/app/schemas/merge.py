@@ -21,6 +21,15 @@ class MergeApplyRequest(BaseModel):
         default=None,
         description="Username/identifier of the reviewer applying the merge",
     )
+    rationale: str | None = Field(
+        default=None,
+        description=(
+            "Optional free-text justification for applying this proposal. "
+            "Surfaced in the audit timeline + the resulting live version's "
+            "summary so future viewers know why the merge was approved."
+        ),
+        max_length=2000,
+    )
 
 
 class MergeRulePayload(BaseModel):
@@ -74,6 +83,7 @@ class MergeProposalResponse(BaseModel):
     summary: str | None
     decided_by: str | None
     decided_at: str | None
+    decision_rationale: str | None = None
     created_at: str
     items: list[MergeItemResponse] = []
     counts_by_category: dict[str, int] = {}
@@ -87,3 +97,42 @@ class MergeApplyResponse(BaseModel):
     new_version_id: str | None = None
     blockers: list[str] = []
     summary: str | None = None
+
+
+# ── Slice 6: bulk decisions on merge items ────────────────────────────
+
+class MergeBatchUpdateRequest(BaseModel):
+    """Apply a single user_action to every item matching the filter.
+
+    Filter semantics: a value of None means "don't filter on this
+    field". Combine multiple filters and they're ANDed together.
+    Items already with a non-null user_action are SKIPPED unless
+    `overwrite_existing=True` so the bulk button doesn't accidentally
+    revert a hand-set decision.
+    """
+    user_action: str = Field(
+        description="ACCEPT | REJECT | SUPERSEDE | DROP | KEEP_BOTH | RETIRE | NEEDS_HUMAN | EDIT_NEEDED",
+    )
+    severity: str | None = Field(
+        default=None,
+        description="INFO | SOFT | HARD — leave null to match any severity.",
+    )
+    category: str | None = Field(
+        default=None,
+        description="MergeItemCategory enum value — leave null to match any category.",
+    )
+    overwrite_existing: bool = Field(
+        default=False,
+        description="If true, also overwrite items that already have a user_action.",
+    )
+
+
+class MergeBatchUpdateResponse(BaseModel):
+    updated: int = Field(description="Number of items whose user_action was changed.")
+    skipped_existing: int = Field(
+        description="Items that already had a user_action and were skipped.",
+    )
+    skipped_unmatched: int = Field(
+        description="Items that didn't match the filter.",
+    )
+    user_action: str

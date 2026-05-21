@@ -91,6 +91,9 @@ class TestCaseSuiteResponse(BaseModel):
     # not reflect the current rule contents. UI surfaces a "STALE" badge.
     is_stale: bool = False
     rule_set_last_modified_at: str | None = None
+    # Slice 1: who ran the latest execution and (optionally) why.
+    last_executed_by: str | None = None
+    last_execution_rationale: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -140,6 +143,8 @@ class GenerateFromVersionRequest(BaseModel):
 
 class ExecuteSuiteRequest(BaseModel):
     version_id: str
+    executed_by: str | None = None
+    rationale: str | None = None
 
 
 class TestCaseExecutionReport(BaseModel):

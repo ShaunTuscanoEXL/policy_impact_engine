@@ -24,6 +24,10 @@ import type { SuiteExecutionResponse } from "@/lib/types";
 interface SuiteExecutionPanelProps {
   report: SuiteExecutionResponse;
   executedAt: string | null;
+  /** Slice 1 — surface attribution under the header so reviewers know
+   *  who validated this version and the documented reason. */
+  executedBy?: string | null;
+  executionRationale?: string | null;
 }
 
 const CATEGORY_TONE: Record<string, { bg: string; text: string; label: string }> = {
@@ -52,7 +56,12 @@ function formatDistribution(actual: Record<string, number>) {
   return entries.map(([k, n]) => `${k}: ${n}`).join(" · ");
 }
 
-export function SuiteExecutionPanel({ report, executedAt }: SuiteExecutionPanelProps) {
+export function SuiteExecutionPanel({
+  report,
+  executedAt,
+  executedBy,
+  executionRationale,
+}: SuiteExecutionPanelProps) {
   const { passed, failed, untested } = useMemo(() => {
     let p = 0;
     let f = 0;
@@ -84,15 +93,26 @@ export function SuiteExecutionPanel({ report, executedAt }: SuiteExecutionPanelP
             </span>
             Scenario Test Execution
           </CardTitle>
-          <div className="flex items-center gap-2">
-            {report.version_number != null && (
-              <Badge variant="outline" className="text-[11px]">
-                vs v{report.version_number}
-              </Badge>
-            )}
-            {executedAt && (
-              <span className="text-[11px] text-muted-foreground">
-                {new Date(executedAt).toLocaleString()}
+          <div className="flex flex-col items-end gap-0.5">
+            <div className="flex items-center gap-2">
+              {report.version_number != null && (
+                <Badge variant="outline" className="text-[11px]">
+                  vs v{report.version_number}
+                </Badge>
+              )}
+              {executedAt && (
+                <span className="text-[11px] text-muted-foreground">
+                  {new Date(executedAt).toLocaleString()}
+                </span>
+              )}
+            </div>
+            {executedBy && (
+              <span
+                className="text-[10px] text-muted-foreground"
+                title={executionRationale || undefined}
+              >
+                Run by <span className="font-medium">{executedBy}</span>
+                {executionRationale ? ` · "${executionRationale}"` : ""}
               </span>
             )}
           </div>

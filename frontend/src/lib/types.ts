@@ -23,6 +23,10 @@ export interface RuleSet {
   status: "DRAFT" | "REVIEWED" | "APPROVED" | "ARCHIVED";
   rules: Rule[];
   created_at: string;
+  /** Slice 1 — decision attribution captured on PATCH …/approve */
+  approved_by?: string | null;
+  approved_at?: string | null;
+  approval_notes?: string | null;
 }
 
 export type Subsystem =
@@ -47,6 +51,9 @@ export interface Rule {
   source_section: string;
   has_conflicts: boolean;
   conflict_details: any;
+  /** Slice 7 — optional governance metadata. */
+  policy_intent?: string | null;
+  regulatory_citation?: string | null;
 }
 
 export interface Condition {
@@ -111,6 +118,9 @@ export interface TestCaseSuite {
    *  was generated. */
   is_stale?: boolean;
   rule_set_last_modified_at?: string | null;
+  /** Slice 1 — who ran the latest execution and (optionally) why. */
+  last_executed_by?: string | null;
+  last_execution_rationale?: string | null;
 }
 
 export interface SuggestedCounts {
@@ -201,6 +211,8 @@ export interface LiveRepository {
   production_version_number?: number | null;
   production_promoted_at?: string | null;
   production_promoted_by?: string | null;
+  /** Slice 1 — free-text justification captured at promotion time. */
+  production_promotion_rationale?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -211,6 +223,7 @@ export interface PromoteVersionResponse {
   production_version_number: number;
   promoted_by: string;
   promoted_at: string;
+  rationale?: string | null;
 }
 
 export interface LiveRepositoryDetail extends LiveRepository {
@@ -294,6 +307,8 @@ export interface MergeProposal {
   summary: string | null;
   decided_by: string | null;
   decided_at: string | null;
+  /** Slice 1 — free-text reason captured at apply time. */
+  decision_rationale?: string | null;
   created_at: string;
   items: MergeItem[];
   counts_by_category: Record<string, number>;
@@ -325,6 +340,8 @@ export interface ImpactRun {
   created_at: string;
   completed_at: string | null;
   created_by: string | null;
+  /** Slice 1 — optional "why we kicked off this run". */
+  rationale?: string | null;
 }
 
 export interface ImpactRunSummary {
@@ -340,7 +357,33 @@ export interface ImpactRunSummary {
     base_approval_rate: number;
     candidate_approval_rate: number;
     approval_rate_change: number;
+    /** Slice 2 — per-segment USD exposure totals + signed delta. */
+    base_funded_amount_usd?: number;
+    candidate_funded_amount_usd?: number;
+    funded_amount_delta_usd?: number;
   }>;
+  /** Slice 2 — plain-English roll-up consumed by the BusinessImpactCard. */
+  business_summary?: BusinessImpactSummary;
+}
+
+/** Plain-English summary block used by the BusinessImpactCard. Every
+ *  field is computed server-side from the same loan corpus that drives
+ *  the developer-view distribution + flip stats. */
+export interface BusinessImpactSummary {
+  base_approval_rate: number;
+  candidate_approval_rate: number;
+  approval_rate_delta: number;
+  loans_newly_denied: number;
+  loans_newly_approved: number;
+  net_funded_loans_change: number;
+  base_funded_amount_usd: number;
+  candidate_funded_amount_usd: number;
+  exposure_change_loss_usd: number;
+  exposure_change_gain_usd: number;
+  net_exposure_change_usd: number;
+  /** Segment with the biggest absolute approval-rate swing; null when
+   *  the corpus is empty. UI uses this for the hero callout. */
+  top_changed_segment: string | null;
 }
 
 
@@ -511,6 +554,12 @@ export interface DashboardTrends {
   approval_rate_history: Array<{
     completed_at: string | null;
     approval_rate: number;
+    /** Slice 11 follow-up: per-run flagged + rejected rates so the
+     *  trend chart can render all three lines (and a 0% approval
+     *  rate doesn't look like flat zero — the FLAGGED line shows
+     *  where those loans actually went). */
+    flagged_rate?: number;
+    rejected_rate?: number;
     total_loans: number;
     run_id: string;
   }>;
@@ -520,4 +569,75 @@ export interface DashboardTrends {
     version_number: number;
     rule_count: number;
   }>;
+}
+
+
+// ── Audit timeline ─────────────────────────────────────────────────────
+
+export type AuditAction =
+  | "BRD_UPLOADED" | "RULES_EXTRACTED"
+  | "RULE_SET_APPROVED" | "RULE_EDITED" | "RULE_DELETED" | "RULE_ADDED"
+  | "MERGE_PROPOSAL_CREATED" | "MERGE_PROPOSAL_APPLIED"
+  | "MERGE_PROPOSAL_REJECTED" | "MERGE_ITEM_DECIDED" | "VERSION_PROMOTED"
+  | "IMPACT_RUN_STARTED" | "IMPACT_RUN_COMPLETED"
+  | "SUITE_GENERATED" | "SUITE_EXECUTED";
+
+export type AuditEntityType =
+  | "BRD" | "RULE_SET" | "RULE" | "MERGE_PROPOSAL"
+  | "LIVE_REPO" | "LIVE_VERSION" | "IMPACT_RUN" | "TEST_SUITE";
+
+export interface AuditEvent {
+  id: string;
+  action: AuditAction;
+  entity_type: AuditEntityType;
+  entity_id: string;
+  actor: string;
+  rationale: string | null;
+  brd_id: string | null;
+  repository_id: string | null;
+  metadata?: Record<string, any> | null;
+  created_at: string;
+}
+
+
+// ── Slice 10: production drift watch ───────────────────────────────────
+
+export interface DriftDecisionDelta {
+  predicted_pct: number;
+  observed_pct: number;
+  delta_pct: number;
+  predicted_count: number;
+  observed_count: number;
+}
+
+export interface DriftSegmentDelta {
+  loans: number;
+  predicted_approval_rate: number;
+  observed_approval_rate: number;
+  approval_rate_delta: number;
+  observed_funded_amount_usd: number;
+}
+
+export interface DriftReport {
+  repository_id: string;
+  production_version_id: string;
+  production_version_number: number;
+  computed_at: string;
+  predicted_source: {
+    impact_run_id: string;
+    completed_at: string | null;
+    loan_count: number | null;
+  } | null;
+  observed: {
+    loan_count: number;
+    decision_distribution: Record<string, number>;
+    by_segment: Record<string, Record<string, number | string>>;
+  };
+  drift: {
+    decision_distribution: Record<string, DriftDecisionDelta>;
+    by_segment: Record<string, DriftSegmentDelta>;
+    max_abs_delta_pct: number;
+    top_drifting_segment: string | null;
+  };
+  warnings: string[];
 }

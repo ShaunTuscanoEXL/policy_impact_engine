@@ -654,6 +654,38 @@ export function PipelineHub(props: PipelineHubProps) {
         >
           {ir?.status === "COMPLETED" && ir.summary && (
             <div className="space-y-2">
+              {/* Slice 2: business-friendly headline above the
+                  developer-view tile row. Renders only when the
+                  run produced a `business_summary` block. */}
+              {ir.summary.business_summary && (
+                <div
+                  className={cn(
+                    "rounded-md p-2.5 text-xs ring-1 ring-inset",
+                    ir.summary.business_summary.approval_rate_delta < 0
+                      ? "bg-rose-500/10 text-rose-700 ring-rose-500/30 dark:text-rose-300"
+                      : ir.summary.business_summary.approval_rate_delta > 0
+                        ? "bg-emerald-500/10 text-emerald-700 ring-emerald-500/30 dark:text-emerald-300"
+                        : "bg-slate-500/10 text-slate-700 ring-slate-500/30 dark:text-slate-300",
+                  )}
+                >
+                  <div className="font-medium">
+                    Approval rate{" "}
+                    {(ir.summary.business_summary.base_approval_rate * 100).toFixed(1)}% → {(ir.summary.business_summary.candidate_approval_rate * 100).toFixed(1)}%
+                    {" · "}
+                    {ir.summary.business_summary.net_funded_loans_change > 0 ? "+" : ""}
+                    {ir.summary.business_summary.net_funded_loans_change.toLocaleString()} loans funded
+                  </div>
+                  <div className="text-[10px] opacity-80">
+                    Net exposure change:{" "}
+                    {ir.summary.business_summary.net_exposure_change_usd >= 0 ? "+" : "−"}
+                    ${Math.abs(ir.summary.business_summary.net_exposure_change_usd).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    {ir.summary.business_summary.top_changed_segment
+                      ? ` · biggest swing in ${ir.summary.business_summary.top_changed_segment.replaceAll("_", " ")}`
+                      : ""}
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-3 gap-2 text-xs">
                 <div className="rounded-md bg-muted/30 p-2">
                   <div className="text-[10px] uppercase text-muted-foreground">

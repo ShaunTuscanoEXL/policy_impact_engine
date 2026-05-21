@@ -264,6 +264,8 @@ async def execute_test_suite(
             db,
             suite_id=_uuid.UUID(suite_id),
             version_id=_uuid.UUID(body.version_id),
+            executed_by=body.executed_by,
+            rationale=body.rationale,
         )
     except ValueError as e:
         raise HTTPException(404, str(e))
@@ -359,4 +361,6 @@ async def _build_suite_response(suite, rule_set_name: str | None, db: AsyncSessi
         last_executed_against_version_id=str(suite.last_executed_against_version_id) if suite.last_executed_against_version_id else None,
         is_stale=is_stale,
         rule_set_last_modified_at=rs_lm.isoformat() if rs_lm else None,
+        last_executed_by=getattr(suite, "last_executed_by", None),
+        last_execution_rationale=getattr(suite, "last_execution_rationale", None),
     )

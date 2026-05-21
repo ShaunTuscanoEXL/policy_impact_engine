@@ -65,6 +65,11 @@ class RuleSet(Base):
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow,
     )
 
+    # ── Slice 1: decision attribution ───────────────────────────────────
+    approved_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    approval_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     brd_document = relationship("BrdDocument", back_populates="rule_sets")
     rules = relationship("Rule", back_populates="rule_set", cascade="all, delete-orphan")
     test_case_suites = relationship("TestCaseSuite", back_populates="rule_set", cascade="all, delete-orphan")
@@ -115,5 +120,13 @@ class Rule(Base):
     )
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    # ── Slice 7: policy intent + regulatory citation ────────────────────
+    # Free-text fields populated by the reviewer (no LLM auto-fill).
+    # Surfaced on the rule editor, the merge workbench rule panel,
+    # and the audit timeline so future reviewers know why the rule
+    # exists and which regulation/policy doc backs it.
+    policy_intent: Mapped[str | None] = mapped_column(Text, nullable=True)
+    regulatory_citation: Mapped[str | None] = mapped_column(String(256), nullable=True)
 
     rule_set = relationship("RuleSet", back_populates="rules")

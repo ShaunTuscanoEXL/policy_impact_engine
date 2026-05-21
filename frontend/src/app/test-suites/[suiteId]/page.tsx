@@ -145,6 +145,8 @@ export default function TestSuiteDetailPage() {
           <SuiteExecutionPanel
             report={suite.last_execution_report}
             executedAt={suite.last_executed_at ?? null}
+            executedBy={suite.last_executed_by ?? null}
+            executionRationale={suite.last_execution_rationale ?? null}
           />
         )}
 

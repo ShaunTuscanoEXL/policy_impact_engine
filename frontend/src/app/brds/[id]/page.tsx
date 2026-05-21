@@ -14,6 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { PageTransition } from "@/components/page-transition";
+import { DecisionDialog } from "@/components/decision-dialog";
+import { AuditTimeline } from "@/components/audit/audit-timeline";
 
 export default function BrdDetailPage() {
   const params = useParams<{ id: string }>();
@@ -155,59 +157,78 @@ export default function BrdDetailPage() {
   }, [workflow, testCaseCounts, maxMatches, fetchWorkflow]);
 
   const [suiteExecuting, setSuiteExecuting] = useState(false);
-  const handleExecuteSuite = useCallback(async () => {
-    const suiteId = workflow?.test_case_suite?.id ?? testCaseSuiteId;
-    const lv = workflow?.live_repo_version;
-    if (!suiteId || !lv) return;
-    setSuiteExecuting(true);
-    try {
-      const { data } = await api.post(`/test-cases/${suiteId}/execute`, {
-        version_id: lv.version_id,
-      });
-      const passed = data.summary?.matches_expected ?? 0;
-      const failed = data.summary?.deviates_from_expected ?? 0;
-      toast.success(
-        failed === 0
-          ? `Suite executed: all ${passed.toLocaleString()} matched outcomes are as expected.`
-          : `Suite executed: ${passed.toLocaleString()} matched, ${failed.toLocaleString()} deviated.`,
-      );
-      await fetchWorkflow();
-    } catch (err: any) {
-      toast.error(
-        err?.response?.data?.detail || "Failed to execute test suite.",
-      );
-    } finally {
-      setSuiteExecuting(false);
-    }
-  }, [workflow, testCaseSuiteId, fetchWorkflow]);
+  const [executeDialogOpen, setExecuteDialogOpen] = useState(false);
+  const handleExecuteSuiteConfirm = useCallback(
+    async ({ actor, rationale }: { actor: string; rationale: string }) => {
+      const suiteId = workflow?.test_case_suite?.id ?? testCaseSuiteId;
+      const lv = workflow?.live_repo_version;
+      if (!suiteId || !lv) return;
+      setSuiteExecuting(true);
+      try {
+        const { data } = await api.post(`/test-cases/${suiteId}/execute`, {
+          version_id: lv.version_id,
+          executed_by: actor,
+          rationale: rationale || null,
+        });
+        const passed = data.summary?.matches_expected ?? 0;
+        const failed = data.summary?.deviates_from_expected ?? 0;
+        toast.success(
+          failed === 0
+            ? `Executed by ${actor}: all ${passed.toLocaleString()} matched outcomes are as expected.`
+            : `Executed by ${actor}: ${passed.toLocaleString()} matched, ${failed.toLocaleString()} deviated.`,
+        );
+        setExecuteDialogOpen(false);
+        await fetchWorkflow();
+      } catch (err: any) {
+        toast.error(
+          err?.response?.data?.detail || "Failed to execute test suite.",
+        );
+      } finally {
+        setSuiteExecuting(false);
+      }
+    },
+    [workflow, testCaseSuiteId, fetchWorkflow],
+  );
+  const handleExecuteSuite = useCallback(() => {
+    setExecuteDialogOpen(true);
+  }, []);
 
   const [impactRunning, setImpactRunning] = useState(false);
-  const handleRunImpact = useCallback(async () => {
-    const lv = workflow?.live_repo_version;
-    if (!lv) return;
-    setImpactRunning(true);
-    try {
-      const payload: Record<string, any> = {
-        repository_id: lv.repository_id,
-        candidate_version_id: lv.version_id,
-        created_by: "brd-pipeline",
-      };
-      if (lv.parent_version_id) {
-        payload.base_version_id = lv.parent_version_id;
+  const [impactDialogOpen, setImpactDialogOpen] = useState(false);
+  const handleRunImpactConfirm = useCallback(
+    async ({ actor, rationale }: { actor: string; rationale: string }) => {
+      const lv = workflow?.live_repo_version;
+      if (!lv) return;
+      setImpactRunning(true);
+      try {
+        const payload: Record<string, any> = {
+          repository_id: lv.repository_id,
+          candidate_version_id: lv.version_id,
+          created_by: actor,
+          rationale: rationale || null,
+        };
+        if (lv.parent_version_id) {
+          payload.base_version_id = lv.parent_version_id;
+        }
+        const { data } = await api.post("/impact-run", payload);
+        toast.success(
+          `Impact analysis ${data.status === "COMPLETED" ? "complete" : "started"} by ${actor}.`,
+        );
+        setImpactDialogOpen(false);
+        await fetchWorkflow();
+      } catch (err: any) {
+        toast.error(
+          err?.response?.data?.detail || "Failed to start impact run.",
+        );
+      } finally {
+        setImpactRunning(false);
       }
-      const { data } = await api.post("/impact-run", payload);
-      toast.success(
-        `Impact analysis ${data.status === "COMPLETED" ? "complete" : "started"}.`,
-      );
-      await fetchWorkflow();
-    } catch (err: any) {
-      toast.error(
-        err?.response?.data?.detail || "Failed to start impact run.",
-      );
-    } finally {
-      setImpactRunning(false);
-    }
-  }, [workflow, fetchWorkflow]);
+    },
+    [workflow, fetchWorkflow],
+  );
+  const handleRunImpact = useCallback(() => {
+    setImpactDialogOpen(true);
+  }, []);
 
   if (loading) {
     return (
@@ -258,7 +279,37 @@ export default function BrdDetailPage() {
           onExecuteSuite={handleExecuteSuite}
           suiteExecuting={suiteExecuting}
         />
+
+        {/* Slice 3 — chronological audit log of every action taken on
+            this BRD: upload → extract → approve → merge → promote →
+            impact → execute. Surfaces the actor + rationale captured
+            by the DecisionDialog so reviewers can answer "who/why/when"
+            without leaving the page. */}
+        <AuditTimeline brdId={brd.id} title="BRD activity timeline" />
       </div>
+
+      {/* Impact + Execute decision dialogs — capture actor + optional
+          rationale so the audit timeline knows who/why. */}
+      <DecisionDialog
+        open={impactDialogOpen}
+        onOpenChange={setImpactDialogOpen}
+        title="Run impact analysis"
+        description="Compares the candidate version against the baseline across the loan corpus and records the decision flips. The rationale shows up in the impact run summary + per-BRD audit timeline."
+        confirmLabel="Run impact"
+        rationalePlaceholder="e.g. pre-promotion regression check before approving v2 for production"
+        loading={impactRunning}
+        onConfirm={handleRunImpactConfirm}
+      />
+      <DecisionDialog
+        open={executeDialogOpen}
+        onOpenChange={setExecuteDialogOpen}
+        title="Execute test suite"
+        description="Runs every test case against the live rule version using the matched loans. Captures who validated and (optionally) why."
+        confirmLabel="Execute suite"
+        rationalePlaceholder="e.g. validating the new FICO floor before sign-off"
+        loading={suiteExecuting}
+        onConfirm={handleExecuteSuiteConfirm}
+      />
     </PageTransition>
   );
 }

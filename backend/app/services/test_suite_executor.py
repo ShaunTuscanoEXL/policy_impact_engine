@@ -36,6 +36,8 @@ async def execute_suite_against_version(
     *,
     suite_id: uuid.UUID,
     version_id: uuid.UUID,
+    executed_by: str | None = None,
+    rationale: str | None = None,
 ) -> dict[str, Any]:
     """Run every test case in ``suite`` against ``version``'s rule
     snapshot using the matched_loan_ids that were resolved at generation
@@ -387,9 +389,42 @@ async def execute_suite_against_version(
     # Persist on the suite so the UI can show "X passing / Y failing"
     # without re-running every page load. Last-write-wins is fine — the
     # UI always shows the latest execution + the version it ran against.
+    actor = (executed_by or "system").strip()[:128] or "system"
+    note = (rationale.strip() if rationale else None) or None
     suite.last_execution_report = report
     suite.last_executed_at = datetime.utcnow()
     suite.last_executed_against_version_id = version.id
+    suite.last_executed_by = actor
+    suite.last_execution_rationale = note
     await db.commit()
+
+    # Audit event for the timeline.
+    try:
+        from app.services.audit_service import record_event
+        from app.models.audit_event import AuditAction, AuditEntityType
+        from app.models.rule import RuleSet as _RS
+
+        rs_q = await db.execute(select(_RS).where(_RS.id == suite.rule_set_id))
+        rs_row = rs_q.scalar_one_or_none()
+        brd_id = rs_row.brd_document_id if rs_row else None
+
+        await record_event(
+            db,
+            action=AuditAction.SUITE_EXECUTED,
+            entity_type=AuditEntityType.TEST_SUITE,
+            entity_id=suite.id,
+            actor=actor,
+            rationale=note,
+            brd_id=brd_id,
+            repository_id=version.repository_id,
+            metadata={
+                "version_number": version.version_number,
+                "matches_expected": int(total_match),
+                "deviates_from_expected": int(total_dev),
+                "total_cases": int(report.get("total_cases") or 0),
+            },
+        )
+    except Exception:
+        pass
 
     return report

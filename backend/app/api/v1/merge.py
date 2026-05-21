@@ -17,11 +17,14 @@ from app.schemas.merge import (
     CreateMergeProposalRequest,
     MergeApplyRequest,
     MergeApplyResponse,
+    MergeBatchUpdateRequest,
+    MergeBatchUpdateResponse,
     MergeItemResponse,
     MergeItemUpdateRequest,
     MergeProposalResponse,
     MergeRulePayload,
 )
+from app.models.merge import MergeItemCategory
 from app.services import live_repo_service as svc
 
 router = APIRouter(prefix="/merge-proposal", tags=["Merge Proposals"])
@@ -178,6 +181,7 @@ def _proposal_to_response_with_items(proposal, items: list[MergeItemResponse]) -
         summary=proposal.summary,
         decided_by=proposal.decided_by,
         decided_at=proposal.decided_at.isoformat() if proposal.decided_at else None,
+        decision_rationale=getattr(proposal, "decision_rationale", None),
         created_at=proposal.created_at.isoformat(),
         items=items,
         counts_by_category=counts_cat,
@@ -259,6 +263,57 @@ async def update_item(
     return _item_to_response(item)
 
 
+@router.post("/{proposal_id}/batch-update", response_model=MergeBatchUpdateResponse)
+async def batch_update_items(
+    proposal_id: uuid.UUID,
+    payload: MergeBatchUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Slice 6 — apply a single user_action to every item matching the
+    severity / category filter. Skips items that already have a
+    user_action unless `overwrite_existing=True`."""
+    try:
+        action = MergeSuggestedAction(payload.user_action.upper())
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid user_action: {payload.user_action}",
+        )
+    severity = None
+    if payload.severity:
+        try:
+            severity = MergeItemSeverity(payload.severity.upper())
+        except ValueError:
+            raise HTTPException(
+                status_code=400, detail=f"Invalid severity: {payload.severity}",
+            )
+    category = None
+    if payload.category:
+        try:
+            category = MergeItemCategory(payload.category.upper())
+        except ValueError:
+            raise HTTPException(
+                status_code=400, detail=f"Invalid category: {payload.category}",
+            )
+    try:
+        updated, skipped_existing, skipped_unmatched = await svc.batch_update_proposal_items(
+            db,
+            proposal_id=proposal_id,
+            user_action=action,
+            severity=severity,
+            category=category,
+            overwrite_existing=payload.overwrite_existing,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return MergeBatchUpdateResponse(
+        updated=updated,
+        skipped_existing=skipped_existing,
+        skipped_unmatched=skipped_unmatched,
+        user_action=action.value,
+    )
+
+
 @router.post("/{proposal_id}/apply", response_model=MergeApplyResponse)
 async def apply_proposal(
     proposal_id: uuid.UUID,
@@ -267,7 +322,10 @@ async def apply_proposal(
 ):
     try:
         new_version, blockers = await svc.apply_merge_proposal(
-            db, proposal_id=proposal_id, decided_by=payload.decided_by
+            db,
+            proposal_id=proposal_id,
+            decided_by=payload.decided_by,
+            rationale=payload.rationale,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

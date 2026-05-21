@@ -93,15 +93,43 @@ async def get_rule_set(rule_set_id: str, db: AsyncSession) -> RuleSet | None:
     return result.scalar_one_or_none()
 
 
-async def approve_rule_set(rule_set_id: str, db: AsyncSession) -> RuleSet | None:
+async def approve_rule_set(
+    rule_set_id: str,
+    db: AsyncSession,
+    *,
+    approved_by: str | None = None,
+    approval_notes: str | None = None,
+) -> RuleSet | None:
     rs = await get_rule_set(rule_set_id, db)
     if not rs:
         return None
     rs.status = RuleSetStatus.APPROVED
+    rs.approved_by = (approved_by.strip() if approved_by else None) or "reviewer"
+    rs.approved_at = datetime.utcnow()
+    rs.approval_notes = (approval_notes.strip() if approval_notes else None) or None
     await db.commit()
-    # Trigger downstream sync — approval often follows edits, so we
-    # need to make sure the merge proposal reflects the final state
-    # before the user opens the workbench.
+
+    # Audit event for the per-BRD timeline.
+    try:
+        from app.services.audit_service import record_event
+        from app.models.audit_event import AuditAction, AuditEntityType
+        await record_event(
+            db,
+            action=AuditAction.RULE_SET_APPROVED,
+            entity_type=AuditEntityType.RULE_SET,
+            entity_id=rs.id,
+            actor=rs.approved_by,
+            rationale=rs.approval_notes,
+            brd_id=rs.brd_document_id,
+            metadata={
+                "rule_set_id": str(rs.id),
+                "version": rs.version,
+                "rule_count": len(rs.rules),
+            },
+        )
+    except Exception as e:
+        logger.warning("Audit event for rule_set approval failed: %s", e)
+
     await on_rule_set_modified(db, rs.id)
     await db.refresh(rs)
     return rs

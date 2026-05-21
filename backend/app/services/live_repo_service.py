@@ -230,13 +230,9 @@ async def promote_version_to_production(
     repository_id: uuid.UUID,
     version_number: int,
     promoted_by: str | None = None,
+    rationale: str | None = None,
 ) -> tuple[LiveRuleRepository, LiveRuleVersion]:
-    """Mark a specific version as production-live for the repository.
-
-    The version stays where it is (no data movement) — we just flip a
-    pointer + timestamp on the repo. Idempotent: promoting the already-
-    production version updates only the timestamp + actor.
-    """
+    """Mark a specific version as production-live for the repository."""
     repo = await db.get(LiveRuleRepository, repository_id)
     if repo is None:
         raise ValueError(f"Repository {repository_id} not found")
@@ -248,12 +244,41 @@ async def promote_version_to_production(
     if version_number == 0:
         raise ValueError("Cannot promote v0 (empty seed) to production.")
 
+    previous_version_id = repo.production_version_id
     repo.production_version_id = version.id
     repo.production_promoted_at = datetime.utcnow()
-    repo.production_promoted_by = promoted_by or "system"
+    repo.production_promoted_by = (promoted_by or "system").strip()[:128] or "system"
+    repo.production_promotion_rationale = (
+        (rationale.strip() if rationale else None) or None
+    )
     repo.updated_at = datetime.utcnow()
     await db.commit()
     await db.refresh(repo)
+
+    # Audit event.
+    try:
+        from app.services.audit_service import record_event
+        from app.models.audit_event import AuditAction, AuditEntityType
+        await record_event(
+            db,
+            action=AuditAction.VERSION_PROMOTED,
+            entity_type=AuditEntityType.LIVE_VERSION,
+            entity_id=version.id,
+            actor=repo.production_promoted_by,
+            rationale=repo.production_promotion_rationale,
+            brd_id=version.source_brd_id,
+            repository_id=repo.id,
+            metadata={
+                "version_number": version.version_number,
+                "previous_production_version_id": (
+                    str(previous_version_id) if previous_version_id else None
+                ),
+                "rule_count": len(version.rule_snapshot or []),
+            },
+        )
+    except Exception:
+        pass
+
     return repo, version
 
 
@@ -680,6 +705,47 @@ async def update_proposal_item(
     return item
 
 
+async def batch_update_proposal_items(
+    db: AsyncSession,
+    *,
+    proposal_id: uuid.UUID,
+    user_action: MergeSuggestedAction,
+    severity: MergeItemSeverity | None = None,
+    category=None,  # MergeItemCategory enum or None
+    overwrite_existing: bool = False,
+) -> tuple[int, int, int]:
+    """Slice 6 — apply `user_action` to every item on `proposal_id` that
+    matches the optional severity/category filters. Returns
+    (updated, skipped_existing, skipped_unmatched).
+    """
+    proposal_q = await db.execute(
+        select(MergeProposal)
+        .options(selectinload(MergeProposal.items))
+        .where(MergeProposal.id == proposal_id)
+    )
+    proposal = proposal_q.scalar_one_or_none()
+    if proposal is None:
+        raise ValueError(f"Merge proposal {proposal_id} not found")
+
+    updated = 0
+    skipped_existing = 0
+    skipped_unmatched = 0
+    for item in proposal.items:
+        sev_match = (severity is None) or item.severity == severity
+        cat_match = (category is None) or item.category == category
+        if not (sev_match and cat_match):
+            skipped_unmatched += 1
+            continue
+        if item.user_action is not None and not overwrite_existing:
+            skipped_existing += 1
+            continue
+        item.user_action = user_action
+        updated += 1
+    if updated:
+        await db.commit()
+    return updated, skipped_existing, skipped_unmatched
+
+
 # ── Apply (promote merge to a new version) ───────────────────────────────
 
 def _effective_action(item: MergeProposalItem) -> MergeSuggestedAction:
@@ -703,6 +769,7 @@ async def apply_merge_proposal(
     *,
     proposal_id: uuid.UUID,
     decided_by: str | None = None,
+    rationale: str | None = None,
 ) -> tuple[LiveRuleVersion | None, list[MergeProposalItem]]:
     """Apply an approved MergeProposal: produce a new LiveRuleVersion,
     rebuild LiveRuleEntry table, return the new version.
@@ -826,11 +893,50 @@ async def apply_merge_proposal(
     # v2+ candidates require explicit promotion.
     await auto_promote_first_version(db, repo, new_version)
     proposal.status = MergeProposalStatus.APPLIED
-    proposal.decided_by = decided_by
+    proposal.decided_by = (decided_by or "reviewer").strip()[:128] or "reviewer"
     proposal.decided_at = datetime.utcnow()
+    proposal.decision_rationale = (
+        (rationale.strip() if rationale else None) or None
+    )
+    if proposal.decision_rationale and new_version.summary:
+        new_version.summary = (
+            f"{new_version.summary}\n\nApplied by {proposal.decided_by}: "
+            f"{proposal.decision_rationale}"
+        )
+    elif proposal.decision_rationale:
+        new_version.summary = (
+            f"Applied by {proposal.decided_by}: {proposal.decision_rationale}"
+        )
 
     await db.commit()
     await db.refresh(new_version)
+
+    # Audit event for the per-BRD + per-repo timeline.
+    try:
+        from app.services.audit_service import record_event
+        from app.models.audit_event import AuditAction, AuditEntityType
+        item_summary = {"items_total": len(proposal.items)}
+        for it in proposal.items:
+            sev = it.severity.value if hasattr(it.severity, "value") else str(it.severity)
+            item_summary[f"sev_{sev}"] = item_summary.get(f"sev_{sev}", 0) + 1
+        await record_event(
+            db,
+            action=AuditAction.MERGE_PROPOSAL_APPLIED,
+            entity_type=AuditEntityType.MERGE_PROPOSAL,
+            entity_id=proposal.id,
+            actor=proposal.decided_by,
+            rationale=proposal.decision_rationale,
+            brd_id=proposal.source_brd_id,
+            repository_id=proposal.repository_id,
+            metadata={
+                "new_version_number": new_version.version_number,
+                "new_version_id": str(new_version.id),
+                **item_summary,
+            },
+        )
+    except Exception:
+        pass
+
     return new_version, []
 
 

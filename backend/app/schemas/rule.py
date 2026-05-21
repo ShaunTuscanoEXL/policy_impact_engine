@@ -57,6 +57,9 @@ class RuleResponse(BaseModel):
     compiled_expression: str | None
     has_conflicts: bool
     conflict_details: dict | None
+    # Slice 7: optional governance metadata.
+    policy_intent: str | None = None
+    regulatory_citation: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -70,8 +73,19 @@ class RuleSetResponse(BaseModel):
     status: str
     rules: list[RuleResponse] = []
     created_at: str
+    # Slice 1: decision attribution.
+    approved_by: str | None = None
+    approved_at: str | None = None
+    approval_notes: str | None = None
 
     model_config = {"from_attributes": True}
+
+
+class ApproveRuleSetRequest(BaseModel):
+    """Body for `PATCH /rule-sets/{id}/approve`. All fields optional —
+    the approve action still works with an empty body for back-compat."""
+    approved_by: str | None = None
+    approval_notes: str | None = None
 
 
 class RuleUpdateRequest(BaseModel):
@@ -81,3 +95,7 @@ class RuleUpdateRequest(BaseModel):
     conditions: list[Condition] | None = None
     actions: list[Action] | None = None
     priority: int | None = None
+    # Slice 7: governance metadata — policy team can fill these in
+    # after extraction.
+    policy_intent: str | None = None
+    regulatory_citation: str | None = None

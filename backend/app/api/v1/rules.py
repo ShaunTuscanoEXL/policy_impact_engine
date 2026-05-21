@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.services import rule_service
 from app.schemas.rule import (
+    ApproveRuleSetRequest,
     RuleResponse,
     RuleSetResponse,
     RuleUpdateRequest,
@@ -21,6 +22,9 @@ def _rule_set_to_response(rs) -> RuleSetResponse:
         description=rs.description,
         status=rs.status.value,
         created_at=rs.created_at.isoformat(),
+        approved_by=getattr(rs, "approved_by", None),
+        approved_at=rs.approved_at.isoformat() if getattr(rs, "approved_at", None) else None,
+        approval_notes=getattr(rs, "approval_notes", None),
         rules=[
             RuleResponse(
                 id=str(r.id),
@@ -37,6 +41,8 @@ def _rule_set_to_response(rs) -> RuleSetResponse:
                 compiled_expression=r.compiled_expression,
                 has_conflicts=r.has_conflicts,
                 conflict_details=r.conflict_details,
+                policy_intent=getattr(r, "policy_intent", None),
+                regulatory_citation=getattr(r, "regulatory_citation", None),
             )
             for r in rs.rules
         ],
@@ -59,6 +65,8 @@ def _rule_to_response(r) -> RuleResponse:
         compiled_expression=r.compiled_expression,
         has_conflicts=r.has_conflicts,
         conflict_details=r.conflict_details,
+        policy_intent=getattr(r, "policy_intent", None),
+        regulatory_citation=getattr(r, "regulatory_citation", None),
     )
 
 
@@ -80,8 +88,17 @@ async def get_rule_set(rule_set_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.patch("/rule-sets/{rule_set_id}/approve", response_model=RuleSetResponse)
-async def approve_rule_set(rule_set_id: str, db: AsyncSession = Depends(get_db)):
-    rs = await rule_service.approve_rule_set(rule_set_id, db)
+async def approve_rule_set(
+    rule_set_id: str,
+    body: ApproveRuleSetRequest | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    rs = await rule_service.approve_rule_set(
+        rule_set_id,
+        db,
+        approved_by=(body.approved_by if body else None),
+        approval_notes=(body.approval_notes if body else None),
+    )
     if not rs:
         raise HTTPException(404, "Rule set not found")
     return _rule_set_to_response(rs)

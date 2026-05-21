@@ -12,6 +12,7 @@ from app.api.v1.loan_records import router as loan_records_router
 from app.api.v1.live_repo import router as live_repo_router
 from app.api.v1.merge import router as merge_router
 from app.api.v1.impact import router as impact_router
+from app.api.v1.audit import router as audit_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -22,6 +23,7 @@ async def lifespan(app: FastAPI):
     import app.models.live_repo  # registers LiveRuleRepository / Version / Entry
     import app.models.merge      # registers MergeProposal / MergeProposalItem
     import app.models.impact     # registers ImpactRun
+    import app.models.audit_event  # registers AuditEvent
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         # Additive auto-migrations — new columns added in later slices that
@@ -401,6 +403,28 @@ async def _apply_additive_migrations(conn) -> None:
         "UPDATE rule_sets SET last_modified_at = created_at "
         "WHERE last_modified_at >= created_at + INTERVAL '1 hour' "
         "OR last_modified_at IS NULL",
+        # Slice 1: decision attribution columns.
+        "ALTER TABLE rule_sets "
+        "ADD COLUMN IF NOT EXISTS approved_by VARCHAR(128) NULL",
+        "ALTER TABLE rule_sets "
+        "ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP NULL",
+        "ALTER TABLE rule_sets "
+        "ADD COLUMN IF NOT EXISTS approval_notes TEXT NULL",
+        "ALTER TABLE test_case_suites "
+        "ADD COLUMN IF NOT EXISTS last_executed_by VARCHAR(128) NULL",
+        "ALTER TABLE test_case_suites "
+        "ADD COLUMN IF NOT EXISTS last_execution_rationale TEXT NULL",
+        "ALTER TABLE merge_proposals "
+        "ADD COLUMN IF NOT EXISTS decision_rationale TEXT NULL",
+        "ALTER TABLE live_rule_repositories "
+        "ADD COLUMN IF NOT EXISTS production_promotion_rationale TEXT NULL",
+        "ALTER TABLE impact_runs "
+        "ADD COLUMN IF NOT EXISTS rationale TEXT NULL",
+        # Slice 7: policy intent + regulatory citation per rule.
+        "ALTER TABLE rules "
+        "ADD COLUMN IF NOT EXISTS policy_intent TEXT NULL",
+        "ALTER TABLE rules "
+        "ADD COLUMN IF NOT EXISTS regulatory_citation VARCHAR(256) NULL",
     ]
     for stmt in statements:
         try:
@@ -430,6 +454,7 @@ app.include_router(loan_records_router, prefix="/api/v1")
 app.include_router(live_repo_router, prefix="/api/v1")
 app.include_router(merge_router, prefix="/api/v1")
 app.include_router(impact_router, prefix="/api/v1")
+app.include_router(audit_router, prefix="/api/v1")
 
 
 @app.get("/health")

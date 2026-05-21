@@ -10,6 +10,12 @@ interface ProductionBadgeProps {
   className?: string;
   /** Optional override label for non-standard contexts ("LIVE", "ACTIVE"). */
   label?: string;
+  /** Slice 1 — promotion attribution. When provided, the chip's hover
+   *  tooltip shows "Promoted by X on Y · 'rationale'" so reviewers can
+   *  see who put this version in production without leaving the page. */
+  promotedBy?: string | null;
+  promotedAt?: string | null;
+  rationale?: string | null;
 }
 
 /**
@@ -17,7 +23,23 @@ interface ProductionBadgeProps {
  * production". Used everywhere a version_number is rendered so the
  * production version is unambiguous at a glance.
  */
-export function ProductionBadge({ size = "sm", className, label = "PRODUCTION" }: ProductionBadgeProps) {
+export function ProductionBadge({
+  size = "sm",
+  className,
+  label = "PRODUCTION",
+  promotedBy,
+  promotedAt,
+  rationale,
+}: ProductionBadgeProps) {
+  const titleParts: string[] = ["This version is currently live in production"];
+  if (promotedBy || promotedAt) {
+    const when = promotedAt ? new Date(promotedAt).toLocaleString() : "";
+    const who = promotedBy ? `Promoted by ${promotedBy}` : "Promoted";
+    titleParts.push(`${who}${when ? ` on ${when}` : ""}`);
+  }
+  if (rationale) {
+    titleParts.push(`Reason: ${rationale}`);
+  }
   return (
     <span
       className={cn(
@@ -28,7 +50,7 @@ export function ProductionBadge({ size = "sm", className, label = "PRODUCTION" }
           : "px-2.5 py-1 text-[11px] shadow-sm",
         className
       )}
-      title="This version is currently live in production"
+      title={titleParts.join("\n")}
     >
       <CheckCircle2 className={cn(size === "sm" ? "size-2.5" : "size-3.5")} />
       {label}

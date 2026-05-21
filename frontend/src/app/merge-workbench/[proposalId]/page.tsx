@@ -16,6 +16,8 @@ import { toast } from "sonner";
 import { PageTransition } from "@/components/page-transition";
 import { PipelineContextBar } from "@/components/brds/pipeline/pipeline-context-bar";
 import { motion } from "framer-motion";
+import { DecisionDialog } from "@/components/decision-dialog";
+import { BulkActionsToolbar } from "@/components/merge-workbench/bulk-actions-toolbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +48,7 @@ import {
   FileText,
   GitBranch,
   Sparkles,
+  Clock,
 } from "lucide-react";
 
 const ACTION_OPTIONS: MergeAction[] = [
@@ -356,7 +359,6 @@ export default function MergeWorkbenchDetailPage() {
   const [notesDraft, setNotesDraft] = useState<Record<string, string>>({});
 
   const [applyOpen, setApplyOpen] = useState(false);
-  const [decidedBy, setDecidedBy] = useState("");
   const [applying, setApplying] = useState(false);
   const [repo, setRepo] = useState<LiveRepository | null>(null);
   const [brd, setBrd] = useState<BrdDocument | null>(null);
@@ -466,36 +468,39 @@ export default function MergeWorkbenchDetailPage() {
     return unresolvedBlockers.length === 0;
   }, [proposal, unresolvedBlockers]);
 
-  const handleApply = useCallback(async () => {
-    if (!proposal) return;
-    if (!decidedBy.trim()) {
-      toast.error("Please enter your name.");
-      return;
-    }
-    setApplying(true);
-    try {
-      const { data } = await api.post<MergeApplyResult>(
-        `/merge-proposal/${proposalId}/apply`,
-        { decided_by: decidedBy.trim() }
-      );
-      if (data.applied) {
-        toast.success(
-          `Applied — created v${data.new_version_number ?? "?"}.`
+  const handleApplyConfirm = useCallback(
+    async ({ actor, rationale }: { actor: string; rationale: string }) => {
+      if (!proposal) return;
+      setApplying(true);
+      try {
+        const { data } = await api.post<MergeApplyResult>(
+          `/merge-proposal/${proposalId}/apply`,
+          {
+            decided_by: actor,
+            rationale: rationale || null,
+          }
         );
-        setApplyOpen(false);
-        router.push(`/live-repo/${proposal.repository_id}`);
-      } else {
-        toast.error(
-          data.summary || `Cannot apply — ${data.blockers.length} blocker(s).`
-        );
-        await fetchProposal();
+        if (data.applied) {
+          toast.success(
+            `Applied as v${data.new_version_number ?? "?"} by ${actor}.`
+          );
+          setApplyOpen(false);
+          router.push(`/live-repo/${proposal.repository_id}`);
+        } else {
+          toast.error(
+            data.summary ||
+              `Cannot apply — ${data.blockers.length} blocker(s).`
+          );
+          await fetchProposal();
+        }
+      } catch (err: any) {
+        toast.error(err?.response?.data?.detail || "Failed to apply proposal.");
+      } finally {
+        setApplying(false);
       }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.detail || "Failed to apply proposal.");
-    } finally {
-      setApplying(false);
-    }
-  }, [proposal, proposalId, decidedBy, router, fetchProposal]);
+    },
+    [proposal, proposalId, router, fetchProposal],
+  );
 
   if (loading) {
     return (
@@ -575,6 +580,30 @@ export default function MergeWorkbenchDetailPage() {
                     : `Repo ${proposal.repository_id.slice(0, 8)}`}
                 </Link>
                 <span>Base: v{proposal.base_version}</span>
+                {/* Slice 9 — days-pending counter for visual urgency.
+                    Renders only on PENDING proposals; older = redder. */}
+                {proposal.status === "PENDING" && (() => {
+                  const created = new Date(proposal.created_at);
+                  const days = Math.floor(
+                    (Date.now() - created.getTime()) / (1000 * 60 * 60 * 24),
+                  );
+                  if (days < 1) return null;
+                  const tone =
+                    days >= 7
+                      ? "bg-rose-500/15 text-rose-700 ring-rose-500/40 dark:text-rose-300"
+                      : days >= 3
+                        ? "bg-amber-500/15 text-amber-700 ring-amber-500/40 dark:text-amber-300"
+                        : "bg-blue-500/15 text-blue-700 ring-blue-500/30 dark:text-blue-300";
+                  return (
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ring-1 ring-inset ${tone}`}
+                      title={`Created ${created.toLocaleString()}`}
+                    >
+                      <Clock className="size-3" />
+                      Pending {days} day{days !== 1 ? "s" : ""}
+                    </span>
+                  );
+                })()}
               </div>
 
               {proposal.summary && (
@@ -585,55 +614,31 @@ export default function MergeWorkbenchDetailPage() {
             </div>
           </div>
 
-          <Dialog open={applyOpen} onOpenChange={setApplyOpen}>
-            <Button
-              variant="default"
-              disabled={!canApply}
-              title={
-                canApply
-                  ? "Apply this proposal"
-                  : proposal.status !== "PENDING"
-                  ? `Already ${proposal.status.toLowerCase()}`
-                  : "Resolve all hard blockers first"
-              }
-              onClick={() => setApplyOpen(true)}
-            >
-              <Sparkles className="size-4" />
-              Apply Merge
-            </Button>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Apply Merge Proposal</DialogTitle>
-                <DialogDescription>
-                  Applying creates a new live repository version. Enter your
-                  name to record who approved this change.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-1.5 py-2">
-                <label className="text-xs font-medium">Decided By</label>
-                <Input
-                  value={decidedBy}
-                  onChange={(e) => setDecidedBy(e.target.value)}
-                  placeholder="e.g., jane.doe@example.com"
-                />
-              </div>
-              <DialogFooter>
-                <DialogClose render={<Button variant="outline" />}>
-                  Cancel
-                </DialogClose>
-                <Button
-                  variant="default"
-                  onClick={handleApply}
-                  disabled={applying}
-                >
-                  {applying && (
-                    <Loader2 className="mr-2 size-4 animate-spin" />
-                  )}
-                  Apply
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button
+            variant="default"
+            disabled={!canApply}
+            title={
+              canApply
+                ? "Apply this proposal"
+                : proposal.status !== "PENDING"
+                ? `Already ${proposal.status.toLowerCase()}`
+                : "Resolve all hard blockers first"
+            }
+            onClick={() => setApplyOpen(true)}
+          >
+            <Sparkles className="size-4" />
+            Apply Merge
+          </Button>
+          <DecisionDialog
+            open={applyOpen}
+            onOpenChange={setApplyOpen}
+            title="Apply merge proposal"
+            description={`Creates v${(proposal.base_version ?? 0) + 1} of the live repository from this proposal. Records who applied + an audit-log reason.`}
+            confirmLabel="Apply merge"
+            rationalePlaceholder="e.g. all SOFT items reviewed; impact run within tolerance vs prod baseline"
+            loading={applying}
+            onConfirm={handleApplyConfirm}
+          />
         </div>
 
         {/* Counts and Severity Legend */}
@@ -697,6 +702,18 @@ export default function MergeWorkbenchDetailPage() {
           </Card>
         </motion.div>
 
+        {/* Slice 6 — bulk actions toolbar above the per-item rows.
+            Only renders presets whose target group has items. */}
+        {proposal.status === "PENDING" && proposal.items.length > 0 && (
+          <BulkActionsToolbar
+            proposalId={proposal.id}
+            countsByCategory={proposal.counts_by_category}
+            countsBySeverity={proposal.counts_by_severity}
+            disabled={proposal.status !== "PENDING"}
+            onApplied={fetchProposal}
+          />
+        )}
+
         {/* Items */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -719,11 +736,23 @@ export default function MergeWorkbenchDetailPage() {
                 (item.user_action === null ||
                   item.user_action === "NEEDS_HUMAN" ||
                   item.user_action === "EDIT_NEEDED");
+              // Slice 9 — visual urgency:
+              //   • HARD severity gets a red left rail + a red ring
+              //   • Unresolved blockers get a "BLOCKS APPLY" chip
+              //   • SOFT severity gets a softer amber rail
+              const railClass =
+                item.severity === "HARD"
+                  ? "border-l-4 border-l-rose-500"
+                  : item.severity === "SOFT"
+                    ? "border-l-4 border-l-amber-500"
+                    : "border-l-4 border-l-transparent";
               return (
                 <Card
                   key={item.id}
-                  className={`card-elevated border-border/40 p-4 ${
-                    isUnresolvedBlocker ? "ring-1 ring-red-500/30" : ""
+                  className={`card-elevated border-border/40 p-4 ${railClass} ${
+                    isUnresolvedBlocker
+                      ? "ring-2 ring-rose-500/40 shadow-rose-500/10"
+                      : ""
                   }`}
                 >
                   <div className="space-y-3">
@@ -739,6 +768,14 @@ export default function MergeWorkbenchDetailPage() {
                         >
                           {item.severity}
                         </Badge>
+                        {/* Slice 9 — explicit "this is what's holding
+                            up apply" chip for HARD + unresolved items. */}
+                        {isUnresolvedBlocker && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-rose-700 ring-1 ring-inset ring-rose-500/40 dark:text-rose-300 animate-pulse">
+                            <AlertTriangle className="size-3" />
+                            Blocks apply
+                          </span>
+                        )}
                         {item.canonical_key && (
                           <span className="font-mono text-xs text-muted-foreground">
                             {item.canonical_key}
