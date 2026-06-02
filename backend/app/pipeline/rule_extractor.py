@@ -32,6 +32,7 @@ from openai import AzureOpenAI, OpenAI
 from app.config import settings
 from app.pipeline.schemas import DocumentSection
 from app.schemas.rule import Action, Condition, RuleDefinition, RuleTypeEnum
+from langchain_anthropic import ChatAnthropic
 
 logger = logging.getLogger(__name__)
 
@@ -238,6 +239,20 @@ def _build_client():
         )
         model = settings.azure_openai_deployment
         logger.info("LLM: Azure OpenAI (%s)", model)
+    
+    if settings.llm_provider.lower() == "claude":
+        client = ChatAnthropic(
+            model=settings.azure_openai_deployment,
+            anthropic_api_key=settings.claude_api_key,
+            anthropic_api_url=  settings.azure_openai_endpoint,
+            temperature=0.1,
+            # max_tokens=6000,
+            timeout=None,
+            max_retries=2,
+        )
+        model = settings.azure_openai_deployment
+        logger.info("LLM: Azure OpenAI (%s)", model)
+        print("LLM: Azure OpenAI (%s)", model)
     else:
         if not settings.openai_api_key:
             logger.error("OpenAI: missing API key")
@@ -554,21 +569,30 @@ def _call_llm(client, model: str, messages: list[dict]) -> str:
                 # Newer models (gpt-4.1+, gpt-5+) require max_completion_tokens
                 # Older models use max_tokens. Try both.
                 try:
-                    response = client.chat.completions.create(
-                        model=model,
-                        temperature=0,
-                        max_completion_tokens=MAX_OUTPUT_TOKENS,
-                        messages=conversation,
-                    )
+                    if settings.llm_provider.lower() == "claude":
+                        response = client.invoke(conversation)
+
+                    else:
+                        response = client.chat.completions.create(
+                            model=model,
+                            max_completion_tokens=MAX_OUTPUT_TOKENS,
+                            messages=conversation,
+                        )
+
                 except Exception:
                     response = client.chat.completions.create(
                         model=model,
-                        temperature=0,
-                        max_tokens=MAX_OUTPUT_TOKENS,
+                        # temperature=0,
+                        max_completion_tokens=MAX_OUTPUT_TOKENS,
                         messages=conversation,
                     )
-                response_text = response.choices[0].message.content or ""
-                finish_reason = response.choices[0].finish_reason or "stop"
+
+                if settings.llm_provider.lower() == "claude":
+                    response_text = response.content or ""
+                    finish_reason = "stop"  
+                else:      
+                    response_text = response.choices[0].message.content or ""
+                    finish_reason = response.choices[0].finish_reason or "stop"
 
                 if response_text.strip():
                     break
