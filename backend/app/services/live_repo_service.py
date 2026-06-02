@@ -62,29 +62,27 @@ def serialize_rule(rule: Rule) -> dict[str, Any]:
 
 # ── Backfill / normalization ─────────────────────────────────────────────
 
-async def ensure_rule_classified(db: AsyncSession, rule: Rule) -> Rule:
-    """Populate subsystem, canonical_key, semantic_signature on a Rule
-    if any are missing. Idempotent — safe to call repeatedly."""
+async def ensure_rule_classified(
+    db: AsyncSession, rule: Rule, *, force: bool = False
+) -> Rule:
+    """Populate subsystem, canonical_key, semantic_signature on a Rule.
+
+    Idempotent — safe to call repeatedly. By default skips fields that
+    are already populated. With ``force=True`` re-runs the classifier
+    over current conditions/actions and overwrites — used by
+    ``on_rule_set_modified`` after a user edit so the canonical_key
+    stays in sync with the new contents."""
+    conds = rule.conditions if isinstance(rule.conditions, list) else []
+    acts = rule.actions if isinstance(rule.actions, list) else []
     changed = False
-    if not rule.subsystem or rule.subsystem == Subsystem.UNCLASSIFIED:
-        rule.subsystem = classify_subsystem(
-            rule.conditions if isinstance(rule.conditions, list) else [],
-            rule.actions if isinstance(rule.actions, list) else [],
-            rule.rule_type,
-        )
+    if force or not rule.subsystem or rule.subsystem == Subsystem.UNCLASSIFIED:
+        rule.subsystem = classify_subsystem(conds, acts, rule.rule_type)
         changed = True
-    if not rule.canonical_key:
-        rule.canonical_key = make_canonical_key(
-            rule.subsystem,
-            rule.conditions if isinstance(rule.conditions, list) else [],
-            rule.actions if isinstance(rule.actions, list) else [],
-        )
+    if force or not rule.canonical_key:
+        rule.canonical_key = make_canonical_key(rule.subsystem, conds, acts)
         changed = True
-    if not rule.semantic_signature:
-        rule.semantic_signature = make_semantic_signature(
-            rule.conditions if isinstance(rule.conditions, list) else [],
-            rule.actions if isinstance(rule.actions, list) else [],
-        )
+    if force or not rule.semantic_signature:
+        rule.semantic_signature = make_semantic_signature(conds, acts)
         changed = True
     if changed:
         await db.flush()
@@ -232,13 +230,9 @@ async def promote_version_to_production(
     repository_id: uuid.UUID,
     version_number: int,
     promoted_by: str | None = None,
+    rationale: str | None = None,
 ) -> tuple[LiveRuleRepository, LiveRuleVersion]:
-    """Mark a specific version as production-live for the repository.
-
-    The version stays where it is (no data movement) — we just flip a
-    pointer + timestamp on the repo. Idempotent: promoting the already-
-    production version updates only the timestamp + actor.
-    """
+    """Mark a specific version as production-live for the repository."""
     repo = await db.get(LiveRuleRepository, repository_id)
     if repo is None:
         raise ValueError(f"Repository {repository_id} not found")
@@ -250,12 +244,41 @@ async def promote_version_to_production(
     if version_number == 0:
         raise ValueError("Cannot promote v0 (empty seed) to production.")
 
+    previous_version_id = repo.production_version_id
     repo.production_version_id = version.id
     repo.production_promoted_at = datetime.utcnow()
-    repo.production_promoted_by = promoted_by or "system"
+    repo.production_promoted_by = (promoted_by or "system").strip()[:128] or "system"
+    repo.production_promotion_rationale = (
+        (rationale.strip() if rationale else None) or None
+    )
     repo.updated_at = datetime.utcnow()
     await db.commit()
     await db.refresh(repo)
+
+    # Audit event.
+    try:
+        from app.services.audit_service import record_event
+        from app.models.audit_event import AuditAction, AuditEntityType
+        await record_event(
+            db,
+            action=AuditAction.VERSION_PROMOTED,
+            entity_type=AuditEntityType.LIVE_VERSION,
+            entity_id=version.id,
+            actor=repo.production_promoted_by,
+            rationale=repo.production_promotion_rationale,
+            brd_id=version.source_brd_id,
+            repository_id=repo.id,
+            metadata={
+                "version_number": version.version_number,
+                "previous_production_version_id": (
+                    str(previous_version_id) if previous_version_id else None
+                ),
+                "rule_count": len(version.rule_snapshot or []),
+            },
+        )
+    except Exception:
+        pass
+
     return repo, version
 
 
@@ -572,6 +595,83 @@ async def build_merge_proposal(
     return refreshed.scalar_one()
 
 
+async def regenerate_proposal_items(
+    db: AsyncSession, *, proposal_id: uuid.UUID
+) -> MergeProposal | None:
+    """Re-run the merge engine for an existing PENDING proposal and
+    replace its items with a fresh diff. Useful when the underlying
+    rule_set changed (e.g. tier-rule fan-out added new rules) and the
+    proposal is now stale.
+
+    Only operates on PENDING proposals — APPLIED/REJECTED proposals are
+    immutable and re-running their diff would be misleading.
+    Preserves the proposal's id, repository_id, source_brd_id, and
+    source_rule_set_id so the URL / context bar stays valid.
+    """
+    proposal = await db.get(MergeProposal, proposal_id)
+    if proposal is None:
+        return None
+    if proposal.status != MergeProposalStatus.PENDING:
+        # Don't touch already-decided proposals.
+        return proposal
+
+    # Refresh the rule_set with its current rules
+    rs_q = await db.execute(
+        select(RuleSet)
+        .options(selectinload(RuleSet.rules))
+        .where(RuleSet.id == proposal.source_rule_set_id)
+    )
+    rule_set = rs_q.scalar_one_or_none()
+    if rule_set is None:
+        return proposal
+
+    for r in rule_set.rules:
+        await ensure_rule_classified(db, r)
+
+    head = await get_head_version(db, proposal.repository_id)
+    live_rules: list[dict] = list(head.rule_snapshot or []) if head else []
+    incoming_rules = [serialize_rule(r) for r in rule_set.rules]
+    item_specs = diff_rule_sets(incoming_rules, live_rules)
+
+    # Delete existing items, recreate from fresh diff
+    from sqlalchemy import delete as sql_delete
+    await db.execute(
+        sql_delete(MergeProposalItem)
+        .where(MergeProposalItem.proposal_id == proposal.id)
+    )
+
+    def _maybe_uuid(v):
+        if not v:
+            return None
+        try:
+            return uuid.UUID(str(v))
+        except (TypeError, ValueError):
+            return None
+
+    for spec in item_specs:
+        db.add(MergeProposalItem(
+            proposal_id=proposal.id,
+            category=spec.category,
+            severity=spec.severity,
+            suggested_action=spec.suggested_action,
+            incoming_rule_id=_maybe_uuid(spec.incoming_rule_id),
+            live_rule_id=_maybe_uuid(spec.live_rule_id),
+            canonical_key=spec.canonical_key,
+            diff=spec.diff,
+            rationale=spec.rationale,
+            confidence=spec.confidence,
+        ))
+    proposal.summary = _summarize_specs(item_specs)
+    await db.commit()
+
+    refreshed = await db.execute(
+        select(MergeProposal)
+        .options(selectinload(MergeProposal.items))
+        .where(MergeProposal.id == proposal.id)
+    )
+    return refreshed.scalar_one()
+
+
 async def get_merge_proposal(
     db: AsyncSession, proposal_id: uuid.UUID
 ) -> MergeProposal | None:
@@ -605,6 +705,47 @@ async def update_proposal_item(
     return item
 
 
+async def batch_update_proposal_items(
+    db: AsyncSession,
+    *,
+    proposal_id: uuid.UUID,
+    user_action: MergeSuggestedAction,
+    severity: MergeItemSeverity | None = None,
+    category=None,  # MergeItemCategory enum or None
+    overwrite_existing: bool = False,
+) -> tuple[int, int, int]:
+    """Slice 6 — apply `user_action` to every item on `proposal_id` that
+    matches the optional severity/category filters. Returns
+    (updated, skipped_existing, skipped_unmatched).
+    """
+    proposal_q = await db.execute(
+        select(MergeProposal)
+        .options(selectinload(MergeProposal.items))
+        .where(MergeProposal.id == proposal_id)
+    )
+    proposal = proposal_q.scalar_one_or_none()
+    if proposal is None:
+        raise ValueError(f"Merge proposal {proposal_id} not found")
+
+    updated = 0
+    skipped_existing = 0
+    skipped_unmatched = 0
+    for item in proposal.items:
+        sev_match = (severity is None) or item.severity == severity
+        cat_match = (category is None) or item.category == category
+        if not (sev_match and cat_match):
+            skipped_unmatched += 1
+            continue
+        if item.user_action is not None and not overwrite_existing:
+            skipped_existing += 1
+            continue
+        item.user_action = user_action
+        updated += 1
+    if updated:
+        await db.commit()
+    return updated, skipped_existing, skipped_unmatched
+
+
 # ── Apply (promote merge to a new version) ───────────────────────────────
 
 def _effective_action(item: MergeProposalItem) -> MergeSuggestedAction:
@@ -628,6 +769,7 @@ async def apply_merge_proposal(
     *,
     proposal_id: uuid.UUID,
     decided_by: str | None = None,
+    rationale: str | None = None,
 ) -> tuple[LiveRuleVersion | None, list[MergeProposalItem]]:
     """Apply an approved MergeProposal: produce a new LiveRuleVersion,
     rebuild LiveRuleEntry table, return the new version.
@@ -751,11 +893,50 @@ async def apply_merge_proposal(
     # v2+ candidates require explicit promotion.
     await auto_promote_first_version(db, repo, new_version)
     proposal.status = MergeProposalStatus.APPLIED
-    proposal.decided_by = decided_by
+    proposal.decided_by = (decided_by or "reviewer").strip()[:128] or "reviewer"
     proposal.decided_at = datetime.utcnow()
+    proposal.decision_rationale = (
+        (rationale.strip() if rationale else None) or None
+    )
+    if proposal.decision_rationale and new_version.summary:
+        new_version.summary = (
+            f"{new_version.summary}\n\nApplied by {proposal.decided_by}: "
+            f"{proposal.decision_rationale}"
+        )
+    elif proposal.decision_rationale:
+        new_version.summary = (
+            f"Applied by {proposal.decided_by}: {proposal.decision_rationale}"
+        )
 
     await db.commit()
     await db.refresh(new_version)
+
+    # Audit event for the per-BRD + per-repo timeline.
+    try:
+        from app.services.audit_service import record_event
+        from app.models.audit_event import AuditAction, AuditEntityType
+        item_summary = {"items_total": len(proposal.items)}
+        for it in proposal.items:
+            sev = it.severity.value if hasattr(it.severity, "value") else str(it.severity)
+            item_summary[f"sev_{sev}"] = item_summary.get(f"sev_{sev}", 0) + 1
+        await record_event(
+            db,
+            action=AuditAction.MERGE_PROPOSAL_APPLIED,
+            entity_type=AuditEntityType.MERGE_PROPOSAL,
+            entity_id=proposal.id,
+            actor=proposal.decided_by,
+            rationale=proposal.decision_rationale,
+            brd_id=proposal.source_brd_id,
+            repository_id=proposal.repository_id,
+            metadata={
+                "new_version_number": new_version.version_number,
+                "new_version_id": str(new_version.id),
+                **item_summary,
+            },
+        )
+    except Exception:
+        pass
+
     return new_version, []
 
 

@@ -48,6 +48,9 @@ class TestCaseResponse(BaseModel):
     test_case_id: str
     description: str | None
     source_rule_ids: list[str]
+    # Globally unique IDs for the source rule(s) — populated when the
+    # test was generated (or backfilled) by the UUID-aware pipeline.
+    source_rule_uuids: list[str] | None = None
     category: str
     input_values: dict = {}
     filter_logic: list[dict]
@@ -83,6 +86,14 @@ class TestCaseSuiteResponse(BaseModel):
     last_execution_report: dict[str, Any] | None = None
     last_executed_at: str | None = None
     last_executed_against_version_id: str | None = None
+    # True if the source rule_set has been modified after this suite was
+    # generated — the test cases (and any prior execution report) may
+    # not reflect the current rule contents. UI surfaces a "STALE" badge.
+    is_stale: bool = False
+    rule_set_last_modified_at: str | None = None
+    # Slice 1: who ran the latest execution and (optionally) why.
+    last_executed_by: str | None = None
+    last_execution_rationale: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -110,6 +121,8 @@ class TestCaseSuiteListResponse(BaseModel):
     created_at: str
     # Inline-decorated last execution result (Slice D enrichment)
     last_execution: SuiteLastExecutionInline | None = None
+    # Stale = source rule_set was edited after suite generation.
+    is_stale: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -130,6 +143,8 @@ class GenerateFromVersionRequest(BaseModel):
 
 class ExecuteSuiteRequest(BaseModel):
     version_id: str
+    executed_by: str | None = None
+    rationale: str | None = None
 
 
 class TestCaseExecutionReport(BaseModel):

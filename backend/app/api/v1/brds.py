@@ -28,6 +28,26 @@ async def upload_brd(file: UploadFile = File(...), db: AsyncSession = Depends(ge
     if not file.filename.endswith((".pdf", ".docx")):
         raise HTTPException(400, "Only PDF and DOCX files are supported")
     brd = await brd_service.upload_brd(file, db)
+
+    # Audit event — first row in the per-BRD timeline.
+    try:
+        from app.services.audit_service import record_event
+        from app.models.audit_event import AuditAction, AuditEntityType
+        await record_event(
+            db,
+            action=AuditAction.BRD_UPLOADED,
+            entity_type=AuditEntityType.BRD,
+            entity_id=brd.id,
+            actor="upload-form",
+            brd_id=brd.id,
+            metadata={
+                "filename": brd.filename,
+                "file_type": brd.file_type.value if hasattr(brd.file_type, "value") else str(brd.file_type),
+            },
+        )
+    except Exception:
+        pass
+
     return BrdUploadResponse(
         id=str(brd.id),
         filename=brd.filename,
@@ -367,6 +387,26 @@ async def extract_rules_from_brd(brd_id: str, db: AsyncSession = Depends(get_db)
         logger.exception("propose_from_brd failed after extract-rules")
 
     await db.commit()
+
+    # Audit event — second row in the per-BRD timeline (RULES_EXTRACTED).
+    try:
+        from app.services.audit_service import record_event
+        from app.models.audit_event import AuditAction, AuditEntityType
+        await record_event(
+            db,
+            action=AuditAction.RULES_EXTRACTED,
+            entity_type=AuditEntityType.RULE_SET,
+            entity_id=rule_set.id,
+            actor="extractor",
+            brd_id=brd.id,
+            metadata={
+                "rule_count": len(rule_definitions),
+                "retirement_signal_count": len(retirement_signals or []),
+                "rule_set_id": str(rule_set.id),
+            },
+        )
+    except Exception:
+        pass
 
     return {
         "rule_set_id": str(rule_set.id),

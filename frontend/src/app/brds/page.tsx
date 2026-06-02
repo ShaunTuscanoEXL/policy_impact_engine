@@ -7,6 +7,7 @@ import type { BrdDocument } from "@/lib/types";
 import { toast } from "sonner";
 import { UploadDropzone } from "@/components/brds/upload-dropzone";
 import { PageTransition } from "@/components/page-transition";
+import { EmptyState } from "@/components/empty-state";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -129,12 +130,18 @@ export default function BrdsPage() {
                 <Loader2 className="size-6 animate-spin text-muted-foreground" />
               </div>
             ) : brds.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <FileText className="size-12 text-muted-foreground/20" />
-                <p className="mt-3 text-sm text-muted-foreground">
-                  No BRD documents yet. Upload one above to get started.
-                </p>
-              </div>
+              <EmptyState
+                variant="inline"
+                tone="blue"
+                icon={FileText}
+                title="No BRD documents yet"
+                description="Upload a Business Requirements Document (PDF or DOCX) and the AI will extract structured rules you can review, merge, and validate against the live policy repo."
+                hints={[
+                  "PDFs and DOCX files are supported. Anything with tabular thresholds works best.",
+                  "Once uploaded, click the BRD to start the 5-stage pipeline.",
+                  "Each rule gets a confidence score so you know which to spot-check first.",
+                ]}
+              />
             ) : (
               <Table>
                 <TableHeader>

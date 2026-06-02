@@ -1,6 +1,6 @@
 # Loan Test Case Engine
 
-An AI-powered platform that extracts business rules from BRD documents (PDF/DOCX) and generates test cases with matched loan records from a 10,000-record database.
+An AI-powered platform that extracts business rules from BRD documents (PDF/DOCX) and generates test cases with matched loan records from a 100,000-record database.
 
 ## What It Does
 
@@ -20,7 +20,7 @@ An AI-powered platform that extracts business rules from BRD documents (PDF/DOCX
 - Full workflow stepper: Upload → Extract → Approve → Generate → Export
 
 ### 2. Loan Records Database
-- 10,000 seeded loan records with full `request_payload` and `response_payload` JSON
+- 100,000 seeded loan records with full `request_payload` and `response_payload` JSON
 - PostgreSQL JSONB storage with GIN indexes for fast querying
 - Search, filter, view stats, and upload CSV to add more records
 
@@ -65,15 +65,24 @@ shadcn/ui + Framer Motion      OpenAI / Azure OpenAI
 
 ### One-Time Setup (New Machine)
 
+Checks prerequisites, starts Postgres + Redis, installs deps, **creates the
+full schema (incl. `audit_events` + all migration columns)**, and seeds the
+loan corpus.
+
 ```bash
-# Run the setup script (checks prerequisites, installs deps, seeds DB)
+# Windows
 scripts\setup.bat
+
+# Linux / macOS / WSL
+chmod +x scripts/*.sh
+./scripts/setup.sh            # override corpus size with SEED_COUNT=10000 ./scripts/setup.sh
 ```
 
 ### Start the Application
 
 ```bash
-scripts\start.bat
+scripts\start.bat     # Windows
+./scripts/start.sh    # Linux / macOS / WSL
 ```
 
 This starts:
@@ -84,7 +93,8 @@ This starts:
 ### Stop the Application
 
 ```bash
-scripts\stop.bat
+scripts\stop.bat      # Windows
+./scripts/stop.sh     # Linux / macOS / WSL
 ```
 
 ### Manual Setup
@@ -97,11 +107,15 @@ pip install -e ".[dev]"
 
 # Create .env file (see Environment Variables below)
 
-# Start server
-uvicorn app.main:app --reload --port 8001
+# Create the schema + apply additive migrations (idempotent).
+# Required before seeding so every table exists first.
+python -m scripts.init_db
 
-# Seed 10K loan records
-python -m scripts.seed_loan_records
+# Seed 100K loan records (override: --count=10000)
+python -m scripts.seed_loan_records --count=100000
+
+# Start server (also auto-runs create_all + migrations + backfills on startup)
+uvicorn app.main:app --reload --port 8001
 ```
 
 **Frontend:**
@@ -168,7 +182,7 @@ Configure Test Counts → Per category + max matches
   ↓
 Generate Test Cases → POSITIVE, NEGATIVE, BOUNDARY, EDGE, INTERACTION
   ↓
-Match Customers → JSONB queries against 10K loan records
+Match Customers → JSONB queries against 100K loan records
   ↓
 Export → CSV / JSON with full request & response payloads
 ```
@@ -212,7 +226,7 @@ Export → CSV / JSON with full request & response payloads
 │   │   │   └── rule_validator.py    # Conflict detection
 │   │   └── config.py         # Settings (LLM provider config)
 │   ├── scripts/
-│   │   └── seed_loan_records.py  # Seed 10K diverse loan records
+│   │   └── seed_loan_records.py  # Seed 100K diverse loan records
 │   └── Dockerfile
 ├── frontend/
 │   ├── src/

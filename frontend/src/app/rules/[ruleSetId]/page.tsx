@@ -33,7 +33,9 @@ import { ConflictPanel } from "@/components/rules/conflict-panel";
 import { TestCaseTable } from "@/components/test-cases/test-case-table";
 import { TestCaseExportPanel } from "@/components/test-cases/test-case-export-panel";
 import { PageTransition } from "@/components/page-transition";
+import { PipelineContextBar } from "@/components/brds/pipeline/pipeline-context-bar";
 import { motion } from "framer-motion";
+import { DecisionDialog } from "@/components/decision-dialog";
 
 const STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
   DRAFT: "secondary",
@@ -58,6 +60,9 @@ export default function RuleReviewPage() {
   const [approving, setApproving] = useState(false);
   const [creatingVersion, setCreatingVersion] = useState(false);
   const [runningSimulation, setRunningSimulation] = useState(false);
+  // Slice 1 — capture actor + rationale before approving so the audit
+  // timeline has someone to thank (or blame).
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
 
   // Test case state
   const [testCaseSuite, setTestCaseSuite] = useState<TestCaseSuite | null>(null);
@@ -141,18 +146,25 @@ export default function RuleReviewPage() {
     }
   }, [params.ruleSetId, testCaseCounts, maxMatches]);
 
-  const handleApproveAll = useCallback(async () => {
-    setApproving(true);
-    try {
-      await api.patch(`/rule-sets/${params.ruleSetId}/approve`);
-      toast.success("Rule set approved successfully.");
-      fetchRuleSet();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.detail || "Failed to approve rule set.");
-    } finally {
-      setApproving(false);
-    }
-  }, [params.ruleSetId, fetchRuleSet]);
+  const handleApproveConfirm = useCallback(
+    async ({ actor, rationale }: { actor: string; rationale: string }) => {
+      setApproving(true);
+      try {
+        await api.patch(`/rule-sets/${params.ruleSetId}/approve`, {
+          approved_by: actor,
+          approval_notes: rationale || null,
+        });
+        toast.success(`Rule set approved by ${actor}.`);
+        setApproveDialogOpen(false);
+        fetchRuleSet();
+      } catch (err: any) {
+        toast.error(err?.response?.data?.detail || "Failed to approve rule set.");
+      } finally {
+        setApproving(false);
+      }
+    },
+    [params.ruleSetId, fetchRuleSet],
+  );
 
   const handleCreateVersion = useCallback(async () => {
     setCreatingVersion(true);
@@ -172,20 +184,13 @@ export default function RuleReviewPage() {
     }
   }, [params.ruleSetId, router]);
 
-  const handleApproveAndGenerateTests = useCallback(async () => {
-    setRunningSimulation(true);
-    try {
-      // Approve the rule set, then fetch suggested counts
-      await api.patch(`/rule-sets/${params.ruleSetId}/approve`);
-      toast.success("Rules approved. Configure test case counts below and click Generate.");
-      await fetchRuleSet();
-      // fetchRuleSet will trigger fetchSuggestedCounts since status is now APPROVED
-    } catch (err: any) {
-      toast.error(err?.response?.data?.detail || "Failed to approve rule set.");
-    } finally {
-      setRunningSimulation(false);
-    }
-  }, [params.ruleSetId, fetchRuleSet]);
+  // Approve flow: open the DecisionDialog so we capture attribution +
+  // rationale, then approve via the same dialog confirm callback. The
+  // dialog double-purposes for both "Approve Rules" (DRAFT) and
+  // "Approve All" (REVIEWED) — the API call is identical.
+  const handleOpenApproveDialog = useCallback(() => {
+    setApproveDialogOpen(true);
+  }, []);
 
   const handleEditRule = useCallback((rule: Rule) => {
     setEditingRule(rule);
@@ -259,6 +264,7 @@ export default function RuleReviewPage() {
 
   return (
     <PageTransition>
+    <PipelineContextBar />
     <div className="space-y-6">
       <p className="text-xs text-muted-foreground mb-4">Dashboard / Rules / Detail</p>
       {/* Header */}
@@ -314,10 +320,10 @@ export default function RuleReviewPage() {
           </Button>
           {ruleSet.status !== "APPROVED" ? (
             <Button
-              onClick={handleApproveAndGenerateTests}
-              disabled={runningSimulation}
+              onClick={handleOpenApproveDialog}
+              disabled={runningSimulation || approving}
             >
-              {runningSimulation ? (
+              {(runningSimulation || approving) ? (
                 <Loader2 className="mr-2 size-4 animate-spin" />
               ) : (
                 <FlaskConical className="mr-2 size-4" />
@@ -325,20 +331,38 @@ export default function RuleReviewPage() {
               Approve Rules
             </Button>
           ) : (
-            <Button
-              onClick={handleApproveAll}
-              disabled={approving || ruleSet.status === "APPROVED"}
-            >
-              {approving ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : (
-                <CheckCircle className="mr-2 size-4" />
+            <div className="flex flex-col items-end gap-1">
+              <Badge
+                variant="outline"
+                className="bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/30 dark:text-emerald-300"
+              >
+                <CheckCircle className="mr-1 size-3.5" />
+                Approved
+                {ruleSet.approved_by ? ` by ${ruleSet.approved_by}` : ""}
+              </Badge>
+              {ruleSet.approval_notes && (
+                <p className="max-w-xs truncate text-[10px] italic text-muted-foreground"
+                   title={ruleSet.approval_notes}>
+                  &ldquo;{ruleSet.approval_notes}&rdquo;
+                </p>
               )}
-              Approve All
-            </Button>
+            </div>
           )}
         </div>
       </div>
+
+      {/* Approve dialog — captures actor + rationale before flipping
+          status. Pre-fills the actor from localStorage. */}
+      <DecisionDialog
+        open={approveDialogOpen}
+        onOpenChange={setApproveDialogOpen}
+        title="Approve rule set"
+        description={`Marks "${ruleSet.name}" as APPROVED and unlocks the downstream stages (test generation, merge into live repo, impact analysis).`}
+        confirmLabel="Approve rules"
+        rationalePlaceholder="e.g. spot-checked the 4 DTI tier rules + the 3 employment gates against the source PDF"
+        loading={approving}
+        onConfirm={handleApproveConfirm}
+      />
 
       {/* Conflict Panel */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>

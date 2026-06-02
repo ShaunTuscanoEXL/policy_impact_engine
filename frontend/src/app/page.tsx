@@ -9,6 +9,7 @@ import { PipelineFunnel } from "@/components/dashboard/pipeline-funnel";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { TrendChart } from "@/components/dashboard/trend-chart";
 import { LayoutDashboard, Loader2 } from "lucide-react";
+import { WelcomeBanner } from "@/components/onboarding/welcome-banner";
 import type {
   DashboardStats,
   DashboardActivityEvent,
@@ -48,6 +49,10 @@ export default function DashboardPage() {
   return (
     <PageTransition>
       <div className="space-y-6">
+        {/* Slice 8: dismissible welcome banner — explains the 5-stage
+            pipeline. Hidden after the user clicks "Got it". */}
+        <WelcomeBanner />
+
         {/* Header */}
         <div className="flex items-center gap-4">
           <div className="icon-badge bg-blue-100 dark:bg-blue-900/30">

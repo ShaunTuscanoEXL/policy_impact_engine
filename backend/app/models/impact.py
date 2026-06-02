@@ -67,3 +67,5 @@ class ImpactRun(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    # Slice 1 — optional "why we kicked off this run".
+    rationale: Mapped[str | None] = mapped_column(Text, nullable=True)

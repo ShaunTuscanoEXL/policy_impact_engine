@@ -102,20 +102,34 @@ def _build_last_execution_inline(suite) -> dict | None:
 async def list_test_suites(db: AsyncSession = Depends(get_db)):
     """List all test case suites."""
     suites = await test_case_service.list_suites(db)
-    return [
-        TestCaseSuiteListResponse(
-            id=str(item["suite"].id),
-            rule_set_id=str(item["suite"].rule_set_id),
+
+    # Batch-fetch the rule_set last_modified_at for staleness detection
+    from sqlalchemy import select as _s
+    from app.models.rule import RuleSet as _RS
+    rs_ids = {item["suite"].rule_set_id for item in suites}
+    rs_lm: dict = {}
+    if rs_ids:
+        rows = await db.execute(_s(_RS.id, _RS.last_modified_at).where(_RS.id.in_(rs_ids)))
+        rs_lm = {row[0]: row[1] for row in rows.all()}
+
+    out = []
+    for item in suites:
+        suite = item["suite"]
+        last_mod = rs_lm.get(suite.rule_set_id)
+        is_stale = bool(last_mod and suite.created_at and last_mod > suite.created_at)
+        out.append(TestCaseSuiteListResponse(
+            id=str(suite.id),
+            rule_set_id=str(suite.rule_set_id),
             rule_set_name=item["rule_set_name"],
             brd_id=item.get("brd_id"),
             brd_filename=item.get("brd_filename"),
-            total_cases=item["suite"].total_cases,
-            cases_by_category=item["suite"].cases_by_category,
-            created_at=item["suite"].created_at.isoformat(),
-            last_execution=_build_last_execution_inline(item["suite"]),
-        )
-        for item in suites
-    ]
+            total_cases=suite.total_cases,
+            cases_by_category=suite.cases_by_category,
+            created_at=suite.created_at.isoformat(),
+            last_execution=_build_last_execution_inline(suite),
+            is_stale=is_stale,
+        ))
+    return out
 
 
 @router.get("/by-ruleset/{rule_set_id}", response_model=list[TestCaseSuiteListResponse])
@@ -250,6 +264,8 @@ async def execute_test_suite(
             db,
             suite_id=_uuid.UUID(suite_id),
             version_id=_uuid.UUID(body.version_id),
+            executed_by=body.executed_by,
+            rationale=body.rationale,
         )
     except ValueError as e:
         raise HTTPException(404, str(e))
@@ -297,6 +313,7 @@ async def _build_suite_response(suite, rule_set_name: str | None, db: AsyncSessi
             test_case_id=tc.test_case_id,
             description=tc.description,
             source_rule_ids=tc.source_rule_ids or [],
+            source_rule_uuids=tc.source_rule_uuids or None,
             category=tc.category.value if hasattr(tc.category, 'value') else tc.category,
             input_values=tc.input_values or {},
             filter_logic=tc.filter_logic or [],
@@ -314,6 +331,21 @@ async def _build_suite_response(suite, rule_set_name: str | None, db: AsyncSessi
         key=lambda tc: (category_order.get(tc.category, 99), tc.test_case_id)
     )
 
+    # Compute staleness — was the source rule_set modified after this
+    # suite was generated? If yes the test cases (and any prior
+    # execution report) may not reflect the current rules.
+    rs_lm = None
+    is_stale = False
+    try:
+        from sqlalchemy import select as _s
+        from app.models.rule import RuleSet as _RS
+        rs_q = await db.execute(_s(_RS.last_modified_at).where(_RS.id == suite.rule_set_id))
+        rs_lm = rs_q.scalar_one_or_none()
+        if rs_lm and suite.created_at and rs_lm > suite.created_at:
+            is_stale = True
+    except Exception:
+        pass
+
     return TestCaseSuiteResponse(
         id=str(suite.id),
         rule_set_id=str(suite.rule_set_id),
@@ -327,4 +359,8 @@ async def _build_suite_response(suite, rule_set_name: str | None, db: AsyncSessi
         last_execution_report=suite.last_execution_report,
         last_executed_at=suite.last_executed_at.isoformat() if suite.last_executed_at else None,
         last_executed_against_version_id=str(suite.last_executed_against_version_id) if suite.last_executed_against_version_id else None,
+        is_stale=is_stale,
+        rule_set_last_modified_at=rs_lm.isoformat() if rs_lm else None,
+        last_executed_by=getattr(suite, "last_executed_by", None),
+        last_execution_rationale=getattr(suite, "last_execution_rationale", None),
     )
