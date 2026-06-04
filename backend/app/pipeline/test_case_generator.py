@@ -314,23 +314,38 @@ def _satisfying_value(cond: Condition) -> Any:
     return meta["default"]
 
 
+# NEGATIVE test cases use values that are CLEARLY past the threshold,
+# not adjacent to it. The at-the-boundary values (v-step / v / v+step)
+# are owned by BOUNDARY tests — using them in NEGATIVE would produce
+# duplicate (input, expected) pairs across the two categories and waste
+# reviewer attention. step*3 is enough distance to be unambiguous on
+# realistic policy thresholds (bureau_score step=10 → ±30 below/above).
+_NEGATIVE_OFFSET_MULT = 3
+
+
 def _violating_value(cond: Condition) -> Any:
-    """Generate a value that violates a condition."""
+    """Generate a value that CLEARLY violates a condition.
+
+    Returns a value step*3 past the threshold so it never collides with
+    a BOUNDARY case (which clusters at v-step, v, v+step). The
+    at-boundary cases stay BOUNDARY's responsibility.
+    """
     meta = _get_field_meta(cond.field)
     v = cond.value
     op = cond.operator
     step = meta.get("step", 1)
+    offset = step * _NEGATIVE_OFFSET_MULT
 
     # Handle list-based operators FIRST (before the _is_numeric guard)
     if op == "between":
         if isinstance(v, (list, tuple)) and len(v) == 2:
-            return v[1] + step  # Above range (below-range covered by boundary tests)
+            return v[1] + offset  # Clearly above the range
         return meta.get("max", 999999)
 
     if op == "in":
         if isinstance(v, (list, tuple)) and v:
             if all(_is_numeric(x) for x in v):
-                return max(v) + step
+                return max(v) + offset
             else:
                 return "INVALID_VALUE"
         return meta.get("max", 999999)
@@ -356,19 +371,21 @@ def _violating_value(cond: Condition) -> Any:
     if not _is_numeric(v):
         return meta["default"]
 
-    # Numeric scalar comparisons
+    # Numeric scalar comparisons. Each branch returns a value that
+    # violates the predicate AND is offset*_NEGATIVE_OFFSET_MULT past
+    # the threshold, so BOUNDARY's at-threshold cases stay distinct.
     if op == ">=":
-        return v - step
+        return v - offset           # clearly < v
     elif op == ">":
-        return v
+        return v - offset           # clearly <= v (well below, not just at v)
     elif op == "<=":
-        return v + step
+        return v + offset           # clearly > v
     elif op == "<":
-        return v
+        return v + offset           # clearly >= v (well above, not just at v)
     elif op == "==":
-        return v + step
+        return v + offset           # clearly != v
     elif op == "!=":
-        return v  # Exact value violates !=
+        return v                    # Exact value is the only violator
     return meta.get("max", 999999)
 
 
@@ -923,10 +940,17 @@ def _gen_negative(
         meta = _get_field_meta(cond.field)
         step = meta.get("step", 1)
 
-        # For 'between', generate both below-range and above-range violations
+        # For 'between', generate both below-range and above-range violations.
+        # Use _NEGATIVE_OFFSET_MULT * step so the values are clearly outside
+        # the range and don't collide with BOUNDARY's lo-step / hi+step
+        # at-edge cases.
         if cond.operator == "between" and isinstance(cond.value, (list, tuple)) and len(cond.value) == 2:
             lo, hi = cond.value
-            for violation_val, label in [(lo - step, f"below range ({lo})"), (hi + step, f"above range ({hi})")]:
+            neg_offset = step * _NEGATIVE_OFFSET_MULT
+            for violation_val, label in [
+                (lo - neg_offset, f"below range ({lo})"),
+                (hi + neg_offset, f"above range ({hi})"),
+            ]:
                 inputs = _build_input_values(rule, overrides={cond.field: violation_val})
                 filters = _build_filters(resolved_conds, inputs, keep_range_operators=False)
                 expected = _extract_expected_outcome(rule, satisfied=False)

@@ -197,42 +197,59 @@ export function TestCaseTable({ testCases, casesByCategory }: TestCaseTableProps
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {tc.matched_customers.map((mc) => (
-                                <TableRow key={mc.id}>
-                                  <TableCell>
-                                    <Link
-                                      href={`/loan-records/${mc.id}`}
-                                      className="font-mono text-sm text-primary hover:underline"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      {mc.loan_application_id}
-                                    </Link>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Badge
-                                      variant="outline"
-                                      className={
-                                        mc.response_payload?.decision_status === "APPROVED"
-                                          ? "bg-emerald-500/10 text-emerald-500"
-                                          : "bg-red-500/10 text-red-500"
-                                      }
-                                    >
-                                      {mc.response_payload?.decision_status || "N/A"}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="font-mono text-sm">
-                                    {mc.request_payload?.bureau_score ?? "N/A"}
-                                  </TableCell>
-                                  <TableCell className="font-mono text-sm">
-                                    {mc.request_payload?.monthly_income != null
-                                      ? `$${Number(mc.request_payload.monthly_income).toLocaleString()}`
-                                      : "N/A"}
-                                  </TableCell>
-                                  <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
-                                    {mc.match_reason}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
+                              {tc.matched_customers.map((mc) => {
+                                // Bureau score + monthly income live at
+                                // nested paths in the real loan payload —
+                                // the previous top-level lookup always
+                                // returned undefined → "N/A". Walk the
+                                // tree, falling back to legacy top-level
+                                // fields for back-compat with older seeds.
+                                const rp = mc.request_payload as any;
+                                const bureauScore =
+                                  rp?.borrower_credit_model?.bureau_credits?.bureau_score ??
+                                  rp?.bureau_score ??
+                                  null;
+                                const monthlyIncome =
+                                  rp?.borrower_credit_model?.customer_inputs?.monthly_income ??
+                                  rp?.monthly_income ??
+                                  null;
+                                return (
+                                  <TableRow key={mc.id}>
+                                    <TableCell>
+                                      <Link
+                                        href={`/loan-records/${mc.id}`}
+                                        className="font-mono text-sm text-primary hover:underline"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        {mc.loan_application_id}
+                                      </Link>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge
+                                        variant="outline"
+                                        className={
+                                          mc.response_payload?.decision_status === "APPROVED"
+                                            ? "bg-emerald-500/10 text-emerald-500"
+                                            : "bg-red-500/10 text-red-500"
+                                        }
+                                      >
+                                        {mc.response_payload?.decision_status || "N/A"}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="font-mono text-sm">
+                                      {bureauScore ?? "N/A"}
+                                    </TableCell>
+                                    <TableCell className="font-mono text-sm">
+                                      {monthlyIncome != null
+                                        ? `$${Number(monthlyIncome).toLocaleString()}`
+                                        : "N/A"}
+                                    </TableCell>
+                                    <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
+                                      {mc.match_reason}
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
                             </TableBody>
                           </Table>
                         </div>
