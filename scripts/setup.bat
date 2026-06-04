@@ -78,22 +78,16 @@ if not exist "%~dp0..\backend\.env" (
 )
 echo.
 
-:: Initialize database schema (create all tables + apply additive migrations)
-echo [6/7] Initializing database schema and seeding data...
+:: Initialize database tables
+echo [6/7] Initializing database and seeding data...
 cd /d %~dp0..\backend
-python -m scripts.init_db
-if %ERRORLEVEL% NEQ 0 (
-    echo ERROR: Failed to initialize database schema. Is PostgreSQL running?
-    pause
-    exit /b 1
-)
-echo       Schema created (incl. audit_events + all migration columns).
-python -m scripts.seed_loan_records --count=100000
+python -c "import asyncio; from app.database import engine; from app.models import Base; asyncio.run(Base.metadata.create_all(bind=engine))" 2>nul
+python -m scripts.seed_loan_records 2>nul
 if %ERRORLEVEL% EQU 0 (
-    echo       Database seeded with 100,000 loan records.
+    echo       Database seeded with 10,000 loan records.
 ) else (
-    echo       Note: seed skipped or partial - records may already exist.
-    echo       To reseed: python -m scripts.seed_loan_records --force
+    echo       Note: Seed script may need to run after first backend start.
+    echo       Start the app once, then run: python -m scripts.seed_loan_records
 )
 echo.
 

@@ -78,9 +78,6 @@ export interface RuleFormData {
   priority: number;
   conditions: Condition[];
   actions: Action[];
-  /** Slice 7 — optional governance metadata captured by the reviewer. */
-  policy_intent?: string | null;
-  regulatory_citation?: string | null;
 }
 
 function emptyCondition(): Condition {
@@ -105,8 +102,6 @@ export function RuleEditorDialog({
     priority: 1,
     conditions: [emptyCondition()],
     actions: [emptyAction()],
-    policy_intent: "",
-    regulatory_citation: "",
   });
 
   const isEditMode = rule !== null;
@@ -127,8 +122,6 @@ export function RuleEditorDialog({
           rule.actions.length > 0
             ? rule.actions.map((a) => ({ ...a }))
             : [emptyAction()],
-        policy_intent: rule.policy_intent ?? "",
-        regulatory_citation: rule.regulatory_citation ?? "",
       });
     } else {
       setFormData({
@@ -138,8 +131,6 @@ export function RuleEditorDialog({
         priority: 1,
         conditions: [emptyCondition()],
         actions: [emptyAction()],
-        policy_intent: "",
-        regulatory_citation: "",
       });
     }
   }, [rule, open]);
@@ -283,51 +274,6 @@ export function RuleEditorDialog({
               }
               placeholder="Describe what this rule does..."
             />
-          </div>
-
-          {/* Slice 7 — governance metadata. Optional but high-value
-              for compliance audits + future reviewer hand-offs. */}
-          <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 p-3 space-y-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Governance (optional)
-            </p>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium">
-                Policy intent
-                <span className="ml-1 text-muted-foreground font-normal">
-                  — why does this rule exist?
-                </span>
-              </label>
-              <textarea
-                className="flex min-h-[50px] w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/20"
-                value={formData.policy_intent ?? ""}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    policy_intent: e.target.value,
-                  }))
-                }
-                placeholder="e.g. cap exposure to subprime to keep portfolio risk within board guidance"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium">
-                Regulatory citation
-                <span className="ml-1 text-muted-foreground font-normal">
-                  — link to the regulation / internal policy doc
-                </span>
-              </label>
-              <Input
-                value={formData.regulatory_citation ?? ""}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    regulatory_citation: e.target.value,
-                  }))
-                }
-                placeholder="e.g. Reg-Z §1026.43(c) or Internal Credit Policy v4.2 §3.1"
-              />
-            </div>
           </div>
 
           <Separator />

@@ -126,10 +126,7 @@ def _first_non_guard(conditions: list[dict] | None) -> dict:
     return {}
 
 
-def primary_field(
-    conditions: list[dict] | None,
-    actions: list[dict] | None = None,
-) -> str:
+def primary_field(conditions: list[dict] | None) -> str:
     """Return the field of the first non-guard condition (or fall back).
 
     Skipping guard fields (`loan_type`, `application_type`, …) is what
@@ -137,36 +134,18 @@ def primary_field(
     "guard then policy threshold" shape that BRDs commonly express in
     prose. Without this skip, every "for personal loans, X" rule ends
     up with the same canonical_key regardless of X.
-
-    For unconditional rules (e.g. "the maximum loan amount is $50,000"
-    with no IF clause — common in BRD "current state" baseline tables),
-    falls back to the action's target_field so the canonical_key still
-    carries the rule's identity instead of degrading to ``unknown_field``.
     """
     cond = _first_non_guard(conditions)
-    if cond:
-        return normalize_field(cond.get("field"))
-    # No usable condition — derive identity from the action target.
-    if actions:
-        first = actions[0] if isinstance(actions[0], dict) else {}
-        target = first.get("target_field")
-        if target:
-            return normalize_field(target)
-    return "unknown_field"
+    if not cond:
+        return "unknown_field"
+    return normalize_field(cond.get("field"))
 
 
-def primary_operator(
-    conditions: list[dict] | None,
-    actions: list[dict] | None = None,
-) -> str:
+def primary_operator(conditions: list[dict] | None) -> str:
     cond = _first_non_guard(conditions)
-    if cond:
-        return operator_class(cond.get("operator"))
-    # No usable condition — this is an "always-on" rule. Use ALWAYS to
-    # distinguish from rules with an unparseable operator (UNK).
-    if actions:
-        return "ALWAYS"
-    return "UNK"
+    if not cond:
+        return "UNK"
+    return operator_class(cond.get("operator"))
 
 
 def primary_action(actions: list[dict] | None) -> str:
@@ -187,18 +166,14 @@ def make_canonical_key(
     field, with the same operator family and the same action family.
     Includes action_class so that two rules with different action types
     (e.g. REJECT vs FLAG on the same condition) carry different identity.
-
-    Unconditional rules (no usable condition) derive their primary field
-    from the action's target_field with operator ALWAYS — preserving
-    identity for "current state" baseline rules common in BRD tables.
     """
     sub = subsystem.value if isinstance(subsystem, Subsystem) else (
         str(subsystem) if subsystem else Subsystem.UNCLASSIFIED.value
     )
     return "::".join([
         sub,
-        primary_field(conditions, actions),
-        primary_operator(conditions, actions),
+        primary_field(conditions),
+        primary_operator(conditions),
         primary_action(actions),
     ])
 
@@ -262,8 +237,8 @@ def make_pairing_key(
     )
     return "::".join([
         sub,
-        primary_field(conditions, actions),
-        primary_operator(conditions, actions),
+        primary_field(conditions),
+        primary_operator(conditions),
         primary_target_class(actions),
     ])
 

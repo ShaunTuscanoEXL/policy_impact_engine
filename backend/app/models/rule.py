@@ -57,18 +57,6 @@ class RuleSet(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[RuleSetStatus] = mapped_column(SAEnum(RuleSetStatus), default=RuleSetStatus.DRAFT)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    # Bumped whenever a rule in this rule_set is added, edited, deleted,
-    # split, or otherwise mutated. Lets test_case_suites detect
-    # staleness ("you generated this suite when the rule_set looked
-    # different") without needing to diff every rule on every read.
-    last_modified_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow,
-    )
-
-    # ── Slice 1: decision attribution ───────────────────────────────────
-    approved_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    approval_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     brd_document = relationship("BrdDocument", back_populates="rule_sets")
     rules = relationship("Rule", back_populates="rule_set", cascade="all, delete-orphan")
@@ -120,13 +108,5 @@ class Rule(Base):
     )
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-    # ── Slice 7: policy intent + regulatory citation ────────────────────
-    # Free-text fields populated by the reviewer (no LLM auto-fill).
-    # Surfaced on the rule editor, the merge workbench rule panel,
-    # and the audit timeline so future reviewers know why the rule
-    # exists and which regulation/policy doc backs it.
-    policy_intent: Mapped[str | None] = mapped_column(Text, nullable=True)
-    regulatory_citation: Mapped[str | None] = mapped_column(String(256), nullable=True)
 
     rule_set = relationship("RuleSet", back_populates="rules")

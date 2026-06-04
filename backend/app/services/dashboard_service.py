@@ -358,20 +358,11 @@ async def get_dashboard_trends(db: AsyncSession, *, limit: int = 10) -> dict:
         cand = dist.get("candidate", {}) or {}
         total = sum(int(v) for v in cand.values()) or 1
         approved = int(cand.get("APPROVED", 0))
-        flagged = int(cand.get("FLAGGED", 0))
-        rejected = int(cand.get("REJECTED", 0))
         approval_history.append({
             "completed_at": (
                 ir.completed_at.isoformat() if ir.completed_at else None
             ),
             "approval_rate": approved / total,
-            # Slice 11 follow-up: surface flagged + rejected so the
-            # trend chart can show all three rates side-by-side. When
-            # the rules over-flag (zero approval), the chart shouldn't
-            # silently flatline — it should show the FLAGGED line
-            # absorbing what would have been APPROVED.
-            "flagged_rate": flagged / total,
-            "rejected_rate": rejected / total,
             "total_loans": total,
             "run_id": str(ir.id),
         })

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -18,27 +18,14 @@ import {
   Edit,
   Trash2,
   AlertTriangle,
-  Sparkles,
-  Filter,
 } from "lucide-react";
 import type { Rule, Condition, Action } from "@/lib/types";
-import {
-  attentionForRule,
-  compareByAttention,
-  countRulesNeedingAttention,
-  type AttentionInfo,
-} from "@/lib/rule-attention";
-import { cn } from "@/lib/utils";
-import { FieldHelp } from "@/components/rules/field-help";
 
 interface RuleTableProps {
   rules: Rule[];
   onEdit: (rule: Rule) => void;
   onDelete: (ruleId: string) => void;
 }
-
-type SortMode = "attention" | "id";
-type FilterMode = "all" | "needs_attention";
 
 const RULE_TYPE_COLORS: Record<string, string> = {
   ELIGIBILITY: "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300",
@@ -108,29 +95,6 @@ const ACTION_TYPE_COLORS: Record<string, string> = {
 export function RuleTable({ rules, onEdit, onDelete }: RuleTableProps) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  // Slice 4: prioritization controls — default to "attention" sort so
-  // the most-suspect rules surface at the top, and a filter that
-  // hides the clean ones once the reviewer wants to focus.
-  const [sortMode, setSortMode] = useState<SortMode>("attention");
-  const [filterMode, setFilterMode] = useState<FilterMode>("all");
-
-  const attentionCount = useMemo(
-    () => countRulesNeedingAttention(rules),
-    [rules],
-  );
-
-  const visibleRules = useMemo(() => {
-    let arr = rules;
-    if (filterMode === "needs_attention") {
-      arr = arr.filter((r) => attentionForRule(r).score > 0);
-    }
-    if (sortMode === "attention") {
-      arr = [...arr].sort(compareByAttention);
-    } else {
-      arr = [...arr].sort((a, b) => (a.rule_id || "").localeCompare(b.rule_id || ""));
-    }
-    return arr;
-  }, [rules, sortMode, filterMode]);
 
   const toggleRow = (id: string) => {
     setExpandedRows((prev) => {
@@ -162,140 +126,42 @@ export function RuleTable({ rules, onEdit, onDelete }: RuleTableProps) {
   }
 
   return (
-    <div className="space-y-3">
-      {/* Slice 4: prioritization controls + attention banner */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-        <div className="flex items-center gap-2">
-          {attentionCount > 0 ? (
-            <button
-              type="button"
-              onClick={() =>
-                setFilterMode((m) =>
-                  m === "needs_attention" ? "all" : "needs_attention",
-                )
-              }
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ring-1 ring-inset transition",
-                filterMode === "needs_attention"
-                  ? "bg-amber-500/20 text-amber-800 ring-amber-500/40 dark:text-amber-200"
-                  : "bg-amber-500/10 text-amber-700 ring-amber-500/30 hover:bg-amber-500/20 dark:text-amber-300",
-              )}
-              title={
-                filterMode === "needs_attention"
-                  ? "Show all rules"
-                  : `Show only the ${attentionCount} rule${attentionCount !== 1 ? "s" : ""} flagged for review`
-              }
-            >
-              <AlertTriangle className="size-3.5" />
-              {attentionCount} rule{attentionCount !== 1 ? "s" : ""} need
-              attention
-              {filterMode === "needs_attention" && " (showing only these)"}
-            </button>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-700 ring-1 ring-inset ring-emerald-500/30 dark:text-emerald-300">
-              <Sparkles className="size-3.5" />
-              All rules look healthy
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Filter className="size-3.5" />
-          Sort:
-          <button
-            type="button"
-            onClick={() => setSortMode("attention")}
-            className={cn(
-              "rounded px-2 py-0.5 transition",
-              sortMode === "attention"
-                ? "bg-foreground/10 font-semibold text-foreground"
-                : "hover:bg-muted",
-            )}
-          >
-            Attention
-          </button>
-          <button
-            type="button"
-            onClick={() => setSortMode("id")}
-            className={cn(
-              "rounded px-2 py-0.5 transition",
-              sortMode === "id"
-                ? "bg-foreground/10 font-semibold text-foreground"
-                : "hover:bg-muted",
-            )}
-          >
-            Rule ID
-          </button>
-        </div>
-      </div>
-
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-8 text-xs font-semibold uppercase tracking-wider border-b-2 border-indigo-500/20" />
-            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-indigo-500/20">Attention</TableHead>
-            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-indigo-500/20">Rule ID</TableHead>
-            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-indigo-500/20">Name</TableHead>
-            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-indigo-500/20">Type</TableHead>
-            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-indigo-500/20">Confidence</TableHead>
-            <TableHead className="text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-indigo-500/20">Priority</TableHead>
-            <TableHead className="text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-indigo-500/20">Conflicts</TableHead>
-            <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-indigo-500/20">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {visibleRules.map((rule) => {
-            const isExpanded = expandedRows.has(rule.id);
-            return (
-              <ExpandableRuleRow
-                key={rule.id}
-                rule={rule}
-                attention={attentionForRule(rule)}
-                isExpanded={isExpanded}
-                onToggle={() => toggleRow(rule.id)}
-                onEdit={() => onEdit(rule)}
-                onDelete={() => handleDelete(rule.id)}
-                isDeleteConfirm={deleteConfirm === rule.id}
-                onCancelDelete={() => setDeleteConfirm(null)}
-              />
-            );
-          })}
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
-
-function AttentionPill({ attention }: { attention: AttentionInfo }) {
-  if (attention.tier === "ok") {
-    return <span className="text-xs text-muted-foreground">—</span>;
-  }
-  const tone =
-    attention.tier === "critical"
-      ? "bg-rose-500/15 text-rose-700 ring-rose-500/40 dark:text-rose-300"
-      : attention.tier === "warn"
-        ? "bg-amber-500/15 text-amber-700 ring-amber-500/40 dark:text-amber-300"
-        : "bg-blue-500/15 text-blue-700 ring-blue-500/30 dark:text-blue-300";
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ring-1 ring-inset",
-        tone,
-      )}
-      title={attention.labels.join(" · ")}
-    >
-      <AlertTriangle className="size-3" />
-      {attention.tier === "critical"
-        ? "Critical"
-        : attention.tier === "warn"
-          ? "Review"
-          : "Check"}
-    </span>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-8 text-xs font-semibold uppercase tracking-wider border-b-2 border-indigo-500/20" />
+          <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-indigo-500/20">Rule ID</TableHead>
+          <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-indigo-500/20">Name</TableHead>
+          <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-indigo-500/20">Type</TableHead>
+          <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-indigo-500/20">Confidence</TableHead>
+          <TableHead className="text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-indigo-500/20">Priority</TableHead>
+          <TableHead className="text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-indigo-500/20">Conflicts</TableHead>
+          <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b-2 border-indigo-500/20">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rules.map((rule) => {
+          const isExpanded = expandedRows.has(rule.id);
+          return (
+            <ExpandableRuleRow
+              key={rule.id}
+              rule={rule}
+              isExpanded={isExpanded}
+              onToggle={() => toggleRow(rule.id)}
+              onEdit={() => onEdit(rule)}
+              onDelete={() => handleDelete(rule.id)}
+              isDeleteConfirm={deleteConfirm === rule.id}
+              onCancelDelete={() => setDeleteConfirm(null)}
+            />
+          );
+        })}
+      </TableBody>
+    </Table>
   );
 }
 
 interface ExpandableRuleRowProps {
   rule: Rule;
-  attention: AttentionInfo;
   isExpanded: boolean;
   onToggle: () => void;
   onEdit: () => void;
@@ -306,7 +172,6 @@ interface ExpandableRuleRowProps {
 
 function ExpandableRuleRow({
   rule,
-  attention,
   isExpanded,
   onToggle,
   onEdit,
@@ -317,35 +182,15 @@ function ExpandableRuleRow({
   const typeClass =
     RULE_TYPE_COLORS[rule.rule_type] || "bg-gray-100 text-gray-800";
 
-  // Highlight the row's left edge when attention is non-zero so the
-  // reviewer can scan the table for hot spots without reading every cell.
-  const rowAccent =
-    attention.tier === "critical"
-      ? "border-l-4 border-l-rose-500"
-      : attention.tier === "warn"
-        ? "border-l-4 border-l-amber-500"
-        : attention.tier === "info"
-          ? "border-l-4 border-l-blue-400"
-          : "border-l-4 border-l-transparent";
-
   return (
     <>
-      <TableRow
-        className={cn(
-          "cursor-pointer hover:bg-muted/50 transition-colors",
-          rowAccent,
-        )}
-        onClick={onToggle}
-      >
+      <TableRow className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={onToggle}>
         <TableCell>
           {isExpanded ? (
             <ChevronDown className="size-4 text-muted-foreground" />
           ) : (
             <ChevronRight className="size-4 text-muted-foreground" />
           )}
-        </TableCell>
-        <TableCell>
-          <AttentionPill attention={attention} />
         </TableCell>
         <TableCell className="font-mono text-xs">{rule.rule_id}</TableCell>
         <TableCell className="font-medium">{rule.rule_name}</TableCell>
@@ -401,7 +246,7 @@ function ExpandableRuleRow({
 
       {isExpanded && (
         <TableRow>
-          <TableCell colSpan={9} className="bg-muted/30 p-0">
+          <TableCell colSpan={8} className="bg-muted/30 p-0">
             <div className="p-4 pl-12 space-y-4">
               {/* Description */}
               {rule.description && (
@@ -424,30 +269,21 @@ function ExpandableRuleRow({
                       No conditions defined
                     </span>
                   ) : (
-                    rule.conditions.map((cond, i) => {
-                      const valStr =
-                        typeof cond.value === "object"
-                          ? JSON.stringify(cond.value)
-                          : String(cond.value);
-                      return (
-                        <span key={i} className="flex items-center gap-1.5">
-                          {i > 0 && (
-                            <Badge
-                              variant="secondary"
-                              className="text-[10px] px-1.5"
-                            >
-                              {cond.logic || "AND"}
-                            </Badge>
-                          )}
-                          {/* Slice 5: hover the field name to see the
-                              plain-English glossary entry. */}
-                          <code className="rounded bg-muted px-2 py-0.5 text-xs">
-                            <FieldHelp name={cond.field}>{cond.field}</FieldHelp>{" "}
-                            {cond.operator} {valStr}
-                          </code>
-                        </span>
-                      );
-                    })
+                    rule.conditions.map((cond, i) => (
+                      <span key={i} className="flex items-center gap-1.5">
+                        {i > 0 && (
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] px-1.5"
+                          >
+                            {cond.logic || "AND"}
+                          </Badge>
+                        )}
+                        <code className="rounded bg-muted px-2 py-0.5 text-xs">
+                          {formatCondition(cond)}
+                        </code>
+                      </span>
+                    ))
                   )}
                 </div>
               </div>
@@ -465,34 +301,22 @@ function ExpandableRuleRow({
                       No actions defined
                     </span>
                   ) : (
-                    rule.actions.map((action, i) => {
-                      const valStr =
-                        typeof action.value === "object"
-                          ? JSON.stringify(action.value)
-                          : String(action.value ?? "");
-                      return (
-                        <div key={i} className="flex items-center gap-2">
-                          <code
-                            className={`rounded bg-muted px-2 py-0.5 text-xs font-medium ${
-                              ACTION_TYPE_COLORS[action.action_type] || ""
-                            }`}
-                          >
-                            {action.action_type}{" "}
-                            {action.target_field && (
-                              <FieldHelp name={action.target_field}>
-                                {action.target_field}
-                              </FieldHelp>
-                            )}
-                            {valStr ? ` = ${valStr}` : ""}
-                          </code>
-                          {action.description && (
-                            <span className="text-xs text-muted-foreground">
-                              — {action.description}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })
+                    rule.actions.map((action, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <code
+                          className={`rounded bg-muted px-2 py-0.5 text-xs font-medium ${
+                            ACTION_TYPE_COLORS[action.action_type] || ""
+                          }`}
+                        >
+                          {formatAction(action)}
+                        </code>
+                        {action.description && (
+                          <span className="text-xs text-muted-foreground">
+                            — {action.description}
+                          </span>
+                        )}
+                      </div>
+                    ))
                   )}
                 </div>
               </div>
@@ -508,35 +332,6 @@ function ExpandableRuleRow({
                     <p className="mt-1 text-xs text-muted-foreground">
                       {rule.source_section}
                     </p>
-                  </div>
-                </>
-              )}
-
-              {/* Slice 7: governance metadata */}
-              {(rule.policy_intent || rule.regulatory_citation) && (
-                <>
-                  <Separator />
-                  <div className="space-y-2">
-                    {rule.policy_intent && (
-                      <div>
-                        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                          Policy Intent
-                        </p>
-                        <p className="mt-1 text-xs italic text-muted-foreground">
-                          &ldquo;{rule.policy_intent}&rdquo;
-                        </p>
-                      </div>
-                    )}
-                    {rule.regulatory_citation && (
-                      <div>
-                        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                          Regulatory Citation
-                        </p>
-                        <p className="mt-1 text-xs font-mono text-muted-foreground">
-                          {rule.regulatory_citation}
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </>
               )}

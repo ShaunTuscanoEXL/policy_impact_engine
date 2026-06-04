@@ -14,10 +14,7 @@ import type {
 } from "@/lib/types";
 import { toast } from "sonner";
 import { PageTransition } from "@/components/page-transition";
-import { PipelineContextBar } from "@/components/brds/pipeline/pipeline-context-bar";
 import { motion } from "framer-motion";
-import { DecisionDialog } from "@/components/decision-dialog";
-import { BulkActionsToolbar } from "@/components/merge-workbench/bulk-actions-toolbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,7 +45,6 @@ import {
   FileText,
   GitBranch,
   Sparkles,
-  Clock,
 } from "lucide-react";
 
 const ACTION_OPTIONS: MergeAction[] = [
@@ -95,255 +91,124 @@ function formatThreshold(value: any): string {
   return String(value);
 }
 
-function formatCondition(c: Record<string, any>): string {
-  const field = c.field ?? "?";
-  const op = c.operator ?? "?";
-  const value = c.value;
-  if (op === "between" && Array.isArray(value)) {
-    return `${field} between [${value.join(", ")}]`;
-  }
-  if (op === "in" || op === "not_in") {
-    return `${field} ${op} [${Array.isArray(value) ? value.join(", ") : value}]`;
-  }
-  return `${field} ${op} ${formatThreshold(value)}`;
-}
-
-function formatActionLine(a: Record<string, any>): {
-  type: string;
-  target: string;
-  value: string;
-} {
-  const type = String(a.action_type ?? "?").toUpperCase();
-  const target = a.target_field ?? "";
-  const value =
-    a.value === undefined || a.value === null ? "" : formatThreshold(a.value);
-  return { type, target, value };
-}
-
-const ACTION_TONE: Record<string, string> = {
-  REJECT: "text-rose-700 bg-rose-500/10 ring-rose-500/30 dark:text-rose-300",
-  DECLINE: "text-rose-700 bg-rose-500/10 ring-rose-500/30 dark:text-rose-300",
-  AUTO_REJECT:
-    "text-rose-700 bg-rose-500/10 ring-rose-500/30 dark:text-rose-300",
-  FLAG: "text-amber-700 bg-amber-500/10 ring-amber-500/30 dark:text-amber-300",
-  MANUAL_REVIEW:
-    "text-amber-700 bg-amber-500/10 ring-amber-500/30 dark:text-amber-300",
-  REVIEW: "text-amber-700 bg-amber-500/10 ring-amber-500/30 dark:text-amber-300",
-  SET: "text-blue-700 bg-blue-500/10 ring-blue-500/30 dark:text-blue-300",
-  CAP: "text-violet-700 bg-violet-500/10 ring-violet-500/30 dark:text-violet-300",
-  ADJUST:
-    "text-violet-700 bg-violet-500/10 ring-violet-500/30 dark:text-violet-300",
-  MODIFY:
-    "text-violet-700 bg-violet-500/10 ring-violet-500/30 dark:text-violet-300",
-  APPROVE:
-    "text-emerald-700 bg-emerald-500/10 ring-emerald-500/30 dark:text-emerald-300",
-};
-
-const SUBSYSTEM_TONE: Record<string, string> = {
-  BUREAU_GATE:
-    "bg-blue-500/10 text-blue-700 dark:text-blue-300 ring-blue-500/30",
-  DTI_GATE:
-    "bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-amber-500/30",
-  INCOME_GATE:
-    "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-emerald-500/30",
-  AMOUNT_CAP:
-    "bg-orange-500/10 text-orange-700 dark:text-orange-300 ring-orange-500/30",
-  PRICING_TIER:
-    "bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-300 ring-fuchsia-500/30",
-  EMPLOYMENT_GATE:
-    "bg-violet-500/10 text-violet-700 dark:text-violet-300 ring-violet-500/30",
-  BANKING_BEHAVIOR:
-    "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 ring-cyan-500/30",
-  RATE_MODIFIER:
-    "bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-rose-500/30",
-  FRAUD_SIGNAL:
-    "bg-red-500/10 text-red-700 dark:text-red-300 ring-red-500/30",
-  REGULATORY_FLOOR:
-    "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 ring-indigo-500/30",
-  EXPOSURE_LIMIT:
-    "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 ring-yellow-500/30",
-  SCORING_MODEL:
-    "bg-purple-500/10 text-purple-700 dark:text-purple-300 ring-purple-500/30",
-  UNCLASSIFIED:
-    "bg-slate-500/10 text-slate-600 dark:text-slate-400 ring-slate-500/30",
-};
-
-/**
- * Renders a complete rule (name, description, all conditions, all
- * actions with target+value) — full fidelity, no canonical projection
- * collapsing fields. The merge engine still does its diff work on the
- * canonical projection, but the reviewer sees the actual rule.
- */
-function RulePanel({
-  rule,
-  side,
-  side_label,
-}: {
-  rule: import("@/lib/types").MergeRulePayload | null | undefined;
-  side: "incoming" | "live" | "neutral";
-  side_label?: string;
-}) {
-  if (!rule) {
+function DiffBlock({ diff, category }: { diff: Record<string, any> | null; category: string }) {
+  if (!diff) {
     return (
-      <div className="rounded-md border border-dashed border-border/40 bg-muted/20 p-3">
-        <p className="text-xs italic text-muted-foreground">
-          No rule data on this side.
-        </p>
+      <p className="text-xs text-muted-foreground italic">No diff payload.</p>
+    );
+  }
+
+  if (category === "NEW_RULE") {
+    return (
+      <div className="space-y-1.5 rounded-md border border-border/40 bg-muted/30 p-3">
+        <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+          NEW
+        </div>
+        <div className="font-mono text-xs">
+          <div>
+            <span className="text-muted-foreground">field:</span>{" "}
+            {diff.field ?? "—"}
+          </div>
+          <div>
+            <span className="text-muted-foreground">operator:</span>{" "}
+            {diff.operator ?? "—"}
+          </div>
+          <div>
+            <span className="text-muted-foreground">threshold:</span>{" "}
+            {formatThreshold(diff.threshold)}
+          </div>
+          <div>
+            <span className="text-muted-foreground">action:</span>{" "}
+            {formatThreshold(diff.action)}
+          </div>
+        </div>
       </div>
     );
   }
-  const sideTone =
-    side === "incoming"
-      ? "border-emerald-500/30 bg-emerald-500/[0.03]"
-      : side === "live"
-        ? "border-rose-500/30 bg-rose-500/[0.03]"
-        : "border-border/50 bg-muted/20";
-  const labelTone =
-    side === "incoming"
-      ? "text-emerald-700 dark:text-emerald-300"
-      : side === "live"
-        ? "text-rose-700 dark:text-rose-300"
-        : "text-muted-foreground";
-  return (
-    <div className={`space-y-3 rounded-lg border p-3.5 ${sideTone}`}>
-      {/* Side label + subsystem + rule_type */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span
-          className={`text-[10px] font-bold uppercase tracking-[0.14em] ${labelTone}`}
-        >
-          {side_label ?? (side === "incoming" ? "Incoming" : side === "live" ? "Live" : "Rule")}
-        </span>
-        {rule.subsystem && (
-          <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ring-1 ring-inset ${SUBSYSTEM_TONE[rule.subsystem] ?? SUBSYSTEM_TONE.UNCLASSIFIED}`}
-          >
-            {rule.subsystem}
-          </span>
-        )}
-        {rule.rule_type && (
-          <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {rule.rule_type}
-          </span>
-        )}
-        {rule.rule_id && (
-          <span className="ml-auto font-mono text-[10px] text-muted-foreground">
-            {rule.rule_id}
-          </span>
-        )}
-      </div>
 
-      {/* Rule name + description */}
-      {rule.rule_name && (
-        <div>
-          <p className="text-sm font-semibold leading-tight">{rule.rule_name}</p>
-          {rule.description && (
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {rule.description}
-            </p>
+  if (category === "REMOVED_RULE") {
+    return (
+      <div className="space-y-1.5 rounded-md border border-border/40 bg-muted/30 p-3">
+        <div className="text-xs font-semibold text-red-600 dark:text-red-400">
+          REMOVED
+        </div>
+        <div className="font-mono text-xs">
+          <div>
+            <span className="text-muted-foreground">field:</span>{" "}
+            {diff.field ?? "—"}
+          </div>
+          <div>
+            <span className="text-muted-foreground">operator:</span>{" "}
+            {diff.operator ?? "—"}
+          </div>
+          <div>
+            <span className="text-muted-foreground">threshold:</span>{" "}
+            {formatThreshold(diff.threshold)}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // diff: live → incoming
+  const field = diff.field ?? "—";
+  const operatorLive = diff.operator_live ?? diff.operator ?? "—";
+  const operatorIncoming = diff.operator_incoming ?? diff.operator ?? "—";
+  const thresholdLive = diff.threshold_live ?? diff.threshold;
+  const thresholdIncoming = diff.threshold_incoming ?? diff.threshold;
+  const actionLive = diff.action_live;
+  const actionIncoming = diff.action_incoming;
+
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      <div className="space-y-1.5 rounded-md border border-border/40 bg-red-500/5 p-3">
+        <div className="text-xs font-semibold text-red-600 dark:text-red-400">
+          LIVE
+        </div>
+        <div className="font-mono text-xs">
+          <div>
+            <span className="text-muted-foreground">field:</span> {field}
+          </div>
+          <div>
+            <span className="text-muted-foreground">operator:</span>{" "}
+            {operatorLive}
+          </div>
+          <div>
+            <span className="text-muted-foreground">threshold:</span>{" "}
+            {formatThreshold(thresholdLive)}
+          </div>
+          {actionLive !== undefined && (
+            <div>
+              <span className="text-muted-foreground">action:</span>{" "}
+              {formatThreshold(actionLive)}
+            </div>
           )}
         </div>
-      )}
-
-      {/* Conditions */}
-      {rule.conditions && rule.conditions.length > 0 ? (
-        <div>
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Conditions
-          </p>
-          <ul className="space-y-1">
-            {rule.conditions.map((c, i) => (
-              <li key={i} className="font-mono text-[11px]">
-                <span className="rounded bg-muted/40 px-1.5 py-0.5">
-                  {formatCondition(c)}
-                </span>
-                {i < rule.conditions.length - 1 && (
-                  <span className="mx-1 text-[9px] font-bold text-muted-foreground/60">
-                    {(rule.conditions[i + 1]?.logic ?? "AND")
-                      .toString()
-                      .toUpperCase()}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
+      </div>
+      <div className="space-y-1.5 rounded-md border border-border/40 bg-emerald-500/5 p-3">
+        <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+          INCOMING
         </div>
-      ) : (
-        <p className="text-[11px] italic text-muted-foreground/70">
-          No conditions — applies always.
-        </p>
-      )}
-
-      {/* Actions */}
-      {rule.actions && rule.actions.length > 0 && (
-        <div>
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Actions
-          </p>
-          <ul className="space-y-1">
-            {rule.actions.map((a, i) => {
-              const { type, target, value } = formatActionLine(a);
-              return (
-                <li key={i} className="flex flex-wrap items-baseline gap-1.5 font-mono text-[11px]">
-                  <span
-                    className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ring-1 ring-inset ${ACTION_TONE[type] ?? "bg-muted/40 text-muted-foreground"}`}
-                  >
-                    {type}
-                  </span>
-                  {target && (
-                    <span className="font-mono">
-                      <span className="text-muted-foreground">→</span> {target}
-                    </span>
-                  )}
-                  {value && (
-                    <>
-                      <span className="text-muted-foreground">=</span>
-                      <span className="font-mono font-semibold">{value}</span>
-                    </>
-                  )}
-                  {a.description && (
-                    <span className="text-[10px] italic text-muted-foreground">
-                      — {a.description}
-                    </span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+        <div className="font-mono text-xs">
+          <div>
+            <span className="text-muted-foreground">field:</span> {field}
+          </div>
+          <div>
+            <span className="text-muted-foreground">operator:</span>{" "}
+            {operatorIncoming}
+          </div>
+          <div>
+            <span className="text-muted-foreground">threshold:</span>{" "}
+            {formatThreshold(thresholdIncoming)}
+          </div>
+          {actionIncoming !== undefined && (
+            <div>
+              <span className="text-muted-foreground">action:</span>{" "}
+              {formatThreshold(actionIncoming)}
+            </div>
+          )}
         </div>
-      )}
-    </div>
-  );
-}
-
-function DiffBlock({
-  item,
-}: {
-  item: import("@/lib/types").MergeItem;
-}) {
-  const incoming = item.incoming_rule;
-  const live = item.live_rule;
-
-  if (item.category === "NEW_RULE") {
-    return (
-      <RulePanel rule={incoming} side="incoming" side_label="New Rule" />
-    );
-  }
-
-  if (item.category === "REMOVED_RULE") {
-    return (
-      <RulePanel
-        rule={live}
-        side="live"
-        side_label="Removed from BRD (still live)"
-      />
-    );
-  }
-
-  // Collision categories: side-by-side LIVE vs INCOMING
-  return (
-    <div className="grid gap-3 lg:grid-cols-2">
-      <RulePanel rule={live} side="live" side_label="Live (current)" />
-      <RulePanel rule={incoming} side="incoming" side_label="Incoming (BRD)" />
+      </div>
     </div>
   );
 }
@@ -359,6 +224,7 @@ export default function MergeWorkbenchDetailPage() {
   const [notesDraft, setNotesDraft] = useState<Record<string, string>>({});
 
   const [applyOpen, setApplyOpen] = useState(false);
+  const [decidedBy, setDecidedBy] = useState("");
   const [applying, setApplying] = useState(false);
   const [repo, setRepo] = useState<LiveRepository | null>(null);
   const [brd, setBrd] = useState<BrdDocument | null>(null);
@@ -468,39 +334,36 @@ export default function MergeWorkbenchDetailPage() {
     return unresolvedBlockers.length === 0;
   }, [proposal, unresolvedBlockers]);
 
-  const handleApplyConfirm = useCallback(
-    async ({ actor, rationale }: { actor: string; rationale: string }) => {
-      if (!proposal) return;
-      setApplying(true);
-      try {
-        const { data } = await api.post<MergeApplyResult>(
-          `/merge-proposal/${proposalId}/apply`,
-          {
-            decided_by: actor,
-            rationale: rationale || null,
-          }
+  const handleApply = useCallback(async () => {
+    if (!proposal) return;
+    if (!decidedBy.trim()) {
+      toast.error("Please enter your name.");
+      return;
+    }
+    setApplying(true);
+    try {
+      const { data } = await api.post<MergeApplyResult>(
+        `/merge-proposal/${proposalId}/apply`,
+        { decided_by: decidedBy.trim() }
+      );
+      if (data.applied) {
+        toast.success(
+          `Applied — created v${data.new_version_number ?? "?"}.`
         );
-        if (data.applied) {
-          toast.success(
-            `Applied as v${data.new_version_number ?? "?"} by ${actor}.`
-          );
-          setApplyOpen(false);
-          router.push(`/live-repo/${proposal.repository_id}`);
-        } else {
-          toast.error(
-            data.summary ||
-              `Cannot apply — ${data.blockers.length} blocker(s).`
-          );
-          await fetchProposal();
-        }
-      } catch (err: any) {
-        toast.error(err?.response?.data?.detail || "Failed to apply proposal.");
-      } finally {
-        setApplying(false);
+        setApplyOpen(false);
+        router.push(`/live-repo/${proposal.repository_id}`);
+      } else {
+        toast.error(
+          data.summary || `Cannot apply — ${data.blockers.length} blocker(s).`
+        );
+        await fetchProposal();
       }
-    },
-    [proposal, proposalId, router, fetchProposal],
-  );
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || "Failed to apply proposal.");
+    } finally {
+      setApplying(false);
+    }
+  }, [proposal, proposalId, decidedBy, router, fetchProposal]);
 
   if (loading) {
     return (
@@ -514,7 +377,6 @@ export default function MergeWorkbenchDetailPage() {
 
   return (
     <PageTransition>
-      <PipelineContextBar />
       <div className="space-y-8">
         <p className="text-xs text-muted-foreground mb-4">
           Dashboard /{" "}
@@ -580,30 +442,6 @@ export default function MergeWorkbenchDetailPage() {
                     : `Repo ${proposal.repository_id.slice(0, 8)}`}
                 </Link>
                 <span>Base: v{proposal.base_version}</span>
-                {/* Slice 9 — days-pending counter for visual urgency.
-                    Renders only on PENDING proposals; older = redder. */}
-                {proposal.status === "PENDING" && (() => {
-                  const created = new Date(proposal.created_at);
-                  const days = Math.floor(
-                    (Date.now() - created.getTime()) / (1000 * 60 * 60 * 24),
-                  );
-                  if (days < 1) return null;
-                  const tone =
-                    days >= 7
-                      ? "bg-rose-500/15 text-rose-700 ring-rose-500/40 dark:text-rose-300"
-                      : days >= 3
-                        ? "bg-amber-500/15 text-amber-700 ring-amber-500/40 dark:text-amber-300"
-                        : "bg-blue-500/15 text-blue-700 ring-blue-500/30 dark:text-blue-300";
-                  return (
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ring-1 ring-inset ${tone}`}
-                      title={`Created ${created.toLocaleString()}`}
-                    >
-                      <Clock className="size-3" />
-                      Pending {days} day{days !== 1 ? "s" : ""}
-                    </span>
-                  );
-                })()}
               </div>
 
               {proposal.summary && (
@@ -614,31 +452,55 @@ export default function MergeWorkbenchDetailPage() {
             </div>
           </div>
 
-          <Button
-            variant="default"
-            disabled={!canApply}
-            title={
-              canApply
-                ? "Apply this proposal"
-                : proposal.status !== "PENDING"
-                ? `Already ${proposal.status.toLowerCase()}`
-                : "Resolve all hard blockers first"
-            }
-            onClick={() => setApplyOpen(true)}
-          >
-            <Sparkles className="size-4" />
-            Apply Merge
-          </Button>
-          <DecisionDialog
-            open={applyOpen}
-            onOpenChange={setApplyOpen}
-            title="Apply merge proposal"
-            description={`Creates v${(proposal.base_version ?? 0) + 1} of the live repository from this proposal. Records who applied + an audit-log reason.`}
-            confirmLabel="Apply merge"
-            rationalePlaceholder="e.g. all SOFT items reviewed; impact run within tolerance vs prod baseline"
-            loading={applying}
-            onConfirm={handleApplyConfirm}
-          />
+          <Dialog open={applyOpen} onOpenChange={setApplyOpen}>
+            <Button
+              variant="default"
+              disabled={!canApply}
+              title={
+                canApply
+                  ? "Apply this proposal"
+                  : proposal.status !== "PENDING"
+                  ? `Already ${proposal.status.toLowerCase()}`
+                  : "Resolve all hard blockers first"
+              }
+              onClick={() => setApplyOpen(true)}
+            >
+              <Sparkles className="size-4" />
+              Apply Merge
+            </Button>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Apply Merge Proposal</DialogTitle>
+                <DialogDescription>
+                  Applying creates a new live repository version. Enter your
+                  name to record who approved this change.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-1.5 py-2">
+                <label className="text-xs font-medium">Decided By</label>
+                <Input
+                  value={decidedBy}
+                  onChange={(e) => setDecidedBy(e.target.value)}
+                  placeholder="e.g., jane.doe@example.com"
+                />
+              </div>
+              <DialogFooter>
+                <DialogClose render={<Button variant="outline" />}>
+                  Cancel
+                </DialogClose>
+                <Button
+                  variant="default"
+                  onClick={handleApply}
+                  disabled={applying}
+                >
+                  {applying && (
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                  )}
+                  Apply
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {/* Counts and Severity Legend */}
@@ -702,18 +564,6 @@ export default function MergeWorkbenchDetailPage() {
           </Card>
         </motion.div>
 
-        {/* Slice 6 — bulk actions toolbar above the per-item rows.
-            Only renders presets whose target group has items. */}
-        {proposal.status === "PENDING" && proposal.items.length > 0 && (
-          <BulkActionsToolbar
-            proposalId={proposal.id}
-            countsByCategory={proposal.counts_by_category}
-            countsBySeverity={proposal.counts_by_severity}
-            disabled={proposal.status !== "PENDING"}
-            onApplied={fetchProposal}
-          />
-        )}
-
         {/* Items */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -736,23 +586,11 @@ export default function MergeWorkbenchDetailPage() {
                 (item.user_action === null ||
                   item.user_action === "NEEDS_HUMAN" ||
                   item.user_action === "EDIT_NEEDED");
-              // Slice 9 — visual urgency:
-              //   • HARD severity gets a red left rail + a red ring
-              //   • Unresolved blockers get a "BLOCKS APPLY" chip
-              //   • SOFT severity gets a softer amber rail
-              const railClass =
-                item.severity === "HARD"
-                  ? "border-l-4 border-l-rose-500"
-                  : item.severity === "SOFT"
-                    ? "border-l-4 border-l-amber-500"
-                    : "border-l-4 border-l-transparent";
               return (
                 <Card
                   key={item.id}
-                  className={`card-elevated border-border/40 p-4 ${railClass} ${
-                    isUnresolvedBlocker
-                      ? "ring-2 ring-rose-500/40 shadow-rose-500/10"
-                      : ""
+                  className={`card-elevated border-border/40 p-4 ${
+                    isUnresolvedBlocker ? "ring-1 ring-red-500/30" : ""
                   }`}
                 >
                   <div className="space-y-3">
@@ -768,14 +606,6 @@ export default function MergeWorkbenchDetailPage() {
                         >
                           {item.severity}
                         </Badge>
-                        {/* Slice 9 — explicit "this is what's holding
-                            up apply" chip for HARD + unresolved items. */}
-                        {isUnresolvedBlocker && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-rose-700 ring-1 ring-inset ring-rose-500/40 dark:text-rose-300 animate-pulse">
-                            <AlertTriangle className="size-3" />
-                            Blocks apply
-                          </span>
-                        )}
                         {item.canonical_key && (
                           <span className="font-mono text-xs text-muted-foreground">
                             {item.canonical_key}
@@ -793,7 +623,7 @@ export default function MergeWorkbenchDetailPage() {
                     </div>
 
                     {/* Diff */}
-                    <DiffBlock item={item} />
+                    <DiffBlock diff={item.diff} category={item.category} />
 
                     {/* Rationale */}
                     {item.rationale && (

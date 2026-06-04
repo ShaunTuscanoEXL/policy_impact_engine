@@ -60,11 +60,6 @@ class GeneratedTestCase:
     filter_logic: list[dict]     # Filter conditions for DB matching
     expected_outcome: dict       # Expected result when rule engine runs
     rationale: str = ""          # Why this test case exists
-    # Globally unique IDs for source rule(s). Carried alongside
-    # `source_rule_ids` (the human label) so the suite executor can match
-    # by UUID and avoid the "RULE-001 means three different rules"
-    # collision when multiple BRDs land in the same live repo.
-    source_rule_uuids: list[str] = field(default_factory=list)
 
     def filter_description(self) -> str:
         parts = [f["description"] or f"{f['field_name']} {f['operator']} {f['value']}" for f in self.filter_logic]
@@ -781,7 +776,6 @@ def _gen_positive(
         test_case_id=f"TC-{rule.rule_id}-POS-{counter:03d}",
         description=f"All conditions satisfied → {rule.rule_name}",
         source_rule_ids=[rule.rule_id],
-            source_rule_uuids=[rule.uuid] if rule.uuid else [],
         category=TestCaseCategory.POSITIVE,
         input_values=inputs,
         filter_logic=filters,
@@ -823,7 +817,6 @@ def _gen_positive(
                         f"satisfied → {rule.rule_name}"
                     ),
                     source_rule_ids=[rule.rule_id],
-            source_rule_uuids=[rule.uuid] if rule.uuid else [],
                     category=TestCaseCategory.POSITIVE,
                     input_values=variant_inputs,
                     filter_logic=variant_filters,
@@ -909,7 +902,6 @@ def _gen_negative(
                     f"→ {rule.rule_name} should NOT fire"
                 ),
                 source_rule_ids=[rule.rule_id],
-            source_rule_uuids=[rule.uuid] if rule.uuid else [],
                 category=TestCaseCategory.NEGATIVE,
                 input_values=inputs,
                 filter_logic=filters,
@@ -940,7 +932,6 @@ def _gen_negative(
                         f"(set to {violation_val}, {label}) → {rule.rule_name} should NOT fire"
                     ),
                     source_rule_ids=[rule.rule_id],
-            source_rule_uuids=[rule.uuid] if rule.uuid else [],
                     category=TestCaseCategory.NEGATIVE,
                     input_values=inputs,
                     filter_logic=filters,
@@ -962,7 +953,6 @@ def _gen_negative(
                     f"(set to {inputs[cond.field]}) → {rule.rule_name} should NOT fire"
                 ),
                 source_rule_ids=[rule.rule_id],
-            source_rule_uuids=[rule.uuid] if rule.uuid else [],
                 category=TestCaseCategory.NEGATIVE,
                 input_values=inputs,
                 filter_logic=filters,
@@ -1012,7 +1002,6 @@ def _gen_boundary(
                 test_case_id=f"TC-{rule.rule_id}-BND-{counter:03d}",
                 description=f"Boundary: {cond.field} {label} → {pass_label}",
                 source_rule_ids=[rule.rule_id],
-            source_rule_uuids=[rule.uuid] if rule.uuid else [],
                 category=TestCaseCategory.BOUNDARY,
                 input_values=inputs,
                 filter_logic=filters,
@@ -1065,7 +1054,6 @@ def _gen_edge(
                 test_case_id=f"TC-{rule.rule_id}-EDGE-{counter:03d}",
                 description=f"Edge: {cond.field} at {label}",
                 source_rule_ids=[rule.rule_id],
-            source_rule_uuids=[rule.uuid] if rule.uuid else [],
                 category=TestCaseCategory.EDGE,
                 input_values=inputs,
                 filter_logic=filters,
@@ -1318,7 +1306,6 @@ def _gen_interactions(
                 f"(shared: {', '.join(shared)})"
             ),
             source_rule_ids=[rule_a.rule_id, rule_b.rule_id],
-            source_rule_uuids=[u for u in (rule_a.uuid, rule_b.uuid) if u],
             category=TestCaseCategory.INTERACTION,
             input_values=inputs,
             filter_logic=filters,

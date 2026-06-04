@@ -5,6 +5,8 @@ import {
   Users,
   ArrowDownRight,
   ArrowUpRight,
+  Activity,
+  ShieldAlert,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -77,21 +79,22 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
   const totalLoans = summary.total_loans ?? 0;
   const affectedPct = totalLoans > 0 ? (totalFlips / totalLoans) * 100 : 0;
 
-  // BREAK OUT each decision label rather than bundling APPROVED+FLAGGED
-  // together — the previous "Net Approved" tile mixed FLAGGED loans
-  // (manual review, NOT funded) with truly APPROVED loans, which hid
-  // catastrophic rule misconfigurations like 0 actual approvals.
   const baseRej = summary.decision_distribution.base?.REJECTED ?? 0;
   const candRej = summary.decision_distribution.candidate?.REJECTED ?? 0;
   const rejDelta = candRej - baseRej;
 
-  const baseAppr = summary.decision_distribution.base?.APPROVED ?? 0;
-  const candAppr = summary.decision_distribution.candidate?.APPROVED ?? 0;
+  const baseAppr =
+    (summary.decision_distribution.base?.APPROVED ?? 0) +
+    (summary.decision_distribution.base?.FLAGGED ?? 0);
+  const candAppr =
+    (summary.decision_distribution.candidate?.APPROVED ?? 0) +
+    (summary.decision_distribution.candidate?.FLAGGED ?? 0);
   const apprDelta = candAppr - baseAppr;
 
-  const baseFlag = summary.decision_distribution.base?.FLAGGED ?? 0;
-  const candFlag = summary.decision_distribution.candidate?.FLAGGED ?? 0;
-  const flagDelta = candFlag - baseFlag;
+  const subsystems = Object.entries(summary.by_subsystem ?? {})
+    .map(([name, info]) => ({ name, count: info.flips_caused }))
+    .sort((a, b) => b.count - a.count);
+  const topSubsystem = subsystems[0];
 
   const cards: CardSpec[] = [
     {
@@ -102,36 +105,27 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
       tone: "blue",
     },
     {
-      label: "Net Approved",
-      value: `${apprDelta >= 0 ? "+" : ""}${apprDelta.toLocaleString()}`,
-      detail:
-        candAppr === 0 && baseAppr === 0
-          ? "⚠ 0 loans approved — every loan hit a FLAG/REJECT rule"
-          : `${baseAppr.toLocaleString()} → ${candAppr.toLocaleString()} (${totalLoans > 0 ? ((candAppr / totalLoans) * 100).toFixed(1) : "0"}% rate)`,
-      icon: apprDelta >= 0 ? ArrowUpRight : ArrowDownRight,
-      tone:
-        candAppr === 0 && baseAppr === 0
-          ? "red"
-          : apprDelta > 0
-            ? "green"
-            : apprDelta < 0
-              ? "red"
-              : "neutral",
-    },
-    {
-      label: "Net Flagged",
-      value: `${flagDelta >= 0 ? "+" : ""}${flagDelta.toLocaleString()}`,
-      detail: `${baseFlag.toLocaleString()} → ${candFlag.toLocaleString()} · queued for manual review`,
-      icon: flagDelta >= 0 ? ArrowUpRight : ArrowDownRight,
-      tone:
-        flagDelta > 0 ? "violet" : flagDelta < 0 ? "neutral" : "neutral",
-    },
-    {
       label: "Net Rejected",
       value: `${rejDelta >= 0 ? "+" : ""}${rejDelta.toLocaleString()}`,
       detail: `${baseRej.toLocaleString()} → ${candRej.toLocaleString()}`,
       icon: rejDelta >= 0 ? ArrowDownRight : ArrowUpRight,
       tone: rejDelta > 0 ? "red" : rejDelta < 0 ? "green" : "neutral",
+    },
+    {
+      label: "Net Approved",
+      value: `${apprDelta >= 0 ? "+" : ""}${apprDelta.toLocaleString()}`,
+      detail: `${baseAppr.toLocaleString()} → ${candAppr.toLocaleString()}`,
+      icon: apprDelta >= 0 ? ArrowUpRight : ArrowDownRight,
+      tone: apprDelta > 0 ? "green" : apprDelta < 0 ? "red" : "neutral",
+    },
+    {
+      label: "Top Subsystem Driver",
+      value: topSubsystem?.name ?? "—",
+      detail: topSubsystem
+        ? `${topSubsystem.count.toLocaleString()} flips attributed`
+        : "No subsystem-level flips",
+      icon: topSubsystem ? Activity : ShieldAlert,
+      tone: topSubsystem ? "violet" : "neutral",
     },
   ];
 

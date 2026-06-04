@@ -12,7 +12,6 @@ from app.models.merge import (
     MergeSuggestedAction,
 )
 from app.models.impact import ImpactRun, ImpactRunStatus
-from app.models.audit_event import AuditEvent, AuditAction, AuditEntityType
 
 __all__ = [
     "BrdDocument", "FileType",
@@ -24,5 +23,4 @@ __all__ = [
     "MergeProposalStatus", "MergeItemCategory", "MergeItemSeverity",
     "MergeSuggestedAction",
     "ImpactRun", "ImpactRunStatus",
-    "AuditEvent", "AuditAction", "AuditEntityType",
 ]

@@ -24,10 +24,6 @@ import type { SuiteExecutionResponse } from "@/lib/types";
 interface SuiteExecutionPanelProps {
   report: SuiteExecutionResponse;
   executedAt: string | null;
-  /** Slice 1 — surface attribution under the header so reviewers know
-   *  who validated this version and the documented reason. */
-  executedBy?: string | null;
-  executionRationale?: string | null;
 }
 
 const CATEGORY_TONE: Record<string, { bg: string; text: string; label: string }> = {
@@ -56,12 +52,7 @@ function formatDistribution(actual: Record<string, number>) {
   return entries.map(([k, n]) => `${k}: ${n}`).join(" · ");
 }
 
-export function SuiteExecutionPanel({
-  report,
-  executedAt,
-  executedBy,
-  executionRationale,
-}: SuiteExecutionPanelProps) {
+export function SuiteExecutionPanel({ report, executedAt }: SuiteExecutionPanelProps) {
   const { passed, failed, untested } = useMemo(() => {
     let p = 0;
     let f = 0;
@@ -93,26 +84,15 @@ export function SuiteExecutionPanel({
             </span>
             Scenario Test Execution
           </CardTitle>
-          <div className="flex flex-col items-end gap-0.5">
-            <div className="flex items-center gap-2">
-              {report.version_number != null && (
-                <Badge variant="outline" className="text-[11px]">
-                  vs v{report.version_number}
-                </Badge>
-              )}
-              {executedAt && (
-                <span className="text-[11px] text-muted-foreground">
-                  {new Date(executedAt).toLocaleString()}
-                </span>
-              )}
-            </div>
-            {executedBy && (
-              <span
-                className="text-[10px] text-muted-foreground"
-                title={executionRationale || undefined}
-              >
-                Run by <span className="font-medium">{executedBy}</span>
-                {executionRationale ? ` · "${executionRationale}"` : ""}
+          <div className="flex items-center gap-2">
+            {report.version_number != null && (
+              <Badge variant="outline" className="text-[11px]">
+                vs v{report.version_number}
+              </Badge>
+            )}
+            {executedAt && (
+              <span className="text-[11px] text-muted-foreground">
+                {new Date(executedAt).toLocaleString()}
               </span>
             )}
           </div>
@@ -225,12 +205,6 @@ export function SuiteExecutionPanel({
                 const cat = categoryTone(r.category);
                 const noLoans = r.matched_loan_count === 0;
                 const passed = !noLoans && r.deviates_from_expected === 0;
-                const allShadowed =
-                  passed &&
-                  (r.shadowed ?? 0) > 0 &&
-                  r.matches_expected === 0;
-                const someShadowed =
-                  passed && (r.shadowed ?? 0) > 0 && !allShadowed;
                 const StatusIcon = noLoans
                   ? AlertCircle
                   : passed
@@ -238,25 +212,19 @@ export function SuiteExecutionPanel({
                     : XCircle;
                 const statusColor = noLoans
                   ? "text-slate-500"
-                  : allShadowed
-                    ? "text-amber-600 dark:text-amber-400"
-                    : passed
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-red-600 dark:text-red-400";
+                  : passed
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-red-600 dark:text-red-400";
                 const statusLabel = noLoans
                   ? "Untested"
-                  : allShadowed
-                    ? "Shadowed"
-                    : passed
-                      ? "Pass"
-                      : "Fail";
+                  : passed
+                    ? "Pass"
+                    : "Fail";
                 const statusBg = noLoans
                   ? "bg-slate-500/10 ring-slate-500/20"
-                  : allShadowed
-                    ? "bg-amber-500/10 ring-amber-500/30"
-                    : passed
-                      ? "bg-emerald-500/10 ring-emerald-500/30"
-                      : "bg-red-500/10 ring-red-500/30";
+                  : passed
+                    ? "bg-emerald-500/10 ring-emerald-500/30"
+                    : "bg-red-500/10 ring-red-500/30";
                 return (
                   <TableRow
                     key={r.test_case_id}
@@ -316,20 +284,6 @@ export function SuiteExecutionPanel({
                       ) : noLoans ? (
                         <span className="text-muted-foreground italic">
                           No matching loans in corpus
-                        </span>
-                      ) : allShadowed ? (
-                        <span
-                          className="text-amber-700 dark:text-amber-300"
-                          title="The source rule didn't fire on these loans, but a higher-priority REJECT short-circuited the engine first — the policy outcome is still correct."
-                        >
-                          all {r.matched_loan_count.toLocaleString()} shadowed by an earlier REJECT rule
-                        </span>
-                      ) : someShadowed ? (
-                        <span className="text-emerald-600 dark:text-emerald-400">
-                          {r.matches_expected.toLocaleString()} fired ·{" "}
-                          <span className="text-amber-700 dark:text-amber-300">
-                            {r.shadowed?.toLocaleString()} shadowed
-                          </span>
                         </span>
                       ) : (
                         <span className="text-emerald-600 dark:text-emerald-400">

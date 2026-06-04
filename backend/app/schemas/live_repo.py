@@ -24,7 +24,6 @@ class RepositorySummary(BaseModel):
     production_version_number: int | None = None
     production_promoted_at: str | None = None
     production_promoted_by: str | None = None
-    production_promotion_rationale: str | None = None
     created_at: str
     updated_at: str
 
@@ -37,14 +36,6 @@ class PromoteVersionRequest(BaseModel):
         default=None,
         description="Operator name; falls back to 'system' if omitted.",
     )
-    rationale: str | None = Field(
-        default=None,
-        description=(
-            "Optional justification — e.g. 'all 142 scenario tests pass + "
-            "approval-rate change within tolerance vs prod baseline'."
-        ),
-        max_length=2000,
-    )
 
 
 class PromoteVersionResponse(BaseModel):
@@ -53,7 +44,6 @@ class PromoteVersionResponse(BaseModel):
     production_version_number: int
     promoted_by: str
     promoted_at: str
-    rationale: str | None = None
 
 
 class VersionSummary(BaseModel):

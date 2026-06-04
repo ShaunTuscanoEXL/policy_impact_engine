@@ -45,8 +45,6 @@ class LiveRuleRepository(Base):
     )
     production_promoted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     production_promoted_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    # Slice 1: free-text justification captured at promotion time.
-    production_promotion_rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

@@ -25,7 +25,6 @@ def _to_response(run) -> ImpactRunResponse:
         created_at=run.created_at.isoformat(),
         completed_at=run.completed_at.isoformat() if run.completed_at else None,
         created_by=run.created_by,
-        rationale=getattr(run, "rationale", None),
     )
 
 
@@ -41,7 +40,6 @@ async def create_impact_run(
             candidate_version_id=uuid.UUID(payload.candidate_version_id),
             loan_record_filter=payload.loan_record_filter,
             created_by=payload.created_by,
-            rationale=payload.rationale,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

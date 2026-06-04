@@ -44,7 +44,6 @@ def _rules_to_defs(rules: list) -> list[RuleDefinition]:
             conditions=[Condition(**c) if isinstance(c, dict) else c for c in conditions],
             actions=[Action(**a) if isinstance(a, dict) else a for a in actions],
             priority=r.priority,
-            uuid=str(r.id) if getattr(r, "id", None) else None,
         ))
     return rule_defs
 
@@ -81,7 +80,6 @@ def _snapshot_rules_to_defs(snapshot: list[dict]) -> list[RuleDefinition]:
             conditions=[Condition(**c) if isinstance(c, dict) else c for c in conditions],
             actions=[Action(**a) if isinstance(a, dict) else a for a in actions],
             priority=int(r.get("priority", 0)),
-            uuid=str(r.get("id")) if r.get("id") else None,
         ))
     return rule_defs
 
@@ -130,7 +128,6 @@ async def generate_and_save(
             test_case_id=tc.test_case_id,
             description=tc.description,
             source_rule_ids=tc.source_rule_ids,
-            source_rule_uuids=tc.source_rule_uuids or None,
             category=TestCaseCategory(tc.category.value),
             input_values=tc.input_values,
             filter_logic=tc.filter_logic,
@@ -225,7 +222,6 @@ async def generate_from_version(
             test_case_id=tc.test_case_id,
             description=tc.description,
             source_rule_ids=tc.source_rule_ids,
-            source_rule_uuids=tc.source_rule_uuids or None,
             category=TestCaseCategory(tc.category.value),
             input_values=tc.input_values,
             filter_logic=tc.filter_logic,
