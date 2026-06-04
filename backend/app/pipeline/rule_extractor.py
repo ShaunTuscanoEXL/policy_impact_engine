@@ -896,100 +896,72 @@ def _parse_rule(d: dict, index: int) -> RuleDefinition | None:
 # ---------------------------------------------------------------------------
 
 def _call_llm(client, model: str, messages: list[dict]) -> str:
-    """
-    Call LLM with retries and continuation handling.
+    """Call the LLM with retry and truncation handling.
 
-    - Supports OpenAI-style and Claude-style clients
-    - Retries transient failures
-    - Handles truncated responses by requesting continuation
+    If the response is truncated (finish_reason='length'), makes continuation
+    calls to get the rest of the output. Assembles the full response.
     """
-
     full_response = ""
-    conversation = list(messages)
+    conversation = list(messages)  # Copy so we can append continuations
 
-    for pass_num in range(5):  # up to 5 continuation passes
+    for pass_num in range(5):  # Max 5 continuation passes
         response_text = ""
-        finish_reason = "stop"
+        finish_reason = ""
 
-        # -------------------------
-        # Retry loop
-        # -------------------------
         for attempt in range(MAX_RETRIES + 1):
             try:
-                if settings.llm_provider.lower() == "claude":
-                    # ✅ Claude-style call
-                    response = client.invoke(conversation)
-                    response_text = getattr(response, "content", "") or ""
-                    finish_reason = "stop"   # Claude doesn't always expose this cleanly
+                # Newer models (gpt-4.1+, gpt-5+) require max_completion_tokens
+                # Older models use max_tokens. Try both.
+                try:
+                    if settings.llm_provider.lower() == "claude":
+                        response = client.invoke(conversation)
 
-                else:
-                    # ✅ OpenAI-style call
+                    else:
+                        response = client.chat.completions.create(
+                            model=model,
+                            max_completion_tokens=MAX_OUTPUT_TOKENS,
+                            messages=conversation,
+                        )
+
+                except Exception:
                     response = client.chat.completions.create(
                         model=model,
+                        # temperature=0,
                         max_completion_tokens=MAX_OUTPUT_TOKENS,
                         messages=conversation,
                     )
+
+                if settings.llm_provider.lower() == "claude":
+                    response_text = response.content or ""
+                    finish_reason = "stop"  
+                else:      
                     response_text = response.choices[0].message.content or ""
                     finish_reason = response.choices[0].finish_reason or "stop"
 
                 if response_text.strip():
                     break
-
-                logger.warning(
-                    "Empty LLM response (attempt %d/%d)",
-                    attempt + 1,
-                    MAX_RETRIES + 1,
-                )
-
+                logger.warning("Empty LLM response (attempt %d/%d)", attempt + 1, MAX_RETRIES + 1)
             except Exception as exc:
-                logger.error(
-                    "LLM call failed (attempt %d/%d): %s",
-                    attempt + 1,
-                    MAX_RETRIES + 1,
-                    exc,
-                )
-
+                logger.error("LLM call failed (attempt %d/%d): %s", attempt + 1, MAX_RETRIES + 1, exc)
                 if attempt < MAX_RETRIES:
                     time.sleep(RETRY_DELAY_SECONDS * (2 ** attempt))
-                else:
-                    # return what we got so far (partial is better than nothing)
-                    return full_response
+                    continue
+                return full_response
 
-        # If still empty, stop entirely
         if not response_text.strip():
             break
 
-        # ✅ Append safely (avoid spacing duplication)
-        full_response = full_response.rstrip() + response_text.lstrip()
+        full_response += response_text
+        logger.info("LLM pass %d: %d chars, finish_reason=%s", pass_num + 1, len(response_text), finish_reason)
 
-        logger.info(
-            "LLM pass %d: %d chars, finish_reason=%s",
-            pass_num + 1,
-            len(response_text),
-            finish_reason,
-        )
-
-        # ✅ Stop if not truncated
+        # If the response completed normally, we're done
         if finish_reason != "length":
             break
 
-        # -------------------------
-        # Continuation handling
-        # -------------------------
-        logger.info("Response truncated — requesting continuation...")
-
-        conversation.append({
-            "role": "assistant",
-            "content": response_text,
-        })
-
-        conversation.append({
-            "role": "user",
-            "content": (
-                "Continue exactly from where you stopped. "
-                "Do not repeat previous content."
-            ),
-        })
+        # Response was truncated — ask the LLM to continue
+        logger.info("Response truncated, requesting continuation...")
+        conversation.append({"role": "assistant", "content": response_text})
+        conversation.append({"role": "user", "content": "Continue the JSON array from exactly where you stopped. Do not repeat rules already output. Continue with the next rule object."})
 
     return full_response
 

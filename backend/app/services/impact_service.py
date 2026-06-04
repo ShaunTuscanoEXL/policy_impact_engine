@@ -171,22 +171,11 @@ def _summarize(
         base_dist[base_r.decision] = base_dist.get(base_r.decision, 0) + 1
         cand_dist[cand_r.decision] = cand_dist.get(cand_r.decision, 0) + 1
 
-        amt = _desired_amount(loan)
         seg = _segment_for(loan)
         by_segment_base.setdefault(seg, _empty_dist())
         by_segment_cand.setdefault(seg, _empty_dist())
         by_segment_base[seg][base_r.decision] = by_segment_base[seg].get(base_r.decision, 0) + 1
         by_segment_cand[seg][cand_r.decision] = by_segment_cand[seg].get(cand_r.decision, 0) + 1
-
-        # Per-segment funded $ totals (only the APPROVED ones)
-        by_segment_amount_base.setdefault(seg, 0.0)
-        by_segment_amount_cand.setdefault(seg, 0.0)
-        if base_r.decision in _FUNDED_DECISIONS:
-            base_funded_amount += amt
-            by_segment_amount_base[seg] += amt
-        if cand_r.decision in _FUNDED_DECISIONS:
-            cand_funded_amount += amt
-            by_segment_amount_cand[seg] += amt
 
         if base_r.decision != cand_r.decision:
             key = _flip_key(base_r.decision, cand_r.decision)
@@ -384,7 +373,6 @@ async def execute_impact_run(
     candidate_version_id: uuid.UUID,
     loan_record_filter: dict | None = None,
     created_by: str | None = None,
-    rationale: str | None = None,
 ) -> ImpactRun:
     """Synchronously run the impact evaluation and persist the result.
 
@@ -412,35 +400,11 @@ async def execute_impact_run(
         candidate_version_id=candidate_version_id,
         loan_record_filter=loan_record_filter,
         status=ImpactRunStatus.RUNNING,
-        created_by=(created_by or "system").strip()[:128] or "system",
-        rationale=(rationale.strip() if rationale else None) or None,
+        created_by=created_by,
     )
     db.add(run)
     await db.commit()
     await db.refresh(run)
-
-    # Audit event for the START — completion writes a second event.
-    try:
-        from app.services.audit_service import record_event
-        from app.models.audit_event import AuditAction, AuditEntityType
-        await record_event(
-            db,
-            action=AuditAction.IMPACT_RUN_STARTED,
-            entity_type=AuditEntityType.IMPACT_RUN,
-            entity_id=run.id,
-            actor=run.created_by,
-            rationale=run.rationale,
-            brd_id=cand_version.source_brd_id,
-            repository_id=repository_id,
-            metadata={
-                "candidate_version_id": str(candidate_version_id),
-                "base_version_id": (
-                    str(base_version_id) if base_version_id else None
-                ),
-            },
-        )
-    except Exception:
-        pass
 
     try:
         limit = (loan_record_filter or {}).get("limit") if isinstance(loan_record_filter, dict) else None
@@ -466,33 +430,6 @@ async def execute_impact_run(
         run.completed_at = datetime.utcnow()
     await db.commit()
     await db.refresh(run)
-
-    # Completion event — captures the final outcome for the timeline.
-    try:
-        from app.services.audit_service import record_event
-        from app.models.audit_event import AuditAction, AuditEntityType
-        meta: dict = {
-            "status": run.status.value if hasattr(run.status, "value") else str(run.status),
-        }
-        if run.summary:
-            flips = run.summary.get("decision_flips", {}) or {}
-            meta["total_loans"] = run.summary.get("total_loans")
-            meta["total_flips"] = sum(int(v or 0) for v in flips.values())
-        if run.error:
-            meta["error"] = run.error[:512]
-        await record_event(
-            db,
-            action=AuditAction.IMPACT_RUN_COMPLETED,
-            entity_type=AuditEntityType.IMPACT_RUN,
-            entity_id=run.id,
-            actor=run.created_by,
-            brd_id=cand_version.source_brd_id,
-            repository_id=repository_id,
-            metadata=meta,
-        )
-    except Exception:
-        pass
-
     return run
 
 

@@ -14,14 +14,6 @@ class CreateImpactRunRequest(BaseModel):
         description="Optional filter (slice 2 supports just {'limit': N}; future slices: cohort filters).",
     )
     created_by: str | None = None
-    rationale: str | None = Field(
-        default=None,
-        description=(
-            "Optional reason for kicking off this run — e.g. 'pre-promotion "
-            "regression check' or 'investigating drift in PRIME segment'."
-        ),
-        max_length=2000,
-    )
 
 
 class ImpactRunResponse(BaseModel):
@@ -35,4 +27,3 @@ class ImpactRunResponse(BaseModel):
     created_at: str
     completed_at: str | None
     created_by: str | None
-    rationale: str | None = None

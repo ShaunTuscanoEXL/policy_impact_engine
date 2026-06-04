@@ -48,7 +48,6 @@ import {
 import { ProductionBadge } from "@/components/live-repo/production-badge";
 import { PromoteToProductionButton } from "@/components/live-repo/promote-button";
 import { VersionTimeline } from "@/components/live-repo/version-timeline";
-import { DriftWatchPanel } from "@/components/live-repo/drift-watch-panel";
 
 const SUBSYSTEM_COLORS: Record<string, string> = {
   BUREAU_GATE: "bg-blue-500/10 text-blue-600 border-blue-500/20 dark:text-blue-400",
@@ -295,25 +294,18 @@ export default function LiveRepoDetailPage() {
             </TabsList>
 
             <TabsContent value="timeline">
-              <div className="space-y-5">
-                <Card className="card-elevated border-border/40 p-6">
-                  <VersionTimeline
-                    repoId={repoId}
-                    repoName={repo.name}
-                    versions={repo.versions}
-                    productionVersionNumber={repo.production_version_number ?? null}
-                    productionVersionId={repo.production_version_id ?? null}
-                    onRefresh={fetchRepo}
-                    onViewSnapshot={handleViewVersion}
-                    onDownload={handleDownloadVersion}
-                  />
-                </Card>
-                {/* Slice 10 — production drift watch. Only meaningful
-                    once the repo has a production version. */}
-                {repo.production_version_id && (
-                  <DriftWatchPanel repoId={repoId} />
-                )}
-              </div>
+              <Card className="card-elevated border-border/40 p-6">
+                <VersionTimeline
+                  repoId={repoId}
+                  repoName={repo.name}
+                  versions={repo.versions}
+                  productionVersionNumber={repo.production_version_number ?? null}
+                  productionVersionId={repo.production_version_id ?? null}
+                  onRefresh={fetchRepo}
+                  onViewSnapshot={handleViewVersion}
+                  onDownload={handleDownloadVersion}
+                />
+              </Card>
             </TabsContent>
 
             <TabsContent value="versions">

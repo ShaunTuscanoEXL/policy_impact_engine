@@ -11,7 +11,6 @@ import type {
 } from "@/lib/types";
 import { toast } from "sonner";
 import { PageTransition } from "@/components/page-transition";
-import { PipelineContextBar } from "@/components/brds/pipeline/pipeline-context-bar";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -136,7 +135,6 @@ export default function ImpactRunDetailPage() {
 
   return (
     <PageTransition>
-      <PipelineContextBar />
       <div className="space-y-8">
         <p className="text-xs text-muted-foreground">
           Dashboard /{" "}
