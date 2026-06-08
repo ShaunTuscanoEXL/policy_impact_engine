@@ -499,6 +499,12 @@ def generate_single_record(index: int, rng: np.random.Generator) -> dict:
     choices = []
     if decision_status in ("APPROVED", "APPROVED_WITH_CONDITIONS"):
         num_offers = int(rng.integers(2, 5))
+        # loan_grade is a property of the BORROWER (derived from FICO),
+        # not of the individual offer. Compute it ONCE here and reuse
+        # across every offer/choice so a single applicant doesn't appear
+        # to be A2, B4, and C1 simultaneously. (Term, amount, APR vary
+        # per offer — those are the legitimate differentiators.)
+        loan_grade = get_loan_grade(fico, rng)
         for offer_idx in range(num_offers):
             amount_factor = float(rng.uniform(0.6, 1.05))
             offer_amount = round(desired_amount * amount_factor / 500) * 500
@@ -512,7 +518,6 @@ def generate_single_record(index: int, rng: np.random.Generator) -> dict:
             # APR includes origination fee amortized → typically 0.5%-2% above note rate
             apr = round(interest_rate + float(rng.uniform(0.005, 0.02)), 4)
             term_months = int(rng.choice([12, 24, 36, 48, 60, 72, 84]))
-            loan_grade = get_loan_grade(fico, rng)
             origination_fee_pct = round(float(rng.uniform(0.00, 0.08)), 4)  # 0%-8% (LendingClub style)
             monthly_payment = compute_monthly_payment(offer_amount, interest_rate, term_months)
 
