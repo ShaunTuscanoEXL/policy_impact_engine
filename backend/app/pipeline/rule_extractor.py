@@ -108,6 +108,63 @@ RIGHT (emit one rule per tier row):
    "actions":[{"action_type":"SET","target_field":"interest_rate","value":0.0999,...}]}
 ]
 
+CRITICAL — COMPOUND "ALL OF THE FOLLOWING" DEFINITIONS MUST BE ONE RULE:
+The mirror image of the tier-table rule. When a BRD defines a classification
+or flag and says "X is set if ALL the following conditions are satisfied"
+(or "must satisfy all of", "AND of", "every one of"), it is ONE rule with
+N AND-joined conditions and ONE action — NOT N separate rules each with
+one condition and the same action.
+
+Splitting it into N rules turns AND into OR: the engine fires each rule
+independently, and any single condition matching is enough to trigger the
+action. That's the opposite of what the BRD said.
+
+WRONG (do NOT do this) — splits a compound AND-rule into N separate rules:
+A BRD section reading:
+  "A repeat customer is classified as 'Good' if ALL the following are met:
+   - repeat_type = REPEAT
+   - debt_to_income_ratio <= 0.20
+   - net_monthly_surplus > 0
+   - salary_credit_consistency_6m > 0.75
+   - overdue_accounts = 0"
+
+Wrong extraction (any one condition triggers good_customer_flag — defeats
+the BRD):
+[
+  {"rule_id":"R-A","conditions":[{"field":"repeat_type","operator":"==","value":"REPEAT"}],
+   "actions":[{"action_type":"SET","target_field":"good_customer_flag","value":true,...}]},
+  {"rule_id":"R-B","conditions":[{"field":"dti_ratio","operator":"<=","value":0.20}],
+   "actions":[{"action_type":"SET","target_field":"good_customer_flag","value":true,...}]},
+  {"rule_id":"R-C","conditions":[{"field":"net_monthly_surplus","operator":">","value":0}],
+   "actions":[{"action_type":"SET","target_field":"good_customer_flag","value":true,...}]},
+  ... three more like this ...
+]
+
+RIGHT (one rule with N AND-joined conditions, one action):
+{
+  "rule_id":"RULE-GOOD-CUSTOMER",
+  "rule_name":"Good Repeat Customer classification",
+  "rule_type":"ELIGIBILITY",
+  "conditions":[
+    {"field":"repeat_type","operator":"==","value":"REPEAT","logic":"AND"},
+    {"field":"dti_ratio","operator":"<=","value":0.20,"logic":"AND"},
+    {"field":"net_monthly_surplus","operator":">","value":0,"logic":"AND"},
+    {"field":"salary_credit_consistency_6m","operator":">","value":0.75,"logic":"AND"},
+    {"field":"overdue_accounts","operator":"==","value":0,"logic":"AND"}
+  ],
+  "actions":[{"action_type":"SET","target_field":"good_customer_flag","value":true,
+              "description":"Repeat customer meets all good-customer criteria"}],
+  "source_section":"Section 2 — Definition of Repeat Good Customer"
+}
+
+Decision rule:
+  - Phrases like "all of the following", "must satisfy all", "every one of
+    these", "and ... and ..." → ONE rule with logic=AND across conditions.
+  - Phrases like "any of the following", "either ... or ...", "at least
+    one" → either ONE rule with logic=OR, OR N separate rules (both equivalent).
+  - A TIER TABLE (where each row maps to a DIFFERENT output value) → always
+    N separate rules; see the section above.
+
 For each rule, return a JSON object:
 
 {
@@ -217,6 +274,16 @@ You are a senior lending policy analyst. I will give you a BRD document and a li
 rules that were identified in it. For EACH listed rule, extract the full structured details.
 
 You MUST produce output for EVERY rule in the list. Do not skip, merge, or consolidate any rules.
+
+CRITICAL — COMPOUND "ALL OF THE FOLLOWING" DEFINITIONS ARE ONE RULE:
+When the BRD section says a classification or flag is set if "ALL the following
+conditions are satisfied" (or "must satisfy all of", "AND of", "every one of"),
+emit ONE rule with N AND-joined conditions, NOT N separate rules each with one
+condition and the same SET/FLAG action. Splitting into N separate rules turns
+AND into OR — any single condition would trigger the flag, defeating the BRD.
+
+Example WRONG → "good_customer_flag" requires 5 conditions → don't emit 5 rules
+each setting good_customer_flag=True. Emit ONE rule with 5 AND conditions.
 
 For each rule, return:
 {
@@ -603,6 +670,129 @@ def _fan_out_tiers(rules: list[RuleDefinition]) -> list[RuleDefinition]:
             fanout_count,
             len(out) - (len(rules) - fanout_count),
         )
+    return out
+
+
+def _coalesce_compound_and_rules(rules: list[RuleDefinition]) -> list[RuleDefinition]:
+    """Mirror of ``_fan_out_tiers`` for the opposite LLM failure mode.
+
+    A BRD section like
+        "X is set to True if ALL the following conditions are satisfied:
+         - cond A
+         - cond B
+         - cond C"
+    is ONE compound AND rule. LLMs often split it into N rules each with
+    one condition and the same SET action — which the engine treats as
+    OR (any rule firing sets the flag), the OPPOSITE of what the BRD said.
+
+    Conservative heuristic — only coalesces when ALL of these hold:
+      1. action_type is SET (not REJECT/FLAG/ADJUST — those gates are
+         legitimately independent even when sharing a target)
+      2. target_field is identical across the candidates
+      3. value (normalized to lower-case string for True/False/None) is
+         identical across the candidates
+      4. Every candidate rule has EXACTLY one condition (multi-condition
+         rules are already compound, leave them alone)
+      5. Every candidate shares the same normalized source_section
+         (different sections almost always mean different concepts)
+      6. The group has K >= 2 rules
+
+    When all six hold, the rules are merged into one with K AND-joined
+    conditions. Description, priority, and confidence are inherited from
+    the first rule. The other rule_ids are recorded in the description
+    so the audit trail is traceable.
+
+    Idempotent: rules that don't match the pattern pass through
+    unchanged.
+    """
+    if not rules:
+        return rules
+
+    def _norm_section(s: str | None) -> str:
+        # Trim and lowercase so "Section 2" and " section 2 " coalesce.
+        return (s or "").strip().lower()
+
+    def _norm_value(v: Any) -> str:
+        # JSON booleans, ints, floats, strings all need to compare equal
+        # across the "is this the same SET target?" question.
+        if isinstance(v, bool):
+            return f"bool::{v}"
+        if v is None:
+            return "null::"
+        if isinstance(v, (int, float)):
+            return f"num::{v}"
+        return f"str::{str(v).strip().lower()}"
+
+    # Group candidates by their merge signature. Skip rules that don't
+    # match the per-rule preconditions (multi-cond, multi-action, etc.).
+    from collections import defaultdict
+    groups: dict[tuple, list[RuleDefinition]] = defaultdict(list)
+    untouched: list[RuleDefinition] = []
+    for rule in rules:
+        conds = list(rule.conditions or [])
+        actions = list(rule.actions or [])
+        # Single condition + single SET action are the precondition for
+        # this pattern. Anything else passes through.
+        if len(conds) != 1 or len(actions) != 1:
+            untouched.append(rule)
+            continue
+        act = actions[0]
+        act_type = str(getattr(act, "action_type", "") or "").upper()
+        if act_type != "SET":
+            untouched.append(rule)
+            continue
+        target = getattr(act, "target_field", "") or ""
+        value_key = _norm_value(getattr(act, "value", None))
+        section_key = _norm_section(rule.source_section)
+        sig = (target, value_key, section_key)
+        groups[sig].append(rule)
+
+    out: list[RuleDefinition] = list(untouched)
+    coalesced_count = 0
+
+    for sig, members in groups.items():
+        if len(members) < 2:
+            # Singleton — nothing to coalesce; emit as-is.
+            out.extend(members)
+            continue
+
+        # Build the merged rule. Take the first member as the spine and
+        # graft the other members' conditions onto it with logic=AND.
+        spine = members[0]
+        merged_conditions = []
+        original_ids = []
+        for r in members:
+            for c in r.conditions or []:
+                # Every condition in the merged rule must use logic=AND
+                # (the whole point of the coalesce).
+                merged_conditions.append(c.model_copy(update={"logic": "AND"}))
+            original_ids.append(r.rule_id)
+
+        # Build description that preserves the audit trail.
+        target, _value_key, _section_key = sig
+        merged_description = (
+            f"Compound AND rule coalesced from {len(members)} BRD-split rules "
+            f"({', '.join(original_ids)}) — sets {target} only when "
+            f"ALL {len(merged_conditions)} conditions are satisfied."
+        )
+        merged = spine.model_copy(update={
+            "rule_id": f"{spine.rule_id}-COMPOUND",
+            "rule_name": spine.rule_name,
+            "description": merged_description,
+            "conditions": merged_conditions,
+            # Take the lowest confidence among members — coalescing
+            # adds interpretive risk, so be honest about it.
+            "confidence": min(float(r.confidence or 1.0) for r in members),
+        })
+        out.append(merged)
+        coalesced_count += len(members) - 1
+
+    if coalesced_count > 0:
+        logger.info(
+            "Coalesced %d split-rule(s) into compound AND rules.",
+            coalesced_count,
+        )
+
     return out
 
 
@@ -1096,6 +1286,12 @@ def _extract_rules_internal(
     # Fan out collapsed tier rules into N independent rules (a common
     # LLM mistake when reading tiered pricing tables — see _fan_out_tiers).
     rules = _fan_out_tiers(rules)
+
+    # Coalesce the OPPOSITE LLM mistake: N rules that share a SET action
+    # (same target + value + section) get merged into ONE compound AND
+    # rule. Without this, "X is set if ALL the following are satisfied"
+    # is silently interpreted as OR by the engine — defeating the BRD.
+    rules = _coalesce_compound_and_rules(rules)
 
     # Ensure unique IDs
     seen = set()
