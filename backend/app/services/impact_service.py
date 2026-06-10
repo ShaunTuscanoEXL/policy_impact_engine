@@ -82,6 +82,54 @@ def _desired_amount(loan: LoanRecord) -> float:
 # is excluded — it goes to manual review, not auto-funded.
 _FUNDED_DECISIONS = {"APPROVED"}
 
+# Action types that modify offer terms (not the final APPROVED/FLAGGED/
+# REJECTED decision). Slice 13 tracks these so pricing-only BRDs are
+# visible in impact analysis instead of always showing "0 flips".
+_OFFER_MOD_ACTIONS = {"SET", "ADJUST", "CAP", "MODIFY"}
+
+# Target fields that ARE the final decision (already tracked separately
+# in decision_distribution). Excluded from offer-modification tracking
+# to avoid double-counting.
+_DECISION_TARGETS = {"decision_status", "decision", "status", "outcome", "verdict"}
+
+
+def _offer_writes(result: "DecisionResult") -> set[tuple[str, str]]:
+    """Project a DecisionResult into the set of (target_field, action_type)
+    pairs that modify offer terms — anything that's SET/ADJUST/CAP/MODIFY
+    on a non-decision field. Returns an empty set when no fired rules
+    touch offer terms (decision-only BRDs)."""
+    out: set[tuple[str, str]] = set()
+    for fr in result.fired_rules or []:
+        if not fr.target_field:
+            continue
+        if fr.action_type not in _OFFER_MOD_ACTIONS:
+            continue
+        tgt = str(fr.target_field).strip().lower()
+        if tgt in _DECISION_TARGETS:
+            continue
+        out.add((tgt, fr.action_type))
+    return out
+
+
+def _offer_field_class(field: str) -> str:
+    """Coarse grouping for the offer-modifications UI — every concrete
+    target field maps to a class so the dashboard can show "X loans got
+    new RATE adjustments" without listing every field name."""
+    f = field.lower()
+    if any(x in f for x in ("rate", "apr", "coupon")):
+        return "RATE"
+    if any(x in f for x in ("amount", "limit", "principal")):
+        return "AMOUNT"
+    if any(x in f for x in ("tenure", "term", "month", "duration")):
+        return "TENURE"
+    if any(x in f for x in ("fee", "origination")):
+        return "FEE"
+    if "segment" in f or "tier" in f or "band" in f:
+        return "SEGMENT"
+    if "flag" in f or "eligib" in f:
+        return "ELIGIBILITY"
+    return "OTHER"
+
 
 def _summarize(
     base_results: list[tuple[LoanRecord, DecisionResult]],
@@ -108,6 +156,16 @@ def _summarize(
     loans_newly_approved = 0  # was REJECTED/FLAGGED, now APPROVED
     exposure_change_loss = 0.0  # $ no longer funded
     exposure_change_gain = 0.0  # $ newly funded
+
+    # Slice 13: offer-modification tracking — counts loans that gained
+    # or lost non-decision writes (SET/ADJUST/CAP/MODIFY on fields like
+    # eligible_amount, interest_rate, max_tenure_months). Pricing-only
+    # BRDs that previously showed "0 flips" now have a visible signal.
+    # Keys are (target_field, action_type); values count loans.
+    loans_with_new_write_by_field: dict[str, int] = {}
+    loans_with_dropped_write_by_field: dict[str, int] = {}
+    loans_with_any_offer_change = 0
+    loans_with_offer_change_but_decision_unchanged = 0
 
     for (loan, base_r), (_, cand_r) in zip(base_results, candidate_results):
         base_dist[base_r.decision] = base_dist.get(base_r.decision, 0) + 1
@@ -148,6 +206,29 @@ def _summarize(
             elif now_funded and not was_funded:
                 loans_newly_approved += 1
                 exposure_change_gain += amt
+
+        # Slice 13: track offer-term modifications (non-decision writes)
+        # so pricing/eligibility-only BRDs are visible. Diff the SET/
+        # ADJUST writes each side made for this loan and bucket gains
+        # vs drops by target field.
+        base_writes = _offer_writes(base_r)
+        cand_writes = _offer_writes(cand_r)
+        if base_writes != cand_writes:
+            new_writes = cand_writes - base_writes
+            dropped_writes = base_writes - cand_writes
+            for tgt, _act in new_writes:
+                loans_with_new_write_by_field[tgt] = (
+                    loans_with_new_write_by_field.get(tgt, 0) + 1
+                )
+            for tgt, _act in dropped_writes:
+                loans_with_dropped_write_by_field[tgt] = (
+                    loans_with_dropped_write_by_field.get(tgt, 0) + 1
+                )
+            loans_with_any_offer_change += 1
+            if base_r.decision == cand_r.decision:
+                # Offer terms changed but final decision stayed the same
+                # — the case that used to be invisible in the dashboard.
+                loans_with_offer_change_but_decision_unchanged += 1
 
     # Per-segment summary with absolute numbers AND deltas — the UI
     # uses the absolutes for hero copy and the deltas for sparklines.
@@ -207,6 +288,45 @@ def _summarize(
         "top_changed_segment": top_segment_key,
     }
 
+    # Slice 13: aggregate the offer-modification tracking into the
+    # shape the BusinessImpactCard consumes — by raw field, by coarse
+    # class, plus the headline "X loans got an offer change without a
+    # decision change" so pricing-only BRDs have a visible signal.
+    new_by_class: dict[str, int] = {}
+    new_by_field: list[dict[str, Any]] = []
+    for fld, n in sorted(
+        loans_with_new_write_by_field.items(), key=lambda kv: -kv[1]
+    ):
+        cls = _offer_field_class(fld)
+        new_by_class[cls] = new_by_class.get(cls, 0) + n
+        new_by_field.append({"field": fld, "field_class": cls, "loans_affected": n})
+    dropped_by_field: list[dict[str, Any]] = [
+        {
+            "field": fld,
+            "field_class": _offer_field_class(fld),
+            "loans_affected": n,
+        }
+        for fld, n in sorted(
+            loans_with_dropped_write_by_field.items(), key=lambda kv: -kv[1]
+        )
+    ]
+    offer_modifications = {
+        "loans_with_any_offer_change": loans_with_any_offer_change,
+        "loans_with_offer_change_but_decision_unchanged": (
+            loans_with_offer_change_but_decision_unchanged
+        ),
+        "new_writes_by_field": new_by_field,
+        "new_writes_by_class": [
+            {"class": k, "loans_affected": v}
+            for k, v in sorted(new_by_class.items(), key=lambda kv: -kv[1])
+        ],
+        "dropped_writes_by_field": dropped_by_field,
+        "fields_touched_only_in_candidate": [
+            f for f in loans_with_new_write_by_field
+            if f not in loans_with_dropped_write_by_field
+        ],
+    }
+
     return {
         "total_loans": total,
         "decision_distribution": {
@@ -218,6 +338,9 @@ def _summarize(
         "by_segment": by_segment_summary,
         # Slice 2: plain-English-friendly summary block.
         "business_summary": business_summary,
+        # Slice 13: non-decision offer modifications so pricing/
+        # eligibility BRDs are visible even when no loans flip decision.
+        "offer_modifications": offer_modifications,
     }
 
 

@@ -126,7 +126,7 @@ async def test_rule_response_includes_subsystem_and_canonical_key(client, db_ses
     body = rs_resp.json()
     rule = body["rules"][0]
     assert rule["subsystem"] == "DTI_GATE"
-    assert rule["canonical_key"] == "DTI_GATE::dti_ratio::GT::REJECT"
+    assert rule["canonical_key"] == "DTI_GATE::dti_ratio::GT::REJECT::DECISION"
 
 
 # ── 2. BRD workflow status now surfaces merge_proposal + live version ──

@@ -137,9 +137,9 @@ async def test_slice0_full_flow(client, db_session):
     assert v1["version_number"] == 1
     assert v1["rule_count"] == 3
     snapshot_keys = {x["canonical_key"] for x in v1["rule_snapshot"]}
-    assert "BUREAU_GATE::bureau_score::LT::REJECT" in snapshot_keys
-    assert "DTI_GATE::dti_ratio::GT::REJECT" in snapshot_keys
-    assert "BUREAU_GATE::inquiries_last_3m::GT::REJECT" in snapshot_keys
+    assert "BUREAU_GATE::bureau_score::LT::REJECT::DECISION" in snapshot_keys
+    assert "DTI_GATE::dti_ratio::GT::REJECT::DECISION" in snapshot_keys
+    assert "BUREAU_GATE::inquiries_last_3m::GT::REJECT::DECISION" in snapshot_keys
 
     # 6) Download the generated Python — it should parse + name our rules
     r = await client.get(f"/api/v1/live-repo/{repo_id}/export.py")

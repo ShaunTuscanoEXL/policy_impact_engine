@@ -303,8 +303,8 @@ async def test_full_round_trip_export_then_import(client, db_session):
     v2 = (await client.get(f"/api/v1/live-repo/{repo_id}/version/2")).json()
     assert v2["rule_count"] == 2
     keys = {r["canonical_key"] for r in v2["rule_snapshot"]}
-    assert "BUREAU_GATE::bureau_score::LT::REJECT" in keys
-    assert "DTI_GATE::dti_ratio::GT::REJECT" in keys
+    assert "BUREAU_GATE::bureau_score::LT::REJECT::DECISION" in keys
+    assert "DTI_GATE::dti_ratio::GT::REJECT::DECISION" in keys
 
     # Repo HEAD advanced to 2
     detail = (await client.get(f"/api/v1/live-repo/{repo_id}")).json()

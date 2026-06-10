@@ -102,7 +102,7 @@ async def test_backfill_classifies_legacy_rules(client, db_session):
 
     # Refetch to confirm canonical_key + subsystem populated
     await db_session.refresh(legacy)
-    assert legacy.canonical_key == "DTI_GATE::dti_ratio::GT::REJECT"
+    assert legacy.canonical_key == "DTI_GATE::dti_ratio::GT::REJECT::DECISION"
     assert legacy.subsystem == Subsystem.DTI_GATE
     assert legacy.semantic_signature is not None
 
@@ -193,7 +193,7 @@ def test_signal_from_retires_pattern_well_formed():
         "evidence_section": "Section 4.1",
     })
     assert sig is not None
-    assert sig["canonical_key"] == "DTI_GATE::dti_ratio::GT::REJECT"
+    assert sig["canonical_key"] == "DTI_GATE::dti_ratio::GT::REJECT::DECISION"
     assert sig["basis"] == "explicit_replacement"
     assert sig["evidence_section"] == "Section 4.1"
 
@@ -219,8 +219,8 @@ def test_extract_retirement_signals_walks_full_payload():
     signals = extract_retirement_signals(payload)
     assert len(signals) == 2
     keys = {s["canonical_key"] for s in signals}
-    assert "DTI_GATE::dti_ratio::GT::REJECT" in keys
-    assert "BUREAU_GATE::bureau_score::LT::REJECT" in keys
+    assert "DTI_GATE::dti_ratio::GT::REJECT::DECISION" in keys
+    assert "BUREAU_GATE::bureau_score::LT::REJECT::DECISION" in keys
 
 
 def test_merge_engine_picks_up_retirement_signals():
@@ -230,13 +230,13 @@ def test_merge_engine_picks_up_retirement_signals():
     live = [{
         "id": "L1", "rule_id": "L1", "rule_name": "Legacy DTI cap",
         "subsystem": "DTI_GATE",
-        "canonical_key": "DTI_GATE::dti_ratio::GT::REJECT",
+        "canonical_key": "DTI_GATE::dti_ratio::GT::REJECT::DECISION",
         "conditions": [{"field": "dti_ratio", "operator": ">", "value": 0.40}],
         "actions": [{"action_type": "REJECT", "target_field": "decision_status",
                      "value": "REJECTED", "description": "DTI"}],
     }]
     incoming = []  # incoming BRD has no DTI rule — only the retirement signal
-    signals = [{"canonical_key": "DTI_GATE::dti_ratio::GT::REJECT",
+    signals = [{"canonical_key": "DTI_GATE::dti_ratio::GT::REJECT::DECISION",
                 "basis": "explicit_replacement",
                 "evidence_section": "Section 4.1"}]
     specs = diff_rule_sets(incoming, live, retirement_signals=signals)
@@ -281,7 +281,7 @@ async def test_propose_from_brd_threads_retirement_signals_through(client, db_se
         db_session,
         brd_id=brd2.id,
         retirement_signals=[{
-            "canonical_key": "DTI_GATE::dti_ratio::GT::REJECT",
+            "canonical_key": "DTI_GATE::dti_ratio::GT::REJECT::DECISION",
             "basis": "explicit_replacement",
             "evidence_section": "Section 4.1",
         }],
@@ -303,6 +303,6 @@ async def test_propose_from_brd_threads_retirement_signals_through(client, db_se
     new_v = apply_resp["new_version_number"]
     snapshot = (await client.get(f"/api/v1/live-repo/{repo_id}/version/{new_v}")).json()
     canonical_keys = {r["canonical_key"] for r in snapshot["rule_snapshot"]}
-    assert "DTI_GATE::dti_ratio::GT::REJECT" not in canonical_keys
-    assert "BUREAU_GATE::bureau_score::LT::REJECT" in canonical_keys           # FICO survived
-    assert "BUREAU_GATE::inquiries_last_3m::GT::REJECT" in canonical_keys      # new rule added
+    assert "DTI_GATE::dti_ratio::GT::REJECT::DECISION" not in canonical_keys
+    assert "BUREAU_GATE::bureau_score::LT::REJECT::DECISION" in canonical_keys           # FICO survived
+    assert "BUREAU_GATE::inquiries_last_3m::GT::REJECT::DECISION" in canonical_keys      # new rule added

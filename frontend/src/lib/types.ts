@@ -364,6 +364,28 @@ export interface ImpactRunSummary {
   }>;
   /** Slice 2 — plain-English roll-up consumed by the BusinessImpactCard. */
   business_summary?: BusinessImpactSummary;
+  /** Slice 13 — offer-term modifications (SET/ADJUST on non-decision
+   *  fields like eligible_amount, interest_rate, max_tenure_months).
+   *  Lets pricing-only BRDs show meaningful impact even when
+   *  decision_flips is zero. */
+  offer_modifications?: OfferModifications;
+}
+
+export interface OfferModifications {
+  loans_with_any_offer_change: number;
+  loans_with_offer_change_but_decision_unchanged: number;
+  new_writes_by_field: Array<{
+    field: string;
+    field_class: string;
+    loans_affected: number;
+  }>;
+  new_writes_by_class: Array<{ class: string; loans_affected: number }>;
+  dropped_writes_by_field: Array<{
+    field: string;
+    field_class: string;
+    loans_affected: number;
+  }>;
+  fields_touched_only_in_candidate: string[];
 }
 
 /** Plain-English summary block used by the BusinessImpactCard. Every

@@ -79,7 +79,107 @@ async def lifespan(app: FastAPI):
             logging.getLogger(__name__).warning(
                 "Canonical-key backfill skipped: %s", e
             )
+
+    # Backfill canonical_key inside live-version snapshots so the merge
+    # engine sees consistent keys between incoming rules and HEAD
+    # (otherwise a stale 4-segment key on HEAD vs the 5/6-segment key
+    # on incoming would silently mis-classify rules as NEW_RULE instead
+    # of matching them for DUPLICATE / THRESHOLD_TIGHTENING).
+    async with async_session() as db:
+        try:
+            await _backfill_snapshot_canonical_keys(db)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Snapshot canonical-key backfill skipped: %s", e
+            )
     yield
+
+
+async def _backfill_snapshot_canonical_keys(db) -> None:
+    """Walk every LiveRuleVersion.rule_snapshot and refresh each rule
+    dict's canonical_key + semantic_signature using the current key
+    generator. Only rewrites when the new key is materially better
+    (longer / no unknown_field). Idempotent — already-current keys
+    pass through unchanged.
+
+    Critical after Slice 12: pre-Slice-12 short-format keys (4 segments)
+    don't distinguish lookup-table variants. If HEAD's snapshot keeps
+    those short keys, the merge engine will mis-pair incoming rules
+    that now have the longer 5/6-segment keys.
+    """
+    from sqlalchemy import select
+    from sqlalchemy.orm.attributes import flag_modified
+    from app.models.live_repo import LiveRuleVersion
+    from app.services.canonical_key import (
+        make_canonical_key,
+        make_semantic_signature,
+    )
+    from app.services.rule_classifier import classify as classify_subsystem
+    from app.models.rule import RuleType, Subsystem
+
+    rows = await db.execute(select(LiveRuleVersion))
+    versions = list(rows.scalars())
+    if not versions:
+        return
+
+    total_touched = 0
+    for v in versions:
+        snap = list(v.rule_snapshot or [])
+        if not snap:
+            continue
+        changed_in_v = 0
+        for r in snap:
+            if not isinstance(r, dict):
+                continue
+            conds = r.get("conditions") if isinstance(r.get("conditions"), list) else []
+            acts = r.get("actions") if isinstance(r.get("actions"), list) else []
+            try:
+                sub_raw = r.get("subsystem") or "UNCLASSIFIED"
+                rt_raw = r.get("rule_type") or "ELIGIBILITY"
+                try:
+                    sub = Subsystem(sub_raw) if isinstance(sub_raw, str) else sub_raw
+                except ValueError:
+                    sub = Subsystem.UNCLASSIFIED
+                try:
+                    rt = RuleType(rt_raw) if isinstance(rt_raw, str) else rt_raw
+                except ValueError:
+                    rt = RuleType.ELIGIBILITY
+                if sub == Subsystem.UNCLASSIFIED:
+                    sub = classify_subsystem(conds, acts, rt)
+                new_ck = make_canonical_key(sub, conds, acts)
+                new_sig = make_semantic_signature(conds, acts)
+            except Exception:
+                continue
+            old_ck = r.get("canonical_key") or ""
+            better = (
+                new_ck
+                and "unknown_field" not in new_ck
+                and (
+                    not old_ck
+                    or "unknown_field" in old_ck
+                    or new_ck.count("::") > old_ck.count("::")
+                )
+            )
+            if better:
+                r["canonical_key"] = new_ck
+                r["semantic_signature"] = new_sig
+                if r.get("subsystem") in (None, "UNCLASSIFIED"):
+                    r["subsystem"] = (
+                        sub.value if hasattr(sub, "value") else str(sub)
+                    )
+                changed_in_v += 1
+        if changed_in_v:
+            v.rule_snapshot = snap
+            flag_modified(v, "rule_snapshot")
+            total_touched += changed_in_v
+    if total_touched:
+        await db.commit()
+        import logging
+        logging.getLogger(__name__).info(
+            "Backfilled canonical_key in %d snapshot rule(s) across %d version(s).",
+            total_touched, len(versions),
+        )
 
 
 async def _backfill_rule_canonical_keys(db) -> None:
@@ -95,10 +195,13 @@ async def _backfill_rule_canonical_keys(db) -> None:
     )
     from app.services.rule_classifier import classify as classify_subsystem
 
-    # Also refresh rules whose canonical_key contains the legacy
-    # "unknown_field::UNK" placeholder — those were generated before
-    # the unconditional-rule fix landed and now have meaningful keys
-    # available via the action's target_field.
+    # Refresh rules whose canonical_key is missing, has the legacy
+    # "unknown_field::UNK" placeholder, OR is in the pre-Slice-12 short
+    # format (4 segments — missing target_class suffix and any equality
+    # discriminator). The short format silently collapsed lookup-table
+    # variants like `segment==A → SET tier=GOLD` and `segment==B → SET
+    # tier=SILVER` into the same key, so rules got dropped at merge
+    # time. Regenerate them with the current shape so re-merges work.
     rows_q = await db.execute(
         select(Rule).where(
             (Rule.canonical_key.is_(None))
@@ -108,6 +211,14 @@ async def _backfill_rule_canonical_keys(db) -> None:
         )
     )
     rules = list(rows_q.scalars())
+    # Also pull rules whose key is in the legacy 4-segment shape
+    # (exactly 3 `::` separators). Can't express "count of substring" in
+    # vanilla SQL portably, so we pull all rules and filter in Python.
+    all_rules_q = await db.execute(select(Rule))
+    for r in all_rules_q.scalars():
+        if r.canonical_key and r.canonical_key.count("::") == 3:
+            if r not in rules:
+                rules.append(r)
     if not rules:
         return
 
@@ -126,9 +237,19 @@ async def _backfill_rule_canonical_keys(db) -> None:
         except Exception:
             continue
         # Only overwrite if the new key is actually better than the old
-        # one (i.e. doesn't still contain unknown_field). Prevents
-        # accidentally clobbering a hand-curated key.
-        if new_ck and "unknown_field" not in new_ck:
+        # one (longer / no unknown_field). Prevents accidentally clobbering
+        # a hand-curated key.
+        old_ck = r.canonical_key or ""
+        better = (
+            new_ck
+            and "unknown_field" not in new_ck
+            and (
+                not old_ck
+                or "unknown_field" in old_ck
+                or new_ck.count("::") > old_ck.count("::")
+            )
+        )
+        if better:
             r.canonical_key = new_ck
             r.semantic_signature = new_sig
             if r.subsystem == Subsystem.UNCLASSIFIED:

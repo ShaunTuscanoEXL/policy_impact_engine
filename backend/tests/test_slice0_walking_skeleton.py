@@ -52,7 +52,7 @@ def test_canonical_key_stable_across_threshold_changes():
              "value": "REJECTED", "description": "HIGH_DTI"}]
     ka = make_canonical_key(Subsystem.DTI_GATE, conds_a, acts)
     kb = make_canonical_key(Subsystem.DTI_GATE, conds_b, acts)
-    assert ka == kb == "DTI_GATE::dti_ratio::GT::REJECT"
+    assert ka == kb == "DTI_GATE::dti_ratio::GT::REJECT::DECISION"
 
 
 def test_classifier_picks_bureau_for_bureau_score():
@@ -101,7 +101,7 @@ def _rule(rid, key, field, op, val, action="REJECT", target="decision_status", d
 
 
 def test_classify_pair_new_when_no_live_match():
-    incoming = _rule("I1", "BUREAU_GATE::bureau_score::LT::REJECT",
+    incoming = _rule("I1", "BUREAU_GATE::bureau_score::LT::REJECT::DECISION",
                      "bureau_score", "<", 720)
     spec = classify_pair(incoming, None)
     assert spec.category == MergeItemCategory.NEW_RULE
@@ -110,16 +110,16 @@ def test_classify_pair_new_when_no_live_match():
 
 
 def test_classify_pair_exact_duplicate():
-    live = _rule("L1", "DTI_GATE::dti_ratio::GT::REJECT", "dti_ratio", ">", 0.43)
-    inc = _rule("I1", "DTI_GATE::dti_ratio::GT::REJECT", "dti_ratio", ">", 0.43)
+    live = _rule("L1", "DTI_GATE::dti_ratio::GT::REJECT::DECISION", "dti_ratio", ">", 0.43)
+    inc = _rule("I1", "DTI_GATE::dti_ratio::GT::REJECT::DECISION", "dti_ratio", ">", 0.43)
     spec = classify_pair(inc, live)
     assert spec.category == MergeItemCategory.EXACT_DUPLICATE
     assert spec.suggested_action == MergeSuggestedAction.DROP
 
 
 def test_classify_pair_threshold_tightening():
-    live = _rule("L1", "DTI_GATE::dti_ratio::GT::REJECT", "dti_ratio", ">", 0.43)
-    inc = _rule("I1", "DTI_GATE::dti_ratio::GT::REJECT", "dti_ratio", ">", 0.35)
+    live = _rule("L1", "DTI_GATE::dti_ratio::GT::REJECT::DECISION", "dti_ratio", ">", 0.43)
+    inc = _rule("I1", "DTI_GATE::dti_ratio::GT::REJECT::DECISION", "dti_ratio", ">", 0.35)
     spec = classify_pair(inc, live)
     assert spec.category == MergeItemCategory.THRESHOLD_TIGHTENING
     assert spec.severity == MergeItemSeverity.SOFT
@@ -127,8 +127,8 @@ def test_classify_pair_threshold_tightening():
 
 
 def test_classify_pair_threshold_relaxation():
-    live = _rule("L1", "DTI_GATE::dti_ratio::GT::REJECT", "dti_ratio", ">", 0.35)
-    inc = _rule("I1", "DTI_GATE::dti_ratio::GT::REJECT", "dti_ratio", ">", 0.45)
+    live = _rule("L1", "DTI_GATE::dti_ratio::GT::REJECT::DECISION", "dti_ratio", ">", 0.35)
+    inc = _rule("I1", "DTI_GATE::dti_ratio::GT::REJECT::DECISION", "dti_ratio", ">", 0.45)
     spec = classify_pair(inc, live)
     assert spec.category == MergeItemCategory.THRESHOLD_RELAXATION
 
@@ -137,9 +137,9 @@ def test_classify_pair_action_drift_is_hard():
     """REJECT vs FLAG on the same condition is paired by the merge engine
     via pairing_key (which strips action_class) and surfaces as
     ACTION_DRIFT, blocking apply."""
-    live = _rule("L1", "DTI_GATE::dti_ratio::GT::REJECT",
+    live = _rule("L1", "DTI_GATE::dti_ratio::GT::REJECT::DECISION",
                  "dti_ratio", ">", 0.43, action="REJECT")
-    inc = _rule("I1", "DTI_GATE::dti_ratio::GT::FLAG",
+    inc = _rule("I1", "DTI_GATE::dti_ratio::GT::FLAG::DECISION",
                 "dti_ratio", ">", 0.43, action="FLAG")
     spec = classify_pair(inc, live)
     assert spec.category == MergeItemCategory.ACTION_DRIFT
@@ -148,17 +148,17 @@ def test_classify_pair_action_drift_is_hard():
 
 def test_diff_rule_sets_basic_counts():
     live = [
-        _rule("L1", "BUREAU_GATE::bureau_score::LT::REJECT",
+        _rule("L1", "BUREAU_GATE::bureau_score::LT::REJECT::DECISION",
               "bureau_score", "<", 700),
-        _rule("L2", "DTI_GATE::dti_ratio::GT::REJECT",
+        _rule("L2", "DTI_GATE::dti_ratio::GT::REJECT::DECISION",
               "dti_ratio", ">", 0.40),
     ]
     incoming = [
-        _rule("I1", "BUREAU_GATE::bureau_score::LT::REJECT",
+        _rule("I1", "BUREAU_GATE::bureau_score::LT::REJECT::DECISION",
               "bureau_score", "<", 720),                          # tightening
-        _rule("I2", "DTI_GATE::dti_ratio::GT::REJECT",
+        _rule("I2", "DTI_GATE::dti_ratio::GT::REJECT::DECISION",
               "dti_ratio", ">", 0.40),                            # duplicate
-        _rule("I3", "BUREAU_GATE::inquiries_last_3m::GT::REJECT",
+        _rule("I3", "BUREAU_GATE::inquiries_last_3m::GT::REJECT::DECISION",
               "inquiries_last_3m", ">", 3),                       # new
     ]
     specs = diff_rule_sets(incoming, live)

@@ -2,23 +2,36 @@
 
 The canonical_key is a deterministic short string that represents the
 *identity* of a rule independent of which BRD authored it or what its
-exact threshold value is. The merge engine uses it to recognize "this
-incoming rule is talking about the same thing as that live rule."
+exact (numeric) threshold value is. The merge engine uses it to
+recognize "this incoming rule is talking about the same thing as that
+live rule."
 
-Key shape:
-    {SUBSYSTEM}::{primary_field}::{operator_class}::{action_class}
+Key shape (current — Slice 12+):
+    {SUBSYSTEM}::{primary_field}::{operator_class}[::{eq_discriminator}]::{action_class}::{target_class}
 
 Where:
 - SUBSYSTEM is the Subsystem enum value (or UNCLASSIFIED)
 - primary_field is the leading condition's field, normalized
-- operator_class is the operator family: GT|LT|EQ|RANGE|IN
-- action_class is the action family: REJECT|FLAG|CAP|MODIFY
+- operator_class is the operator family: GT|LT|EQ|RANGE|IN|ALWAYS
+- eq_discriminator is included ONLY when operator is EQ/NEQ/IN/NIN AND
+  the comparison value is non-numeric (a string/enum). This separates
+  lookup-table variants like `IF segment==A → SET tier=GOLD` from
+  `IF segment==B → SET tier=SILVER`, which previously collapsed into
+  one canonical_key and got silently dropped during merge apply.
+  Numeric threshold comparisons (==680, !=720) intentionally omit the
+  value so THRESHOLD_TIGHTENING / RELAXATION variants still pair.
+- action_class is the action family: REJECT|FLAG|CAP|MODIFY|APPROVE
+- target_class is the normalized output target (DECISION|RATE|AMOUNT|
+  REVIEW|<raw upper-cased field>). Distinguishes rules that share the
+  same trigger but write to different output fields (e.g. segment==A
+  → SET max_tenure vs segment==A → ADJUST eligible_amount).
 
 Examples:
-    DTI_GATE::dti_ratio::GT::REJECT
-    BUREAU_GATE::bureau_score::LT::REJECT
-    PRICING_TIER::bureau_score::RANGE::MODIFY
-    AMOUNT_CAP::desired_amount::GT::CAP
+    DTI_GATE::dti_ratio::GT::REJECT::DECISION
+    BUREAU_GATE::bureau_score::LT::REJECT::DECISION
+    SCORING_MODEL::credit_risk_band::EQ::LOW::CAP::CUSTOMER_SEGMENT
+    AMOUNT_CAP::customer_segment::EQ::SEGMENT_A::MODIFY::AMOUNT
+    AMOUNT_CAP::customer_segment::EQ::SEGMENT_A::CAP::MAX_TENURE_MONTHS
 
 Two rules with the same canonical_key are candidates for SUPERSEDE /
 DUPLICATE / OPPOSITE_DIRECTION classification by the merge engine. They
@@ -176,6 +189,64 @@ def primary_action(actions: list[dict] | None) -> str:
     return action_class(first.get("action_type"))
 
 
+def _is_numeric_value(v: Any) -> bool:
+    """True when v is (or string-parses to) a number — used to decide
+    whether an equality comparison is a numeric threshold (don't include
+    in the discriminator so tightening pairs still match) vs an enum
+    bucket (include so SEGMENT_A / SEGMENT_B don't collide)."""
+    if isinstance(v, bool):
+        return False
+    if isinstance(v, (int, float)):
+        return True
+    if isinstance(v, str):
+        try:
+            float(v)
+            return True
+        except ValueError:
+            return False
+    return False
+
+
+def _equality_discriminator(conditions: list[dict] | None) -> str:
+    """Return a discriminator string when the primary condition is an
+    equality / membership check on a NON-NUMERIC value (enum/string).
+    Empty string otherwise — so numeric threshold variants
+    (e.g. `fico < 680` vs `fico < 720`) continue to share canonical_key
+    and the merge engine can still detect THRESHOLD_TIGHTENING.
+    """
+    cond = _first_non_guard(conditions)
+    if not cond:
+        return ""
+    op = operator_class(cond.get("operator"))
+    if op not in ("EQ", "NEQ", "IN", "NIN"):
+        return ""
+    val = cond.get("value")
+    if val is None:
+        return ""
+    if isinstance(val, (list, tuple)):
+        non_numeric = [str(v).strip().upper() for v in val if not _is_numeric_value(v)]
+        if not non_numeric:
+            return ""
+        return ",".join(sorted(non_numeric))
+    if _is_numeric_value(val):
+        return ""
+    return str(val).strip().upper()
+
+
+def _primary_target_class(actions: list[dict] | None) -> str:
+    """target_class of the first action's target_field — DECISION, RATE,
+    AMOUNT, REVIEW, or the raw upper-cased field name. Lets two rules
+    that share a trigger but write to different output fields carry
+    different canonical_keys."""
+    if not actions:
+        return "NOTARGET"
+    first = actions[0] if isinstance(actions[0], dict) else {}
+    tgt = first.get("target_field")
+    if not tgt:
+        return "NOTARGET"
+    return target_class(tgt)
+
+
 def make_canonical_key(
     subsystem: Subsystem | str | None,
     conditions: list[dict] | None,
@@ -184,23 +255,39 @@ def make_canonical_key(
     """Build the canonical key for a rule (full identity).
 
     Stable across BRDs as long as the rule operates on the same primary
-    field, with the same operator family and the same action family.
-    Includes action_class so that two rules with different action types
-    (e.g. REJECT vs FLAG on the same condition) carry different identity.
+    field, with the same operator family / equality bucket / action
+    family / output target. Includes:
+
+    - action_class — REJECT vs FLAG on the same condition carry
+      different identity
+    - eq_discriminator (when applicable) — `segment==A` and `segment==B`
+      are different rules, not the same one
+    - target_class — `segment==A → SET tier` and `segment==A → ADJUST
+      amount` are different rules, not the same one
+
+    Numeric threshold variants (`fico < 680` vs `fico < 720`) keep the
+    SAME canonical_key so the merge engine can pair them and detect
+    THRESHOLD_TIGHTENING.
 
     Unconditional rules (no usable condition) derive their primary field
-    from the action's target_field with operator ALWAYS — preserving
-    identity for "current state" baseline rules common in BRD tables.
+    from the action's target_field with operator ALWAYS.
     """
     sub = subsystem.value if isinstance(subsystem, Subsystem) else (
         str(subsystem) if subsystem else Subsystem.UNCLASSIFIED.value
     )
-    return "::".join([
+    parts = [
         sub,
         primary_field(conditions, actions),
         primary_operator(conditions, actions),
+    ]
+    disc = _equality_discriminator(conditions)
+    if disc:
+        parts.append(disc)
+    parts.extend([
         primary_action(actions),
+        _primary_target_class(actions),
     ])
+    return "::".join(parts)
 
 
 # ── Target-class normalization ───────────────────────────────────────────
