@@ -33,6 +33,7 @@ from app.config import settings
 from app.pipeline.schemas import DocumentSection
 from app.schemas.rule import Action, Condition, RuleDefinition, RuleTypeEnum
 from langchain_anthropic import ChatAnthropic
+from langchain_anthropic import ChatAnthropic
 
 logger = logging.getLogger(__name__)
 
@@ -342,6 +343,20 @@ def _build_client():
         )
         model = settings.azure_openai_deployment
         logger.info("LLM: Azure OpenAI (%s)", model)
+    
+    if settings.llm_provider.lower() == "claude":
+        client = ChatAnthropic(
+            model=settings.azure_openai_deployment,
+            anthropic_api_key=settings.claude_api_key,
+            anthropic_api_url=  settings.azure_openai_endpoint,
+            temperature=0.1,
+            # max_tokens=6000,
+            timeout=None,
+            max_retries=2,
+        )
+        model = settings.azure_openai_deployment
+        logger.info("LLM: Azure OpenAI (%s)", model)
+        print("LLM: Azure OpenAI (%s)", model)
     
     if settings.llm_provider.lower() == "claude":
         client = ChatAnthropic(
@@ -898,24 +913,44 @@ def _parse_rule(d: dict, index: int) -> RuleDefinition | None:
 def _call_llm(client, model: str, messages: list[dict]) -> str:
     """
     Call LLM with retries and continuation handling.
+    """
+    Call LLM with retries and continuation handling.
 
+    - Supports OpenAI-style and Claude-style clients
+    - Retries transient failures
+    - Handles truncated responses by requesting continuation
     - Supports OpenAI-style and Claude-style clients
     - Retries transient failures
     - Handles truncated responses by requesting continuation
     """
 
+
     full_response = ""
+    conversation = list(messages)
     conversation = list(messages)
 
     for pass_num in range(5):  # up to 5 continuation passes
+    for pass_num in range(5):  # up to 5 continuation passes
         response_text = ""
+        finish_reason = "stop"
         finish_reason = "stop"
 
         # -------------------------
         # Retry loop
         # -------------------------
+        # -------------------------
+        # Retry loop
+        # -------------------------
         for attempt in range(MAX_RETRIES + 1):
             try:
+                if settings.llm_provider.lower() == "claude":
+                    # ✅ Claude-style call
+                    response = client.invoke(conversation)
+                    response_text = getattr(response, "content", "") or ""
+                    finish_reason = "stop"   # Claude doesn't always expose this cleanly
+
+                else:
+                    # ✅ OpenAI-style call
                 if settings.llm_provider.lower() == "claude":
                     # ✅ Claude-style call
                     response = client.invoke(conversation)
@@ -931,9 +966,18 @@ def _call_llm(client, model: str, messages: list[dict]) -> str:
                     )
                     response_text = response.choices[0].message.content or ""
                     finish_reason = response.choices[0].finish_reason or "stop"
+                    response_text = response.choices[0].message.content or ""
+                    finish_reason = response.choices[0].finish_reason or "stop"
 
                 if response_text.strip():
                     break
+
+                logger.warning(
+                    "Empty LLM response (attempt %d/%d)",
+                    attempt + 1,
+                    MAX_RETRIES + 1,
+                )
+
 
                 logger.warning(
                     "Empty LLM response (attempt %d/%d)",
@@ -949,12 +993,23 @@ def _call_llm(client, model: str, messages: list[dict]) -> str:
                     exc,
                 )
 
+                logger.error(
+                    "LLM call failed (attempt %d/%d): %s",
+                    attempt + 1,
+                    MAX_RETRIES + 1,
+                    exc,
+                )
+
                 if attempt < MAX_RETRIES:
                     time.sleep(RETRY_DELAY_SECONDS * (2 ** attempt))
                 else:
                     # return what we got so far (partial is better than nothing)
                     return full_response
+                else:
+                    # return what we got so far (partial is better than nothing)
+                    return full_response
 
+        # If still empty, stop entirely
         # If still empty, stop entirely
         if not response_text.strip():
             break
@@ -968,11 +1023,38 @@ def _call_llm(client, model: str, messages: list[dict]) -> str:
             len(response_text),
             finish_reason,
         )
+        # ✅ Append safely (avoid spacing duplication)
+        full_response = full_response.rstrip() + response_text.lstrip()
 
+        logger.info(
+            "LLM pass %d: %d chars, finish_reason=%s",
+            pass_num + 1,
+            len(response_text),
+            finish_reason,
+        )
+
+        # ✅ Stop if not truncated
         # ✅ Stop if not truncated
         if finish_reason != "length":
             break
 
+        # -------------------------
+        # Continuation handling
+        # -------------------------
+        logger.info("Response truncated — requesting continuation...")
+
+        conversation.append({
+            "role": "assistant",
+            "content": response_text,
+        })
+
+        conversation.append({
+            "role": "user",
+            "content": (
+                "Continue exactly from where you stopped. "
+                "Do not repeat previous content."
+            ),
+        })
         # -------------------------
         # Continuation handling
         # -------------------------

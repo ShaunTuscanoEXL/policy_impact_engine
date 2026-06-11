@@ -140,6 +140,7 @@ def _first_non_guard(conditions: list[dict] | None) -> dict:
 
 
 def primary_field(conditions: list[dict] | None) -> str:
+def primary_field(conditions: list[dict] | None) -> str:
     """Return the field of the first non-guard condition (or fall back).
 
     Skipping guard fields (`loan_type`, `application_type`, …) is what
@@ -152,10 +153,17 @@ def primary_field(conditions: list[dict] | None) -> str:
     if not cond:
         return "unknown_field"
     return normalize_field(cond.get("field"))
+    if not cond:
+        return "unknown_field"
+    return normalize_field(cond.get("field"))
 
 
 def primary_operator(conditions: list[dict] | None) -> str:
+def primary_operator(conditions: list[dict] | None) -> str:
     cond = _first_non_guard(conditions)
+    if not cond:
+        return "UNK"
+    return operator_class(cond.get("operator"))
     if not cond:
         return "UNK"
     return operator_class(cond.get("operator"))
@@ -328,6 +336,8 @@ def make_pairing_key(
     )
     return "::".join([
         sub,
+        primary_field(conditions),
+        primary_operator(conditions),
         primary_field(conditions),
         primary_operator(conditions),
         primary_target_class(actions),

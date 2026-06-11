@@ -401,6 +401,7 @@ async def execute_impact_run(
         loan_record_filter=loan_record_filter,
         status=ImpactRunStatus.RUNNING,
         created_by=created_by,
+        created_by=created_by,
     )
     db.add(run)
     await db.commit()
