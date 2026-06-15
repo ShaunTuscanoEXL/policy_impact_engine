@@ -229,6 +229,34 @@ Shape:
 The retirement is about the OLD rule being removed; the rule object itself
 describes the NEW rule that takes its place.
 
+SCOPE & ELIGIBILITY GATING (read the document as a whole):
+A BRD often states a scope or eligibility ONCE and expects it to apply to
+every rule that follows — e.g. "This framework applies to Repeat
+Customers", or a "Definition of Good Customer" section whose criteria gate
+all the pricing/segmentation rules below it. Each individual rule's line
+won't restate the scope, but the rule still only applies within it.
+
+For every rule that sits UNDER such a scope/eligibility, add an
+"applies_when" array capturing the gating condition(s) drawn from the
+DOCUMENT CONTEXT (not from the rule's own sentence). Keep these SEPARATE
+from "conditions" (which is the rule's own line). Use the SAME field
+names the eligibility/scope was defined with.
+
+Example — the BRD says "Applies To: Repeat Customers" and defines a
+"Good Customer" classification, then describes segment-based pricing:
+{
+  "rule_id":"RULE-010","rule_name":"Segment A exposure increase",
+  "rule_type":"CAP",
+  "conditions":[{"field":"customer_segment","operator":"==","value":"SEGMENT_A"}],
+  "applies_when":[
+    {"field":"repeat_type","operator":"==","value":"REPEAT"},
+    {"field":"customer_classification","operator":"==","value":"GOOD"}
+  ],
+  "actions":[{"action_type":"ADJUST","target_field":"eligible_amount","value":0.4,...}]
+}
+Only add applies_when when the document genuinely scopes the rule. If a
+rule is universal (applies to every application), omit applies_when.
+
 Return ONLY a JSON array. No markdown fences. No explanations. Just [...].
 """
 
@@ -796,6 +824,55 @@ def _coalesce_compound_and_rules(rules: list[RuleDefinition]) -> list[RuleDefini
     return out
 
 
+def _inject_scope_gates(rules: list[RuleDefinition]) -> list[RuleDefinition]:
+    """Merge each rule's `applies_when` scope gates into its `conditions`
+    list, marked origin='scope' so the UI flags them and the reviewer can
+    remove any that are wrong.
+
+    This is the "look at the BRD as a whole" step: a framework that
+    "applies to Repeat Good Customers" should gate its segmentation /
+    pricing rules on that eligibility, even though each rule's own line
+    doesn't restate it. The LLM (which sees the whole document) emits the
+    gate in applies_when; here we fold it into the rule's real conditions
+    with logic=AND, deduping against conditions the rule already has.
+
+    Idempotent and conservative: a scope gate that duplicates an existing
+    explicit condition (same field+operator+value) is skipped, so we
+    never double-gate.
+    """
+    if not rules:
+        return rules
+
+    injected = 0
+    for rule in rules:
+        scope = list(getattr(rule, "applies_when", None) or [])
+        if not scope:
+            continue
+        existing = {
+            (c.field, str(c.operator), str(c.value))
+            for c in (rule.conditions or [])
+        }
+        new_conditions = list(rule.conditions or [])
+        for sc in scope:
+            sig = (sc.field, str(sc.operator), str(sc.value))
+            if sig in existing:
+                continue
+            # Force AND + scope provenance.
+            new_conditions.append(sc.model_copy(update={"logic": "AND", "origin": "scope"}))
+            existing.add(sig)
+            injected += 1
+        rule.conditions = new_conditions
+        rule.applies_when = []  # folded in; clear so it isn't double-applied
+
+    if injected:
+        logger.info(
+            "Injected %d scope/eligibility gate(s) into downstream rules "
+            "(flagged origin='scope', reviewer-removable).",
+            injected,
+        )
+    return rules
+
+
 def _describe_condition_tier(cond) -> str:
     """Compact human label for a single condition, used in tier rule names.
     Examples: '680-719' for between, '>= 800' for scalar, 'in [...]' for in."""
@@ -856,6 +933,24 @@ def _parse_rule(d: dict, index: int) -> RuleDefinition | None:
                 actions = [Action(action_type="FLAG", target_field="decision_status",
                                   value="REVIEW", description="Flagged for review")]
 
+        # Scope/eligibility gates from BRD document context (Slice 15).
+        # Parsed but kept SEPARATE from `conditions` until the injection
+        # post-pass merges them with origin="scope".
+        applies_when = []
+        for c in d.get("applies_when", []) or []:
+            if not isinstance(c, dict):
+                continue
+            field = _normalize_field(str(c.get("field", "")))
+            if not field:
+                continue
+            applies_when.append(Condition(
+                field=field,
+                operator=str(c.get("operator", "==")),
+                value=_normalize_value(c.get("value"), field),
+                logic="AND",
+                origin="scope",
+            ))
+
         rule_id = str(d.get("rule_id", f"RULE-{index:03d}"))
         if not rule_id.startswith("RULE"):
             rule_id = f"RULE-{index:03d}"
@@ -870,6 +965,7 @@ def _parse_rule(d: dict, index: int) -> RuleDefinition | None:
             priority=int(d.get("priority", index)),
             source_section=str(d.get("source_section", "")),
             confidence=float(d.get("confidence", 0.8)),
+            applies_when=applies_when,
         )
     except Exception as exc:
         logger.warning("Failed to parse rule #%d: %s", index, exc)
@@ -1292,6 +1388,12 @@ def _extract_rules_internal(
     # rule. Without this, "X is set if ALL the following are satisfied"
     # is silently interpreted as OR by the engine — defeating the BRD.
     rules = _coalesce_compound_and_rules(rules)
+
+    # Fold BRD-level scope/eligibility gates (applies_when) into each
+    # rule's conditions, flagged origin='scope'. This is the "read the
+    # BRD as a whole" step — downstream rules inherit the framework's
+    # eligibility even when their own line doesn't restate it.
+    rules = _inject_scope_gates(rules)
 
     # Ensure unique IDs
     seen = set()

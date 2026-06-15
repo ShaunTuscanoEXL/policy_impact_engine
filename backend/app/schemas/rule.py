@@ -16,6 +16,13 @@ class Condition(BaseModel):
     operator: str = Field(description="Comparison operator: >=, <=, ==, !=, in, not_in, between")
     value: Any = Field(description="Threshold value or list of values")
     logic: str = Field(default="AND", description="AND | OR for chaining with next condition")
+    # Slice 15 — provenance. "explicit" = the rule's own condition from
+    # its BRD line. "scope" = an eligibility/scope gate auto-injected
+    # from BRD document context (e.g. "this framework applies to Repeat
+    # Good Customers"). Scope conditions are rendered with a badge and
+    # are reviewer-removable. Ignored by canonical_key/semantic_signature
+    # (it's metadata, not identity).
+    origin: str = Field(default="explicit", description="explicit | scope")
 
 
 class Action(BaseModel):
@@ -35,6 +42,12 @@ class RuleDefinition(BaseModel):
     priority: int = 0
     source_section: str = ""
     confidence: float = 1.0
+    # Slice 15 — scope/eligibility gates the BRD's document context says
+    # apply to this rule (NOT from the rule's own line). The LLM emits
+    # these when it sees, e.g., "this whole framework applies to Repeat
+    # Good Customers". A post-pass merges them into `conditions` with
+    # origin="scope" so they're flagged + reversible.
+    applies_when: list[Condition] = []
     # Globally unique identifier (DB row UUID for rule-set rules, or
     # snapshot's `id` field for live-version rules). Used downstream by
     # the test case generator + executor to disambiguate when the
@@ -99,3 +112,25 @@ class RuleUpdateRequest(BaseModel):
     # after extraction.
     policy_intent: str | None = None
     regulatory_citation: str | None = None
+
+
+# ── Slice 14: BRD coherence report ─────────────────────────────────────
+
+class CoherenceIssueResponse(BaseModel):
+    kind: str               # dead_consumer | orphan_producer | unreferenced_eligibility | dependency_cycle
+    severity: str           # error | warning | info
+    rule_ids: list[str]
+    field: str | None = None
+    message: str
+
+
+class CoherenceReportResponse(BaseModel):
+    is_coherent: bool
+    issue_count: int
+    error_count: int
+    warning_count: int
+    issues: list[CoherenceIssueResponse] = []
+    produced_fields: list[str] = []
+    consumed_fields: list[str] = []
+    # (producer_rule_id, consumer_rule_id, field) tuples for graph rendering
+    dependency_edges: list[list[str]] = []

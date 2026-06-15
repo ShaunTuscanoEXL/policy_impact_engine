@@ -50,26 +50,58 @@ _EVAL_RANK = {sub: i for i, sub in enumerate(_EVAL_ORDER)}
 # ── Loan context: dot-path-aware accessor over the request_payload ──────
 
 class LoanContext:
-    """Read-only view over a loan record's request_payload that resolves
-    rule field names through the existing field_registry.
+    """View over a loan record's request_payload that resolves rule field
+    names through the existing field_registry, PLUS a writable overlay of
+    derived values produced by SET actions during evaluation.
+
+    The overlay is what makes multi-stage BRDs work: when a rule does
+    ``SET customer_segment = SEGMENT_A``, the engine writes that into the
+    overlay so a later rule's ``IF customer_segment == SEGMENT_A`` can
+    read it. Raw payload fields are never mutated — the overlay is checked
+    first, the raw payload second.
 
     Examples (using a US-fintech seed record):
-        ctx["bureau_score"]              -> 742
-        ctx["dti_ratio"]                 -> 0.257
-        ctx["banking_stability_index"]   -> 0.83
+        ctx["bureau_score"]              -> 742          (raw)
+        ctx["dti_ratio"]                 -> 0.257        (raw)
+        ctx.set("customer_segment", "A")                 (derived)
+        ctx["customer_segment"]          -> "A"          (overlay)
     """
 
-    __slots__ = ("_request_payload", "_loan_application_id")
+    __slots__ = ("_request_payload", "_loan_application_id", "_derived")
 
     def __init__(self, request_payload: dict, loan_application_id: str | None = None):
         self._request_payload = request_payload or {}
         self._loan_application_id = loan_application_id
+        # Derived values written by SET actions during this evaluation.
+        # Keyed by normalized field name (lower-cased, stripped) so a
+        # condition referencing "customer_segment" or "Customer Segment"
+        # both resolve to the same overlay slot.
+        self._derived: dict[str, Any] = {}
 
     @property
     def loan_application_id(self) -> str | None:
         return self._loan_application_id
 
+    @staticmethod
+    def _norm(field_name: str) -> str:
+        # Match the rest of the codebase: lower-case, strip, and collapse
+        # spaces/dashes/dots to underscore so "Customer Segment",
+        # "customer-segment", and "customer_segment" all resolve alike.
+        s = str(field_name or "").strip().lower()
+        return s.replace(" ", "_").replace("-", "_").replace(".", "_")
+
+    def set(self, field_name: str, value: Any) -> None:
+        """Write a derived value into the overlay so later rules can read
+        it. Used by the engine when a SET action fires on a non-decision
+        field."""
+        self._derived[self._norm(field_name)] = value
+
     def __getitem__(self, field_name: str) -> Any:
+        # Overlay (derived) wins over the raw payload — a rule that SET a
+        # field overrides whatever the raw loan carried.
+        norm = self._norm(field_name)
+        if norm in self._derived:
+            return self._derived[norm]
         path = resolve_field_path(field_name) or field_name
         return self._walk(path)
 
@@ -225,6 +257,114 @@ def _sort_key(rule: dict) -> tuple[int, int, str]:
     )
 
 
+# ── Dependency-aware ordering (producers before consumers) ───────────────
+# A rule "produces" the target_field of each SET action; it "consumes" the
+# field of each condition. When rule B's condition reads a field that rule
+# A SETs, A must evaluate before B — otherwise B reads the raw payload
+# (where the derived field doesn't exist) and never fires. The flat
+# subsystem sort doesn't guarantee this (SCORING_MODEL, which produces
+# customer_segment, sorts AFTER AMOUNT_CAP / RATE_MODIFIER, which consume
+# it), so we topologically sort, tie-broken by the historical _sort_key.
+
+def _norm_field(name: Any) -> str:
+    s = str(name or "").strip().lower()
+    return s.replace(" ", "_").replace("-", "_").replace(".", "_")
+
+
+def _produced_fields(rule: dict) -> set[str]:
+    out: set[str] = set()
+    for a in rule.get("actions") or []:
+        if not isinstance(a, dict):
+            continue
+        if str(a.get("action_type", "")).strip().upper() == "SET":
+            tf = _norm_field(a.get("target_field"))
+            if tf:
+                out.add(tf)
+    return out
+
+
+def _consumed_fields(rule: dict) -> set[str]:
+    out: set[str] = set()
+    for c in rule.get("conditions") or []:
+        if isinstance(c, dict):
+            f = _norm_field(c.get("field"))
+            if f:
+                out.add(f)
+    return out
+
+
+def _compute_order(snapshot: list[dict]) -> list[int]:
+    """Return rule indices in producer-before-consumer order.
+
+    Kahn's algorithm with the historical _sort_key as the tiebreak among
+    ready (in-degree-0) rules. This preserves gate short-circuit: a gate
+    reading only raw fields has in-degree 0 and sorts early by subsystem
+    rank, so a REJECT still fires before any pricing rule. Cyclic rules
+    (A produces a field B consumes and vice-versa) are appended last in
+    _sort_key order — the coherence validator flags the cycle.
+    """
+    import heapq
+
+    n = len(snapshot)
+    producers: dict[str, set[int]] = {}
+    consumed_per: list[set[str]] = []
+    for i, r in enumerate(snapshot):
+        for f in _produced_fields(r):
+            producers.setdefault(f, set()).add(i)
+        consumed_per.append(_consumed_fields(r))
+
+    adj: list[set[int]] = [set() for _ in range(n)]
+    indeg = [0] * n
+    for j in range(n):
+        for f in consumed_per[j]:
+            for i in producers.get(f, ()):
+                if i == j:
+                    continue  # self-loop (rule reads a field it also sets)
+                if j not in adj[i]:
+                    adj[i].add(j)
+                    indeg[j] += 1
+
+    keys = [_sort_key(snapshot[i]) for i in range(n)]
+    ready = [(keys[i], i) for i in range(n) if indeg[i] == 0]
+    heapq.heapify(ready)
+    order: list[int] = []
+    while ready:
+        _, i = heapq.heappop(ready)
+        order.append(i)
+        for j in sorted(adj[i], key=lambda x: keys[x]):
+            indeg[j] -= 1
+            if indeg[j] == 0:
+                heapq.heappush(ready, (keys[j], j))
+
+    if len(order) < n:
+        # Cycle — append the leftover rules deterministically.
+        leftover = sorted((i for i in range(n) if i not in set(order)),
+                          key=lambda i: keys[i])
+        order.extend(leftover)
+    return order
+
+
+# Cache the computed order per snapshot so a 100k-loan impact run sorts
+# once, not per loan. Keyed by the tuple of rule UUIDs — unique per repo
+# version, so no cross-version collisions.
+_ORDER_CACHE: dict[tuple, list[int]] = {}
+_ORDER_CACHE_MAX = 256
+
+
+def _order_rules(snapshot: list[dict]) -> list[dict]:
+    key = tuple(
+        str(r.get("id") or r.get("rule_id") or idx)
+        for idx, r in enumerate(snapshot)
+    )
+    perm = _ORDER_CACHE.get(key)
+    if perm is None:
+        perm = _compute_order(snapshot)
+        if len(_ORDER_CACHE) >= _ORDER_CACHE_MAX:
+            _ORDER_CACHE.clear()
+        _ORDER_CACHE[key] = perm
+    return [snapshot[i] for i in perm]
+
+
 def _action_to_fired(rule: dict, action: dict) -> FiredRule:
     act_type = str(action.get("action_type", "")).strip().upper()
     rule_uuid_raw = rule.get("id")
@@ -257,7 +397,9 @@ def evaluate_snapshot(
     - If no terminal action fires the decision is APPROVED
     """
     ctx = LoanContext(request_payload, loan_application_id=loan_application_id)
-    rules_sorted = sorted(snapshot, key=_sort_key)
+    # Producer-before-consumer order so derived fields (e.g. a rule that
+    # SETs customer_segment) are available to rules that condition on them.
+    rules_sorted = _order_rules(list(snapshot))
 
     fired: list[FiredRule] = []
     reasons: list[str] = []
@@ -283,6 +425,12 @@ def evaluate_snapshot(
             if fr.action_type in ("FLAG", "MANUAL_REVIEW", "REVIEW"):
                 if decision == "APPROVED":
                     decision = "FLAGGED"
+            # Write SET outputs into the context overlay so later rules
+            # in producer-before-consumer order can read this derived
+            # value. This is what makes multi-stage BRDs (eligibility →
+            # classification → segment → pricing) actually execute.
+            if fr.action_type == "SET" and fr.target_field:
+                ctx.set(fr.target_field, fr.value)
             if fr.action_type in ("CAP", "SET") and isinstance(fr.value, (int, float)):
                 amount_caps.append(float(fr.value))
             if fr.action_type in ("ADJUST", "MODIFY") and isinstance(fr.value, (int, float)):

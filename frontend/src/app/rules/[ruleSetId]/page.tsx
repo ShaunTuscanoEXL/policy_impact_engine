@@ -30,6 +30,7 @@ import {
   type RuleFormData,
 } from "@/components/rules/rule-editor-dialog";
 import { ConflictPanel } from "@/components/rules/conflict-panel";
+import { CoherencePanel } from "@/components/rules/coherence-panel";
 import { TestCaseTable } from "@/components/test-cases/test-case-table";
 import { TestCaseExportPanel } from "@/components/test-cases/test-case-export-panel";
 import { PageTransition } from "@/components/page-transition";
@@ -50,6 +51,8 @@ export default function RuleReviewPage() {
 
   const [ruleSet, setRuleSet] = useState<RuleSet | null>(null);
   const [loading, setLoading] = useState(true);
+  // Bumped after every rule mutation so the coherence panel re-analyzes.
+  const [coherenceRefresh, setCoherenceRefresh] = useState(0);
 
   // Editor dialog state
   const [editorOpen, setEditorOpen] = useState(false);
@@ -95,6 +98,10 @@ export default function RuleReviewPage() {
     try {
       const { data } = await api.get(`/rule-sets/${params.ruleSetId}`);
       setRuleSet(data);
+      // Re-run the coherence analysis whenever the rule set is (re)loaded
+      // — every edit/add/delete calls fetchRuleSet, so the panel stays
+      // in sync with the current rules.
+      setCoherenceRefresh((n) => n + 1);
       // Auto-fetch suggested counts when rule set is approved
       if (data.status === "APPROVED") {
         fetchSuggestedCounts(params.ruleSetId);
@@ -367,6 +374,13 @@ export default function RuleReviewPage() {
       {/* Conflict Panel */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
       <ConflictPanel rules={ruleSet.rules} />
+      </motion.div>
+
+      {/* Slice 14: BRD coherence — does the rule graph connect the way
+          the document describes? (dead refs, unreferenced eligibility,
+          dependency cycles). refreshKey re-runs it after every edit. */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
+      <CoherencePanel ruleSetId={params.ruleSetId} refreshKey={coherenceRefresh} />
       </motion.div>
 
       {/* Rule Table */}

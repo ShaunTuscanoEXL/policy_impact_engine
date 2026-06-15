@@ -4,6 +4,8 @@ from app.database import get_db
 from app.services import rule_service
 from app.schemas.rule import (
     ApproveRuleSetRequest,
+    CoherenceIssueResponse,
+    CoherenceReportResponse,
     RuleResponse,
     RuleSetResponse,
     RuleUpdateRequest,
@@ -85,6 +87,59 @@ async def get_rule_set(rule_set_id: str, db: AsyncSession = Depends(get_db)):
     if not rs:
         raise HTTPException(404, "Rule set not found")
     return _rule_set_to_response(rs)
+
+
+@router.get("/rule-sets/{rule_set_id}/coherence", response_model=CoherenceReportResponse)
+async def get_rule_set_coherence(rule_set_id: str, db: AsyncSession = Depends(get_db)):
+    """Slice 14 — BRD coherence report. Builds the produce/consume
+    dependency graph across all rules in the set and surfaces dead
+    consumers, orphan producers, unreferenced eligibility classifications,
+    and dependency cycles. This is the 'did the BRD convert correctly?'
+    check the reviewer runs before approving.
+    """
+    from app.pipeline.coherence import analyze_coherence
+    from app.schemas.rule import RuleDefinition as _RD, Condition as _C, Action as _A
+
+    rs = await rule_service.get_rule_set(rule_set_id, db)
+    if not rs:
+        raise HTTPException(404, "Rule set not found")
+
+    # Project ORM rules into RuleDefinitions for the analyzer.
+    defs = []
+    for r in rs.rules:
+        try:
+            conds = [_C(**c) if isinstance(c, dict) else c for c in (r.conditions or [])]
+            acts = [_A(**a) if isinstance(a, dict) else a for a in (r.actions or [])]
+            defs.append(_RD(
+                rule_id=r.rule_id, rule_name=r.rule_name,
+                description=r.description or "",
+                rule_type=r.rule_type.value if hasattr(r.rule_type, "value") else r.rule_type,
+                conditions=conds, actions=acts,
+                priority=r.priority, source_section=r.source_section or "",
+                confidence=r.confidence,
+            ))
+        except Exception:
+            continue
+
+    report = analyze_coherence(defs)
+    errors = sum(1 for i in report.issues if i.severity == "error")
+    warnings = sum(1 for i in report.issues if i.severity == "warning")
+    return CoherenceReportResponse(
+        is_coherent=report.is_coherent,
+        issue_count=len(report.issues),
+        error_count=errors,
+        warning_count=warnings,
+        issues=[
+            CoherenceIssueResponse(
+                kind=i.kind, severity=i.severity, rule_ids=i.rule_ids,
+                field=i.field, message=i.message,
+            )
+            for i in report.issues
+        ],
+        produced_fields=report.produced_fields,
+        consumed_fields=report.consumed_fields,
+        dependency_edges=[list(e) for e in report.dependency_edges],
+    )
 
 
 @router.patch("/rule-sets/{rule_set_id}/approve", response_model=RuleSetResponse)

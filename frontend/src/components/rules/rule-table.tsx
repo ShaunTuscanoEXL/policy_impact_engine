@@ -429,6 +429,11 @@ function ExpandableRuleRow({
                         typeof cond.value === "object"
                           ? JSON.stringify(cond.value)
                           : String(cond.value);
+                      // Slice 15: scope/eligibility gates injected from
+                      // BRD document context get a distinct badge so the
+                      // reviewer can tell them apart from the rule's own
+                      // conditions (and remove via the editor if wrong).
+                      const isScope = cond.origin === "scope";
                       return (
                         <span key={i} className="flex items-center gap-1.5">
                           {i > 0 && (
@@ -441,7 +446,23 @@ function ExpandableRuleRow({
                           )}
                           {/* Slice 5: hover the field name to see the
                               plain-English glossary entry. */}
-                          <code className="rounded bg-muted px-2 py-0.5 text-xs">
+                          <code
+                            className={`rounded px-2 py-0.5 text-xs ${
+                              isScope
+                                ? "bg-violet-500/10 text-violet-700 ring-1 ring-inset ring-violet-500/30 dark:text-violet-300"
+                                : "bg-muted"
+                            }`}
+                            title={
+                              isScope
+                                ? "Scope gate inherited from the BRD's eligibility/scope context — not from this rule's own line. Edit the rule to remove it if the BRD didn't intend it."
+                                : undefined
+                            }
+                          >
+                            {isScope && (
+                              <span className="mr-1 font-bold uppercase tracking-wider text-[9px]">
+                                scope
+                              </span>
+                            )}
                             <FieldHelp name={cond.field}>{cond.field}</FieldHelp>{" "}
                             {cond.operator} {valStr}
                           </code>

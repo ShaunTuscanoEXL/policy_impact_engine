@@ -61,6 +61,11 @@ export interface Condition {
   operator: string;
   value: any;
   logic: string;
+  /** Slice 15 — "explicit" = the rule's own condition; "scope" = an
+   *  eligibility/scope gate auto-injected from BRD context (flagged +
+   *  reviewer-removable). Absent on pre-Slice-15 rules → treat as
+   *  explicit. */
+  origin?: "explicit" | "scope";
 }
 
 export interface Action {
@@ -619,6 +624,35 @@ export interface AuditEvent {
   repository_id: string | null;
   metadata?: Record<string, any> | null;
   created_at: string;
+}
+
+
+// ── Slice 14: BRD coherence report ─────────────────────────────────────
+
+export type CoherenceIssueKind =
+  | "dead_consumer"
+  | "orphan_producer"
+  | "unreferenced_eligibility"
+  | "dependency_cycle";
+
+export interface CoherenceIssue {
+  kind: CoherenceIssueKind;
+  severity: "error" | "warning" | "info";
+  rule_ids: string[];
+  field: string | null;
+  message: string;
+}
+
+export interface CoherenceReport {
+  is_coherent: boolean;
+  issue_count: number;
+  error_count: number;
+  warning_count: number;
+  issues: CoherenceIssue[];
+  produced_fields: string[];
+  consumed_fields: string[];
+  /** [producer_rule_id, consumer_rule_id, field] triples. */
+  dependency_edges: string[][];
 }
 
 
