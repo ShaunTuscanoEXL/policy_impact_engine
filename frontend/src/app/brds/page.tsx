@@ -183,12 +183,14 @@ export default function BrdsPage() {
                         />
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {new Date(brd.created_at).toLocaleDateString("en-US", {
+                       {new Date(`${brd.created_at}Z`).toLocaleString("en-IN", {
+                          timeZone: "Asia/Kolkata",
                           year: "numeric",
                           month: "short",
                           day: "numeric",
                           hour: "2-digit",
                           minute: "2-digit",
+                          hour12: true,
                         })}
                       </TableCell>
                       <TableCell className="text-right">

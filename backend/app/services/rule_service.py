@@ -3,9 +3,11 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import selectinload
-from app.models.rule import RuleSet, Rule, RuleSetStatus
+from app.models.rule import RuleSet, Rule, RuleSetStatus 
+from app.models.merge import MergeProposalItem
+from app.models.live_repo import LiveRuleEntry
 
 logger = logging.getLogger(__name__)
 
@@ -195,14 +197,34 @@ async def delete_rule(rule_id: str, db: AsyncSession) -> bool:
         parsed_id = uuid.UUID(rule_id)
     except ValueError:
         return False
-    result = await db.execute(select(Rule).where(Rule.id == parsed_id))
+
+    result = await db.execute(
+        select(Rule).where(Rule.id == parsed_id)
+    )
     rule = result.scalar_one_or_none()
+
     if not rule:
         return False
+
     rule_set_id = rule.rule_set_id
+
+    # await db.execute(
+    #     delete(LiveRuleEntry).where(LiveRuleEntry.rule_id == parsed_id)
+    # )
+    # Delete merge proposal items referencing this rule
+    await db.execute(
+        delete(MergeProposalItem).where(
+            MergeProposalItem.incoming_rule_id == parsed_id
+        )
+    )
+
+    # Delete the rule
     await db.delete(rule)
+
     await db.commit()
+
     await on_rule_set_modified(db, rule_set_id)
+
     return True
 
 
