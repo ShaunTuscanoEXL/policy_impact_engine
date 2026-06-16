@@ -380,7 +380,7 @@ export default function RuleReviewPage() {
           the document describes? (dead refs, unreferenced eligibility,
           dependency cycles). refreshKey re-runs it after every edit. */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
-      <CoherencePanel ruleSetId={params.ruleSetId} refreshKey={coherenceRefresh} />
+      {/* <CoherencePanel ruleSetId={params.ruleSetId} refreshKey={coherenceRefresh} /> */}
       </motion.div>
 
       {/* Rule Table */}

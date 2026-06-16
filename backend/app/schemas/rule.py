@@ -42,6 +42,8 @@ class RuleDefinition(BaseModel):
     priority: int = 0
     source_section: str = ""
     confidence: float = 1.0
+    has_conflicts: bool = False
+    conflict_details: dict | None = None
     # Slice 15 — scope/eligibility gates the BRD's document context says
     # apply to this rule (NOT from the rule's own line). The LLM emits
     # these when it sees, e.g., "this whole framework applies to Repeat

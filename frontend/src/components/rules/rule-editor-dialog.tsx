@@ -40,6 +40,10 @@ const FIELD_OPTIONS = [
   "city_tier",
   "max_dpd_last_12m",
   "cheque_bounces_6m",
+  "overdue_accounts",
+  "debt_to_income_ratio",
+  "credit_risk_band",
+  "good_repeat_customer_flag"
 ];
 
 const OPERATOR_OPTIONS = [

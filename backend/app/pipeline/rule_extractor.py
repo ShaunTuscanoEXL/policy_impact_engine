@@ -32,6 +32,7 @@ from openai import AzureOpenAI, OpenAI
 from app.config import settings
 from app.pipeline.schemas import DocumentSection
 from app.schemas.rule import Action, Condition, RuleDefinition, RuleTypeEnum
+from langchain_anthropic import ChatAnthropic
 
 logger = logging.getLogger(__name__)
 
@@ -190,11 +191,13 @@ For each rule, return a JSON object:
   ],
   "priority": 1,
   "source_section": "Which part of the document this came from",
-  "confidence": 0.95
+  "confidence": 0.95,
+  "has_conflicts": true | false,
+  "conflict_details": {"message":"human-readable message" , "description":"detailed explanation"}
 }
 
 FIELD NAME GUIDANCE (use these when they fit, but you may use other descriptive names too):
-bureau_score, dti_ratio, monthly_income, employment_type, employment_tenure_months,
+bureau_score, debt_to_income_ratio, monthly_income, employment_type, employment_tenure_months,
 active_loans, unsecured_loans, credit_utilization_ratio, inquiries_last_3m,
 salary_credit_consistency_6m, banking_stability_index, desired_amount, cash_deposits_6m,
 city_tier, max_dpd_last_12m, cheque_bounces_6m, age, residence_type,
@@ -280,13 +283,19 @@ A "rule" is any statement that affects a lending decision:
 - Behavioral gates (delinquency, bounce history, inquiry velocity)
 
 IMPORTANT:
-- Each DISTINCT condition-action pair is a SEPARATE rule
 - A table row with a threshold and an action is a rule
 - "If X then Y" is a rule, even if buried in a paragraph
 - Segment-specific variations are separate rules (e.g., "bureau >= 680 for salaried" \
 and "bureau >= 720 for self-employed" are TWO rules)
 - Pricing tiers: each tier row is a separate rule
 - DO NOT merge or consolidate — enumerate EVERY individual rule
+
+CRITICAL — COMPOUND "ALL OF THE FOLLOWING" DEFINITIONS ARE ONE RULE:
+When the BRD section says a classification or flag is set if "ALL the following
+conditions are satisfied" (or "must satisfy all of", "AND of", "every one of"),
+emit ONE rule with N AND-joined conditions, NOT N separate rules each with one
+condition and the same SET/FLAG action. Splitting into N separate rules turns
+AND into OR — any single condition would trigger the flag, defeating the BRD.
 
 Return a JSON array of lightweight rule summaries:
 [
@@ -327,11 +336,13 @@ For each rule, return:
   ],
   "priority": 1,
   "source_section": "Which part of the document",
-  "confidence": 0.95
+  "confidence": 0.95,
+  "has_conflicts": true | false,
+  "conflict_details": {"message":"human-readable message" , "description":"detailed explanation"}
 }
 
 FIELD NAME GUIDANCE (use these when they fit, but you may use other descriptive names too):
-bureau_score, dti_ratio, monthly_income, employment_type, employment_tenure_months,
+bureau_score, debt_to_income_ratio, monthly_income, employment_type, employment_tenure_months,
 active_loans, unsecured_loans, credit_utilization_ratio, inquiries_last_3m,
 salary_credit_consistency_6m, banking_stability_index, desired_amount, cash_deposits_6m,
 city_tier, max_dpd_last_12m, cheque_bounces_6m, age, residence_type,
@@ -341,6 +352,7 @@ loan_repayment_bounces_12m, repeat_type, closed_loans, transaction_volatility_in
 
 For ratio/percentage fields: use decimals (40% = 0.40), not whole numbers.
 For currency: use raw numbers without symbols (₹5,00,000 = 500000).
+
 
 CONFIDENCE:
 - 0.95-1.0: Explicitly stated with exact numbers
@@ -369,6 +381,20 @@ def _build_client():
         )
         model = settings.azure_openai_deployment
         logger.info("LLM: Azure OpenAI (%s)", model)
+    
+    if settings.llm_provider.lower() == "claude":
+        client = ChatAnthropic(
+            model=settings.azure_openai_deployment,
+            anthropic_api_key=settings.claude_api_key,
+            anthropic_api_url=  settings.azure_openai_endpoint,
+            temperature=0.1,
+            # max_tokens=6000,
+            timeout=None,
+            max_retries=2,
+        )
+        model = settings.azure_openai_deployment
+        logger.info("LLM: Azure OpenAI (%s)", model)
+        print("LLM: Azure OpenAI (%s)", model)
     else:
         if not settings.openai_api_key:
             logger.error("OpenAI: missing API key")
@@ -456,9 +482,9 @@ FIELD_ALIASES: dict[str, str] = {
     "income": "monthly_income",
     "salary": "monthly_income",
     "monthly_salary": "monthly_income",
-    "dti": "dti_ratio",
-    "debt_to_income_ratio": "dti_ratio",
-    "debt_to_income": "dti_ratio",
+    "dti": "debt_to_income_ratio",
+    "debt_to_income_ratio": "debt_to_income_ratio",
+    "debt_to_income": "debt_to_income_ratio",
     "employment_tenure": "employment_tenure_months",
     "tenure_months": "employment_tenure_months",
     "loan_amount": "desired_amount",
@@ -477,6 +503,7 @@ FIELD_ALIASES: dict[str, str] = {
     "banking_stability": "banking_stability_index",
     "salary_consistency": "salary_credit_consistency_6m",
     "salary_credit_consistency": "salary_credit_consistency_6m",
+    "banking_behavior_stability": "salary_credit_consistency_6m",
     "utilization_ratio": "credit_utilization_ratio",
     "credit_utilization": "credit_utilization_ratio",
     "surplus": "net_monthly_surplus",
@@ -493,7 +520,7 @@ FIELD_ALIASES: dict[str, str] = {
 
 # Fields where the value is a ratio (0-1) but LLM might return whole numbers
 RATIO_FIELDS = {
-    "dti_ratio", "credit_utilization_ratio", "salary_credit_consistency_6m",
+    "debt_to_income_ratio", "credit_utilization_ratio", "salary_credit_consistency_6m",
     "banking_stability_index", "income_stability_score", "transaction_volatility_index",
 }
 
@@ -965,6 +992,8 @@ def _parse_rule(d: dict, index: int) -> RuleDefinition | None:
             priority=int(d.get("priority", index)),
             source_section=str(d.get("source_section", "")),
             confidence=float(d.get("confidence", 0.8)),
+            has_conflicts=bool(d.get("has_conflicts", False)),
+            conflict_details=d.get("conflict_details", {}),
             applies_when=applies_when,
         )
     except Exception as exc:
@@ -977,63 +1006,100 @@ def _parse_rule(d: dict, index: int) -> RuleDefinition | None:
 # ---------------------------------------------------------------------------
 
 def _call_llm(client, model: str, messages: list[dict]) -> str:
-    """Call the LLM with retry and truncation handling.
-
-    If the response is truncated (finish_reason='length'), makes continuation
-    calls to get the rest of the output. Assembles the full response.
     """
+    Call LLM with retries and continuation handling.
+
+    - Supports OpenAI-style and Claude-style clients
+    - Retries transient failures
+    - Handles truncated responses by requesting continuation
+    """
+
     full_response = ""
-    conversation = list(messages)  # Copy so we can append continuations
+    conversation = list(messages)
 
-    for pass_num in range(5):  # Max 5 continuation passes
+    for pass_num in range(5):  # up to 5 continuation passes
         response_text = ""
-        finish_reason = ""
+        finish_reason = "stop"
 
+        # -------------------------
+        # Retry loop
+        # -------------------------
         for attempt in range(MAX_RETRIES + 1):
             try:
-                # Newer models (gpt-4.1+, gpt-5+) require max_completion_tokens
-                # Older models use max_tokens. Try both.
-                try:
+                if settings.llm_provider.lower() == "claude":
+                    # ✅ Claude-style call
+                    response = client.invoke(conversation)
+                    response_text = getattr(response, "content", "") or ""
+                    finish_reason = "stop"   # Claude doesn't always expose this cleanly
+
+                else:
+                    # ✅ OpenAI-style call
                     response = client.chat.completions.create(
                         model=model,
-                        temperature=0,
                         max_completion_tokens=MAX_OUTPUT_TOKENS,
                         messages=conversation,
                     )
-                except Exception:
-                    response = client.chat.completions.create(
-                        model=model,
-                        temperature=0,
-                        max_tokens=MAX_OUTPUT_TOKENS,
-                        messages=conversation,
-                    )
-                response_text = response.choices[0].message.content or ""
-                finish_reason = response.choices[0].finish_reason or "stop"
+                    response_text = response.choices[0].message.content or ""
+                    finish_reason = response.choices[0].finish_reason or "stop"
 
                 if response_text.strip():
                     break
-                logger.warning("Empty LLM response (attempt %d/%d)", attempt + 1, MAX_RETRIES + 1)
+
+                logger.warning(
+                    "Empty LLM response (attempt %d/%d)",
+                    attempt + 1,
+                    MAX_RETRIES + 1,
+                )
+
             except Exception as exc:
-                logger.error("LLM call failed (attempt %d/%d): %s", attempt + 1, MAX_RETRIES + 1, exc)
+                logger.error(
+                    "LLM call failed (attempt %d/%d): %s",
+                    attempt + 1,
+                    MAX_RETRIES + 1,
+                    exc,
+                )
+
                 if attempt < MAX_RETRIES:
                     time.sleep(RETRY_DELAY_SECONDS * (2 ** attempt))
-                    continue
-                return full_response
+                else:
+                    # return what we got so far (partial is better than nothing)
+                    return full_response
 
+        # If still empty, stop entirely
         if not response_text.strip():
             break
 
-        full_response += response_text
-        logger.info("LLM pass %d: %d chars, finish_reason=%s", pass_num + 1, len(response_text), finish_reason)
+        # ✅ Append safely (avoid spacing duplication)
+        full_response = full_response.rstrip() + response_text.lstrip()
 
-        # If the response completed normally, we're done
+        logger.info(
+            "LLM pass %d: %d chars, finish_reason=%s",
+            pass_num + 1,
+            len(response_text),
+            finish_reason,
+        )
+
+        # ✅ Stop if not truncated
         if finish_reason != "length":
             break
 
-        # Response was truncated — ask the LLM to continue
-        logger.info("Response truncated, requesting continuation...")
-        conversation.append({"role": "assistant", "content": response_text})
-        conversation.append({"role": "user", "content": "Continue the JSON array from exactly where you stopped. Do not repeat rules already output. Continue with the next rule object."})
+        # -------------------------
+        # Continuation handling
+        # -------------------------
+        logger.info("Response truncated — requesting continuation...")
+
+        conversation.append({
+            "role": "assistant",
+            "content": response_text,
+        })
+
+        conversation.append({
+            "role": "user",
+            "content": (
+                "Continue exactly from where you stopped. "
+                "Do not repeat previous content."
+            ),
+        })
 
     return full_response
 
@@ -1110,7 +1176,6 @@ def _enumerate_rules(client, model: str, doc_title: str, full_text: str) -> list
         f"Document: {doc_title}\n\n"
         f"{full_text}\n\n"
         f"List EVERY single business rule in this document. "
-        f"Each distinct condition-action pair is a separate rule. "
         f"Do not merge or consolidate. Return the JSON array."
     )
     logger.info("Pass 1 (enumerate): sending %d chars to LLM", len(full_text))

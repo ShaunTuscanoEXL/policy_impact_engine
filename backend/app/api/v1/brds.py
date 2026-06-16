@@ -314,6 +314,7 @@ async def extract_rules_from_brd(brd_id: str, db: AsyncSession = Depends(get_db)
     # REMOVED_RULE merge items downstream.
     rule_definitions, retirement_signals = extract_rules_with_retirements(sections)
 
+
     if not rule_definitions:
         raise HTTPException(422, "No rules could be extracted from the document")
     logger.info(
@@ -348,6 +349,8 @@ async def extract_rules_from_brd(brd_id: str, db: AsyncSession = Depends(get_db)
             actions=[a.model_dump() for a in rd.actions],
             priority=rd.priority,
             confidence=rd.confidence,
+            has_conflicts=getattr(rd, "has_conflicts", False),
+            conflict_details=getattr(rd, "conflict_details", None),
             source_section=rd.source_section,
         )
         db.add(rule)
