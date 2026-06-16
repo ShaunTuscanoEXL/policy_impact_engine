@@ -102,6 +102,15 @@ class LoanContext:
         norm = self._norm(field_name)
         if norm in self._derived:
             return self._derived[norm]
+        # A DIRECT top-level key beats registry resolution. App-set flags
+        # and derived inputs (e.g. dti_breach_regeneration) live at the
+        # payload root; without this they would fuzzy-match an unrelated
+        # registry field — "dti_breach_regeneration" → debt_to_income_ratio
+        # — and silently read the wrong value.
+        if field_name in self._request_payload:
+            return self._request_payload[field_name]
+        if norm in self._request_payload:
+            return self._request_payload[norm]
         path = resolve_field_path(field_name) or field_name
         return self._walk(path)
 
@@ -431,6 +440,24 @@ def evaluate_snapshot(
             # classification → segment → pricing) actually execute.
             if fr.action_type == "SET" and fr.target_field:
                 ctx.set(fr.target_field, fr.value)
+                # Honor SET decision_status writes as decisions. BRDs often
+                # phrase rejects/flags as "set decision_status = REJECTED"
+                # rather than a REJECT action; without this those rules
+                # would fire but leave the decision APPROVED. The terminal
+                # decision vocabulary is APPROVED / FLAGGED / REJECTED —
+                # APPROVED_WITH_CONDITIONS and similar map to APPROVED for
+                # the top-level decision while the precise label stays on
+                # the decision_status field (overlay + offer modifications).
+                if _norm_field(fr.target_field) == "decision_status":
+                    sv = str(fr.value).strip().upper()
+                    if sv in ("REJECTED", "REJECT", "DECLINED", "DECLINE", "AUTO_REJECT"):
+                        decision = "REJECTED"
+                        terminal_rule_id = fr.rule_id
+                        break
+                    if sv in ("FLAGGED", "FLAG", "MANUAL_REVIEW", "REVIEW",
+                              "FLAGGED_FOR_REVIEW", "SENIOR_CREDIT_OFFICER_REVIEW"):
+                        if decision == "APPROVED":
+                            decision = "FLAGGED"
             if fr.action_type in ("CAP", "SET") and isinstance(fr.value, (int, float)):
                 amount_caps.append(float(fr.value))
             if fr.action_type in ("ADJUST", "MODIFY") and isinstance(fr.value, (int, float)):
