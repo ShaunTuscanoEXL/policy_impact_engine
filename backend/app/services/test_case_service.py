@@ -14,8 +14,11 @@ from app.models.live_repo import LiveRuleVersion
 from app.schemas.rule import RuleDefinition, Condition, Action
 from app.pipeline.test_case_generator import generate_test_cases, suggest_counts
 from app.services.customer_matcher import match_customers
+from app.models.loan_record import LoanRecord
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_MATCHED_CUSTOMERS_PAGE_SIZE = 10
 
 
 def _format_filter_part(f: dict) -> str:
@@ -28,6 +31,24 @@ def _format_filter_part(f: dict) -> str:
     if op in ("in", "not_in") and isinstance(val, (list, tuple)):
         return f"{field} {op} [{', '.join(str(v) for v in val)}]"
     return f"{field} {op} {val}"
+
+
+async def _loan_rows_by_application_id(
+    loan_ids: list[str],
+    db: AsyncSession,
+) -> dict[str, LoanRecord]:
+    """Batch-load loan records keyed by loan_application_id.
+
+    Export paths expand one row per matched loan, so loading them in one
+    query per test case keeps CSV generation from degenerating into
+    thousands of single-row lookups.
+    """
+    if not loan_ids:
+        return {}
+    result = await db.execute(
+        select(LoanRecord).where(LoanRecord.loan_application_id.in_(loan_ids))
+    )
+    return {row.loan_application_id: row for row in result.scalars().all()}
 
 
 def _rules_to_defs(rules: list) -> list[RuleDefinition]:
@@ -371,7 +392,7 @@ async def export_suite(suite_id: str, format: str, db: AsyncSession) -> str | di
             "test_case_id", "description", "category", "rationale",
             "input_values", "filter_logic", "expected_decision",
             "expected_outcome", "source_rule_ids",
-            "loan_application_id", "match_reason",
+            "loan_application_id", "request_payload", "response_payload", "match_reason",
         ])
 
         for tc in suite.test_cases:
@@ -380,16 +401,21 @@ async def export_suite(suite_id: str, format: str, db: AsyncSession) -> str | di
             exp_decision = (tc.expected_outcome or {}).get("decision", "UNKNOWN")
             source_ids = ", ".join(tc.source_rule_ids or [])
             input_str = json.dumps(tc.input_values or {})
+            loan_rows = await _loan_rows_by_application_id(list(tc.matched_loan_ids or []), db)
 
             if tc.matched_loan_ids:
                 for loan_id in tc.matched_loan_ids:
+                    lr = loan_rows.get(loan_id)
                     writer.writerow([
                         tc.test_case_id, tc.description,
                         tc.category.value if hasattr(tc.category, 'value') else tc.category,
                         tc.rationale or "",
                         input_str, filter_str, exp_decision,
                         json.dumps(tc.expected_outcome), source_ids,
-                        loan_id, filter_str,
+                        loan_id,
+                        json.dumps((lr.request_payload if lr else {}) or {}),
+                        json.dumps((lr.response_payload if lr else {}) or {}),
+                        filter_str,
                     ])
             else:
                 # Write test case even without matched loans
@@ -399,12 +425,109 @@ async def export_suite(suite_id: str, format: str, db: AsyncSession) -> str | di
                     tc.rationale or "",
                     input_str, filter_str, exp_decision,
                     json.dumps(tc.expected_outcome), source_ids,
-                    "", "",
+                    "", "{}", "{}", "",
                 ])
 
         return output.getvalue()
 
     return None
+
+
+async def get_test_case_matched_customers_page(
+    suite_id: str,
+    test_case_id: str,
+    db: AsyncSession,
+    *,
+    limit: int = DEFAULT_MATCHED_CUSTOMERS_PAGE_SIZE,
+    offset: int = 0,
+) -> dict | None:
+    """Fetch a page of matched customers for one test case.
+
+    The matched loan IDs are stored on the test case row, but the UI only
+    needs a small slice at a time. This keeps the detail page responsive
+    when a case matches thousands of loans.
+    """
+    import uuid as _uuid
+
+    try:
+        suite_uuid = _uuid.UUID(str(suite_id))
+        test_case_uuid = _uuid.UUID(str(test_case_id))
+    except (TypeError, ValueError):
+        return None
+
+    result = await db.execute(
+        select(TestCase)
+        .where(TestCase.suite_id == suite_uuid)
+        .where(TestCase.id == test_case_uuid)
+    )
+    test_case = result.scalar_one_or_none()
+    if not test_case:
+        return None
+
+    loan_ids = list(test_case.matched_loan_ids or [])
+    total = len(loan_ids)
+    if offset >= total:
+        return {
+            "items": [],
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "has_more": False,
+        }
+
+    page_ids = loan_ids[offset:offset + limit]
+    if not page_ids:
+        return {
+            "items": [],
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "has_more": False,
+        }
+
+    rows = await db.execute(
+        select(LoanRecord).where(LoanRecord.loan_application_id.in_(page_ids))
+    )
+    rows_by_loan_id = {row.loan_application_id: row for row in rows.scalars().all()}
+
+    filter_parts = [_format_filter_part(f) for f in (test_case.filter_logic or [])]
+    filter_str = " AND ".join(filter_parts)
+
+    items = []
+    for loan_id in page_ids:
+        lr = rows_by_loan_id.get(loan_id)
+        if not lr:
+            continue
+        reasons = []
+        payload = lr.request_payload or {}
+        for f in (test_case.filter_logic or []):
+            json_path = f.get("json_path", "")
+            parts = json_path.split(".")
+            current = payload
+            for part in parts:
+                if isinstance(current, dict):
+                    current = current.get(part)
+                else:
+                    current = None
+                    break
+            reasons.append(
+                f"{f.get('field_name')}={current} ({f.get('operator')} {f.get('value')})"
+            )
+        items.append({
+            "id": str(lr.id),
+            "loan_application_id": lr.loan_application_id,
+            "request_payload": lr.request_payload or {},
+            "response_payload": lr.response_payload or {},
+            "match_reason": ", ".join(reasons) if reasons else filter_str,
+        })
+
+    return {
+        "items": items,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "has_more": offset + len(page_ids) < total,
+    }
 
 
 async def export_by_brd(brd_id: str, format: str, db: AsyncSession) -> str | dict | None:
@@ -434,7 +557,7 @@ async def export_by_brd(brd_id: str, format: str, db: AsyncSession) -> str | dic
             "rule_set_name", "test_case_id", "description", "category",
             "rationale", "input_values", "filter_logic", "expected_decision",
             "expected_outcome", "source_rule_ids",
-            "loan_application_id", "match_reason",
+            "loan_application_id", "request_payload", "response_payload", "match_reason",
         ])
 
         for rs in rule_sets:
@@ -449,16 +572,21 @@ async def export_by_brd(brd_id: str, format: str, db: AsyncSession) -> str | dic
                     exp_decision = (tc.expected_outcome or {}).get("decision", "UNKNOWN")
                     source_ids = ", ".join(tc.source_rule_ids or [])
                     input_str = json.dumps(tc.input_values or {})
+                    loan_rows = await _loan_rows_by_application_id(list(tc.matched_loan_ids or []), db)
 
                     if tc.matched_loan_ids:
                         for loan_id in tc.matched_loan_ids:
+                            lr = loan_rows.get(loan_id)
                             writer.writerow([
                                 rs.name, tc.test_case_id, tc.description,
                                 tc.category.value if hasattr(tc.category, 'value') else tc.category,
                                 tc.rationale or "",
                                 input_str, filter_str, exp_decision,
                                 json.dumps(tc.expected_outcome), source_ids,
-                                loan_id, filter_str,
+                                loan_id,
+                                json.dumps((lr.request_payload if lr else {}) or {}),
+                                json.dumps((lr.response_payload if lr else {}) or {}),
+                                filter_str,
                             ])
                     else:
                         writer.writerow([
@@ -467,7 +595,7 @@ async def export_by_brd(brd_id: str, format: str, db: AsyncSession) -> str | dic
                             tc.rationale or "",
                             input_str, filter_str, exp_decision,
                             json.dumps(tc.expected_outcome), source_ids,
-                            "", "",
+                            "", "{}", "{}", "",
                         ])
 
         return all_csv.getvalue()
