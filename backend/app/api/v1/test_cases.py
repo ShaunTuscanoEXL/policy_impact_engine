@@ -1,18 +1,18 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.services import test_case_service, rule_service
-from app.services.customer_matcher import match_customers
 from app.schemas.test_case import (
     TestCaseGenerateRequest,
     TestCaseSuiteResponse,
     TestCaseSuiteListResponse,
     TestCaseResponse,
     MatchedCustomer,
+    MatchedCustomerPageResponse,
     SuggestCountsRequest,
     SuggestedCountsResponse,
     GenerateFromVersionRequest,
@@ -202,6 +202,30 @@ async def export_test_suite(suite_id: str, format: str, db: AsyncSession = Depen
     return result
 
 
+@router.get(
+    "/{suite_id}/cases/{test_case_id}/matched-customers",
+    response_model=MatchedCustomerPageResponse,
+)
+async def get_test_case_matched_customers(
+    suite_id: str,
+    test_case_id: str,
+    db: AsyncSession = Depends(get_db),
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+):
+    """Fetch matched customers for one test case in pages."""
+    result = await test_case_service.get_test_case_matched_customers_page(
+        suite_id,
+        test_case_id,
+        db,
+        limit=limit,
+        offset=offset,
+    )
+    if result is None:
+        raise HTTPException(404, "Test case not found")
+    return MatchedCustomerPageResponse(**result)
+
+
 @router.delete("/{suite_id}")
 async def delete_test_suite(suite_id: str, db: AsyncSession = Depends(get_db)):
     """Delete a test case suite."""
@@ -275,6 +299,7 @@ async def execute_test_suite(
 async def _build_suite_response(suite, rule_set_name: str | None, db: AsyncSession) -> TestCaseSuiteResponse:
     """Build a full suite response with test cases and matched customer details."""
     test_case_responses = []
+    initial_page_size = 10
 
     for tc in (suite.test_cases or []):
         # Build human-readable filter description
@@ -290,23 +315,27 @@ async def _build_suite_response(suite, rule_set_name: str | None, db: AsyncSessi
             else:
                 filter_parts.append(f"{field} {op} {val}")
 
-        # Fetch matched customer details
+        # Fetch only the first page of matched customer details.
+        # The UI can request more on demand per test case.
         customers = []
-        for loan_id in (tc.matched_loan_ids or []):
-            from app.models.loan_record import LoanRecord
-            from sqlalchemy import select
-            lr_result = await db.execute(
-                select(LoanRecord).where(LoanRecord.loan_application_id == loan_id)
-            )
-            lr = lr_result.scalar_one_or_none()
-            if lr:
-                customers.append(MatchedCustomer(
-                    id=str(lr.id),
-                    loan_application_id=lr.loan_application_id,
-                    request_payload=lr.request_payload,
-                    response_payload=lr.response_payload,
-                    match_reason=" AND ".join(filter_parts),
-                ))
+        page = await test_case_service.get_test_case_matched_customers_page(
+            str(suite.id),
+            str(tc.id),
+            db,
+            limit=initial_page_size,
+            offset=0,
+        )
+        if page:
+            customers = [
+                MatchedCustomer(
+                    id=item["id"],
+                    loan_application_id=item["loan_application_id"],
+                    request_payload=item["request_payload"],
+                    response_payload=item["response_payload"],
+                    match_reason=item.get("match_reason") or " AND ".join(filter_parts),
+                )
+                for item in page["items"]
+            ]
 
         test_case_responses.append(TestCaseResponse(
             id=str(tc.id),
@@ -320,7 +349,6 @@ async def _build_suite_response(suite, rule_set_name: str | None, db: AsyncSessi
             filter_description=" AND ".join(filter_parts) if filter_parts else None,
             expected_outcome=tc.expected_outcome or {},
             rationale=tc.rationale,
-            matched_loan_ids=tc.matched_loan_ids or [],
             match_count=tc.match_count or 0,
             matched_customers=customers,
         ))

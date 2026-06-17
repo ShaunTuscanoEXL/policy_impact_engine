@@ -84,6 +84,14 @@ export interface MatchedCustomer {
   match_reason: string;
 }
 
+export interface MatchedCustomerPage {
+  items: MatchedCustomer[];
+  total: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
+}
+
 export interface TestCase {
   id: string;
   test_case_id: string;
@@ -101,7 +109,6 @@ export interface TestCase {
   filter_description: string | null;
   expected_outcome: Record<string, any>;
   rationale: string | null;
-  matched_loan_ids: string[];
   match_count: number;
   matched_customers: MatchedCustomer[];
 }

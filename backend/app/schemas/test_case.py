@@ -43,6 +43,14 @@ class MatchedCustomer(BaseModel):
     match_reason: str
 
 
+class MatchedCustomerPageResponse(BaseModel):
+    items: list[MatchedCustomer]
+    total: int
+    limit: int
+    offset: int
+    has_more: bool
+
+
 class TestCaseResponse(BaseModel):
     id: str
     test_case_id: str
@@ -57,7 +65,6 @@ class TestCaseResponse(BaseModel):
     filter_description: str | None = None
     expected_outcome: dict
     rationale: str | None = None
-    matched_loan_ids: list[str] = []
     match_count: int = 0
     matched_customers: list[MatchedCustomer] = []
 

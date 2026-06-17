@@ -152,6 +152,7 @@ export default function TestSuiteDetailPage() {
 
         {/* Test Case Table */}
         <TestCaseTable
+          suiteId={suite.id}
           testCases={suite.test_cases}
           casesByCategory={suite.cases_by_category}
         />
