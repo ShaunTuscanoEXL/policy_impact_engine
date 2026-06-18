@@ -43,7 +43,8 @@ const FIELD_OPTIONS = [
   "overdue_accounts",
   "debt_to_income_ratio",
   "credit_risk_band",
-  "good_repeat_customer_flag"
+  "good_repeat_customer_flag",
+  "application_type"
 ];
 
 const OPERATOR_OPTIONS = [

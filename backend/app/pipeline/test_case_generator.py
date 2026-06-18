@@ -152,6 +152,10 @@ def _is_numeric(value: Any) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
+def _is_bool(value: Any) -> bool:
+    return isinstance(value, bool)
+
+
 def _is_enum_field(field_name: str) -> bool:
     normalized = field_name.lower().strip().replace(" ", "_").replace("-", "_")
     return normalized in ENUM_FIELD_VALUES
@@ -177,8 +181,16 @@ def suggest_counts(rules: list[RuleDefinition]) -> dict:
     )
     numeric_conditions = sum(
         1 for r in rules for c in r.conditions
-        if _is_numeric(c.value) or _get_field_meta(c.field)["type"] in ("int", "float")
+        if (
+            (
+                not _is_bool(c.value)
+                and (
+                    _is_numeric(c.value)
+                    or _get_field_meta(c.field)["type"] in ("int", "float")
+                )
+            )
             or (c.operator == "between" and isinstance(c.value, (list, tuple)))
+        )
     )
     enum_conditions = sum(
         1 for r in rules for c in r.conditions
@@ -289,6 +301,13 @@ def _satisfying_value(cond: Condition) -> Any:
                     return candidate
         return default
 
+    if _is_bool(v):
+        if op in ("==", "="):
+            return v
+        if op == "!=":
+            return not v
+        return v
+
     # String/enum conditions
     if isinstance(v, str) and not _is_numeric(v):
         return v
@@ -354,6 +373,13 @@ def _violating_value(cond: Condition) -> Any:
         if isinstance(v, (list, tuple)) and v:
             return v[0]  # Return something that IS in the list
         return v
+
+    if _is_bool(v):
+        if op in ("==", "="):
+            return not v
+        if op == "!=":
+            return v
+        return not v
 
     # String/enum conditions
     if isinstance(v, str) and not _is_numeric(v):
@@ -439,6 +465,9 @@ def _boundary_values(cond: Condition) -> list[tuple[Any, str, bool]]:
 
 def _edge_values(cond: Condition) -> list[tuple[Any, str]]:
     """Generate edge/extreme values for a condition."""
+    if _is_bool(cond.value):
+        return []
+
     # Skip edge values for string/enum fields — they don't have numeric extremes
     if isinstance(cond.value, str) and not _is_numeric(cond.value):
         if _is_enum_field(cond.field):
@@ -520,6 +549,12 @@ def _input_satisfies_cond(cond: Condition, input_val) -> bool:
         return False
     op = (cond.operator or "").lower().strip()
     target = cond.value
+    if _is_bool(target):
+        if op in ("==", "=", "eq"):
+            return input_val is target
+        if op in ("!=", "ne"):
+            return input_val is not target
+        return False
     if op in (">", "gt"):
         return _is_numeric(input_val) and _is_numeric(target) and input_val > target
     if op in (">=", "gte"):
@@ -1376,6 +1411,13 @@ def _check_satisfies(cond: Condition, value: Any) -> bool:
         if isinstance(v, (list, tuple)) and len(v) == 2:
             if _is_numeric(value) and _is_numeric(v[0]) and _is_numeric(v[1]):
                 return v[0] <= value <= v[1]
+        return False
+
+    if _is_bool(v):
+        if op in ("==", "="):
+            return value is v
+        elif op == "!=":
+            return value is not v
         return False
 
     # String/non-numeric comparisons

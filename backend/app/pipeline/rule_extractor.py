@@ -203,7 +203,7 @@ salary_credit_consistency_6m, banking_stability_index, desired_amount, cash_depo
 city_tier, max_dpd_last_12m, cheque_bounces_6m, age, residence_type,
 account_vintage_months, overdue_accounts, net_monthly_surplus, credit_risk_band,
 g5_score, g6_score, interest_rate, eligible_amount, decision_status,
-loan_repayment_bounces_12m, repeat_type, closed_loans, transaction_volatility_index
+loan_repayment_bounces_12m, repeat_type, closed_loans, transaction_volatility_index ,application_type 
 
 For ratio/percentage fields: use decimals (40% = 0.40), not whole numbers.
 For currency: use raw numbers without symbols (₹5,00,000 = 500000).
@@ -322,6 +322,12 @@ AND into OR — any single condition would trigger the flag, defeating the BRD.
 Example WRONG → "good_customer_flag" requires 5 conditions → don't emit 5 rules
 each setting good_customer_flag=True. Emit ONE rule with 5 AND conditions.
 
+For every rule that sits UNDER such a scope/eligibility, add an
+"applies_when" array capturing the gating condition(s) drawn from the
+DOCUMENT CONTEXT (not from the rule's own sentence). Keep these SEPARATE
+from "conditions" (which is the rule's own line). Use the SAME field
+names the eligibility/scope was defined with.
+
 For each rule, return:
 {
   "rule_id": "RULE-001",
@@ -334,12 +340,18 @@ For each rule, return:
   "actions": [
     {"action_type": "SET | REJECT | ADJUST | FLAG", "target_field": "decision_status", "value": "REJECTED", "description": "Human-readable description"}
   ],
+  "applies_when": [
+   {"field": "bureau_score", "operator": ">= | <= | > | < | == | != | in | not_in | between", "value": 680, "logic": "AND | OR"}
+  ],
   "priority": 1,
   "source_section": "Which part of the document",
   "confidence": 0.95,
   "has_conflicts": true | false,
   "conflict_details": {"message":"human-readable message" , "description":"detailed explanation"}
 }
+
+Only add applies_when when the document genuinely scopes the rule. If a
+rule is universal (applies to every application), omit applies_when.
 
 FIELD NAME GUIDANCE (use these when they fit, but you may use other descriptive names too):
 bureau_score, debt_to_income_ratio, monthly_income, employment_type, employment_tenure_months,
@@ -348,7 +360,7 @@ salary_credit_consistency_6m, banking_stability_index, desired_amount, cash_depo
 city_tier, max_dpd_last_12m, cheque_bounces_6m, age, residence_type,
 account_vintage_months, overdue_accounts, net_monthly_surplus, credit_risk_band,
 g5_score, g6_score, interest_rate, eligible_amount, decision_status,
-loan_repayment_bounces_12m, repeat_type, closed_loans, transaction_volatility_index
+loan_repayment_bounces_12m, repeat_type, closed_loans, transaction_volatility_index ,application_type 
 
 For ratio/percentage fields: use decimals (40% = 0.40), not whole numbers.
 For currency: use raw numbers without symbols (₹5,00,000 = 500000).
@@ -515,7 +527,9 @@ FIELD_ALIASES: dict[str, str] = {
     "emi_bounces": "loan_repayment_bounces_12m",
     "customer_type": "repeat_type",
     "borrower_type": "repeat_type",
-    "application_type": "repeat_type",
+    "application_type": "application_type",
+    "application_channel": "application_type",
+    "channel": "application_type",
 }
 
 # Fields where the value is a ratio (0-1) but LLM might return whole numbers

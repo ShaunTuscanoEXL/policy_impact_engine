@@ -365,9 +365,8 @@ async def extract_rules_from_brd(brd_id: str, db: AsyncSession = Depends(get_db)
 
     # Slice 1 wire-up: auto-create a merge proposal against the default
     # live repo for (PERSONAL, US). If the repo doesn't exist yet it gets
-    # created; if its HEAD is empty the proposal is auto-applied as v1
-    # (baseline). Any returned proposal is left in PENDING for HITL when
-    # the repo already had rules.
+    # created. Even for the first BRD, keep the proposal in PENDING so
+    # reviewers can edit/delete rules before anything becomes live.
     proposal_id: str | None = None
     auto_applied_version: int | None = None
     repository_id: str | None = None
@@ -377,7 +376,7 @@ async def extract_rules_from_brd(brd_id: str, db: AsyncSession = Depends(get_db)
             brd_id=brd.id,
             product="PERSONAL",
             jurisdiction="US",
-            auto_apply_when_empty=True,
+            auto_apply_when_empty=False,
             decided_by="auto-baseline",
             retirement_signals=retirement_signals or None,
         )
